@@ -123,7 +123,7 @@ class MainActivity : Activity() {
         val t = TextView(this)
         t.text = text
         t.textSize = 18f
-        t.setPadding(0, 10, 0, 10)
+        t.setPadding(0, 16, 0, 10)
         return t
     }
 
@@ -173,13 +173,13 @@ class MainActivity : Activity() {
 
         container.addView(cardTitle("Quick Access"))
         container.addView(normalText("• Roast Planner：生成第一锅执行卡"))
-        container.addView(normalText("• Batch Correction：生成第二锅修正执行卡"))
-        container.addView(normalText("• Bean Library：架构预留位"))
+        container.addView(normalText("• Live Assist：关键点即时修正"))
+        container.addView(normalText("• Batch Correction：第二锅修正执行卡"))
 
         container.addView(cardTitle("Current Build"))
         container.addView(normalText("• Planner 已接原生 RoastEngine"))
+        container.addView(normalText("• Live 已接 Live Assist v1"))
         container.addView(normalText("• Correction 已接原生 CorrectionEngine"))
-        container.addView(normalText("• Beans / Brew / AI 先保留架构位"))
     }
 
     private fun showRoastPage() {
@@ -276,9 +276,230 @@ class MainActivity : Activity() {
 
         fun showLive() {
             subContainer.removeAllViews()
-            subContainer.addView(cardTitle("Roast Live"))
-            subContainer.addView(normalText("预留位：未来接入 BT / ET / ROR 实时数据"))
-            subContainer.addView(normalText("未来显示：阶段、目标 ROR、FC 预测、下一步动作"))
+            subContainer.addView(cardTitle("Live Assist v1"))
+
+            if (lastPlannerResult == null) {
+                val hint = TextView(this)
+                hint.text = "请先在 Planner 中生成第一锅策略，再进入 Live Assist。"
+                subContainer.addView(hint)
+                return
+            }
+
+            val predicted = lastPlannerResult!!
+
+            val predTurning = (predicted.h1Sec - 60.0).toInt().coerceAtLeast(50)
+            val predYellow = predicted.h2Sec.toInt()
+            val predFc = predicted.fcPredSec.toInt()
+            val predDrop = predicted.dropSec.toInt()
+
+            subContainer.addView(normalText("当前预测"))
+            subContainer.addView(normalText("• Turning ${RoastEngine.toMMSS(predTurning.toDouble())}"))
+            subContainer.addView(normalText("• Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}"))
+            subContainer.addView(normalText("• FC ${RoastEngine.toMMSS(predFc.toDouble())}"))
+            subContainer.addView(normalText("• Drop ${RoastEngine.toMMSS(predDrop.toDouble())}"))
+
+            // Turning Assist
+            subContainer.addView(cardTitle("Turning Assist"))
+            val turningTimeInput = textInput("实际 Turning，例如 1:28")
+            val turningRorInput = decimalInput("当前 ROR（可选，例如 18.5）")
+            val turningBtn = Button(this)
+            turningBtn.text = "修正到 Yellow"
+            val turningResult = TextView(this)
+
+            subContainer.addView(turningTimeInput)
+            subContainer.addView(turningRorInput)
+            subContainer.addView(turningBtn)
+            subContainer.addView(turningResult)
+
+            turningBtn.setOnClickListener {
+                val actualTurning = RoastEngine.parseMMSS(turningTimeInput.text.toString())
+                if (actualTurning == null) {
+                    turningResult.text = "请输入正确的 Turning 时间，例如 1:28"
+                    return@setOnClickListener
+                }
+
+                val diff = actualTurning - predTurning
+
+                val message = when {
+                    diff > 8 -> """
+回温偏慢 ${diff}s
+
+建议
+• H2 +60W
+• 1风门延后 10s
+• Yellow 新预测：${RoastEngine.toMMSS((predYellow + diff / 2.0).coerceAtMost(predYellow + 25.0))}
+• 目标：把转黄重新拉回窗口
+                    """.trimIndent()
+
+                    diff < -8 -> """
+回温偏快 ${-diff}s
+
+建议
+• H2 -60W
+• 1风门提前 10s
+• Yellow 新预测：${RoastEngine.toMMSS((predYellow + diff / 2.0).coerceAtLeast(predYellow - 25.0))}
+• 目标：防止中段推进过快
+                    """.trimIndent()
+
+                    else -> """
+回温基本正常
+
+建议
+• 保持 H2
+• 保持 1风门节奏
+• Yellow 仍按原窗口观察
+                    """.trimIndent()
+                }
+
+                turningResult.text = message
+            }
+
+            // Yellow Assist
+            subContainer.addView(cardTitle("Yellow Assist"))
+            val yellowTimeInput = textInput("实际 Yellow，例如 4:25")
+            val yellowRorInput = decimalInput("当前 ROR，例如 13.5")
+            val yellowBtn = Button(this)
+            yellowBtn.text = "修正到 FC"
+            val yellowResult = TextView(this)
+
+            subContainer.addView(yellowTimeInput)
+            subContainer.addView(yellowRorInput)
+            subContainer.addView(yellowBtn)
+            subContainer.addView(yellowResult)
+
+            yellowBtn.setOnClickListener {
+                val actualYellow = RoastEngine.parseMMSS(yellowTimeInput.text.toString())
+                val currentRor = yellowRorInput.text.toString().toDoubleOrNull()
+
+                if (actualYellow == null || currentRor == null) {
+                    yellowResult.text = "请输入正确的 Yellow 时间和 ROR。"
+                    return@setOnClickListener
+                }
+
+                val diff = actualYellow - predYellow
+
+                val message = when {
+                    diff > 15 -> """
+转黄偏慢 ${diff}s
+
+建议
+• H3 +60W
+• 2风门延后 10-15s
+• FC 新预测：${RoastEngine.toMMSS((predFc + diff * 0.6).coerceAtMost(predFc + 35.0))}
+• 目标：避免一爆过晚
+                    """.trimIndent()
+
+                    diff < -15 -> """
+转黄偏快 ${-diff}s
+
+建议
+• H3 -60W
+• 2风门提前 10-15s
+• Protect 提前 10s
+• FC 新预测：${RoastEngine.toMMSS((predFc + diff * 0.6).coerceAtLeast(predFc - 35.0))}
+• 目标：避免爆前冲高
+                    """.trimIndent()
+
+                    currentRor > 14.0 -> """
+转黄后 ROR 偏高
+
+建议
+• H3 -40W
+• 风门 +2Pa
+• Protect 提前 10s
+• 目标：压制梅纳冲高
+                    """.trimIndent()
+
+                    else -> """
+转黄阶段基本正常
+
+建议
+• H3 保持
+• 风门保持
+• FC 仍按原预测推进
+                    """.trimIndent()
+                }
+
+                yellowResult.text = message
+            }
+
+            // FC Assist
+            subContainer.addView(cardTitle("First Crack Assist"))
+            val fcTimeInput = textInput("实际 FC，例如 8:42")
+            val preFcRorInput = decimalInput("Pre-FC ROR，例如 9.5")
+            val fcBtn = Button(this)
+            fcBtn.text = "修正发展段"
+            val fcResult = TextView(this)
+
+            subContainer.addView(fcTimeInput)
+            subContainer.addView(preFcRorInput)
+            subContainer.addView(fcBtn)
+            subContainer.addView(fcResult)
+
+            fcBtn.setOnClickListener {
+                val actualFc = RoastEngine.parseMMSS(fcTimeInput.text.toString())
+                val preFcRor = preFcRorInput.text.toString().toDoubleOrNull()
+
+                if (actualFc == null || preFcRor == null) {
+                    fcResult.text = "请输入正确的 FC 时间和 Pre-FC ROR。"
+                    return@setOnClickListener
+                }
+
+                val diff = actualFc - predFc
+
+                val message = when {
+                    preFcRor > 10.0 -> """
+爆前 ROR 偏高
+
+建议
+• H4 -60W
+• 风门 +2Pa
+• 发展控制 75-85s
+• Drop 参考：${RoastEngine.toMMSS((actualFc + 80.0))}
+                    """.trimIndent()
+
+                    preFcRor < 7.0 -> """
+爆前能量不足
+
+建议
+• H4 +40W
+• 风门保持
+• 发展控制 85-95s
+• Drop 参考：${RoastEngine.toMMSS((actualFc + 90.0))}
+                    """.trimIndent()
+
+                    diff > 15 -> """
+FC 偏慢 ${diff}s
+
+建议
+• 发展段不要过长
+• H4 保持或微增
+• Drop 参考：${RoastEngine.toMMSS((actualFc + 85.0))}
+                    """.trimIndent()
+
+                    diff < -15 -> """
+FC 偏快 ${-diff}s
+
+建议
+• H4 微降
+• 风门微增
+• 发展控制 70-80s
+• Drop 参考：${RoastEngine.toMMSS((actualFc + 75.0))}
+                    """.trimIndent()
+
+                    else -> """
+爆前状态正常
+
+建议
+• 保持当前火力
+• 保持当前风门
+• 发展控制 75-90s
+• Drop 参考：${RoastEngine.toMMSS((actualFc + 82.0))}
+                    """.trimIndent()
+                }
+
+                fcResult.text = message
+            }
         }
 
         fun showCorrection() {
@@ -404,145 +625,4 @@ class MainActivity : Activity() {
         }
 
         val orientation = when (flavorCn) {
-            "干净清晰" -> "clean"
-            "平衡甜感" -> "stable"
-            "高风味强度" -> "stable"
-            "厚重Body" -> "thick"
-            else -> "clean"
-        }
-
-        return PlannerInput(
-            process = process,
-            density = density,
-            moisture = moisture,
-            aw = aw,
-            envTemp = envTemp,
-            envRH = humidity,
-            roastLevel = roastLevel,
-            purpose = "pourover",
-            orientation = orientation,
-            mode = if (batchCn == "连续批") "M2" else "M1",
-            ttSec = 80,
-            tySec = 250
-        )
-    }
-
-    private fun generatePlannerStrategy() {
-        val input = buildPlannerInputFromUi()
-        val result = RoastEngine.calcCard(input)
-
-        lastPlannerInput = input
-        lastPlannerResult = result
-
-        plannerResultView.text = """
-Bean Process
-${result.ptLabel}
-
-Charge BT
-${result.chargeBT}℃
-
-RPM
-${result.rpm}
-
-Preheat / Dev PA
-${result.preheatPa}Pa / ${result.devPa}Pa
-
-Predicted First Crack
-FC1 ${RoastEngine.toMMSS(result.fc1)}
-FC2 ${result.fc2?.let { RoastEngine.toMMSS(it) } ?: "-"}
-FC Pred ${RoastEngine.toMMSS(result.fcPredSec)}
-
-Drop / Development
-Drop ${RoastEngine.toMMSS(result.dropSec)}
-Dev ${result.devTime}s
-DTR ${"%.1f".format(result.dtrPercent)}%
-
-Heat Plan
-H1 ${result.h1W}W @ ${RoastEngine.toMMSS(result.h1Sec)}
-H2 ${result.h2W}W @ ${RoastEngine.toMMSS(result.h2Sec)}
-H3 ${result.h3W}W @ ${RoastEngine.toMMSS(result.h3Sec)}
-H4 ${result.h4W}W @ ${RoastEngine.toMMSS(result.h4Sec)}
-H5 ${result.h5W}W @ ${RoastEngine.toMMSS(result.h5Sec)}
-
-Air Plan
-Wind1 ${result.wind1Pa}Pa @ ${RoastEngine.toMMSS(result.wind1Sec)}
-Wind2 ${result.wind2Pa}Pa @ ${RoastEngine.toMMSS(result.wind2Sec)}
-Protect @ ${RoastEngine.toMMSS(result.protectSec)}
-
-ROR Targets
-Target 1 ${"%.1f".format(result.rorTargets[0])}
-Target 2 ${"%.1f".format(result.rorTargets[1])}
-Target 3 ${"%.1f".format(result.rorTargets[2])}
-
-ROR Full
-${result.rorFull.joinToString(" / ") { "%.1f".format(it) }}
-
-Flags
-awTol ${"%.1f".format(result.awTol)}
-M3 Protected ${if (result.m3Protected) "YES" else "NO"}
-LowDens Assist ${if (result.m3LowDens) "YES" else "NO"}
-        """.trimIndent()
-    }
-
-    private fun generateCorrectionStrategy() {
-        val plannerInput = lastPlannerInput
-        val plannerResult = lastPlannerResult
-
-        if (plannerInput == null || plannerResult == null) {
-            correctionResultView.text = "请先在 Planner 中生成第一锅策略。"
-            return
-        }
-
-        val turningSec = RoastEngine.parseMMSS(actualTurningInput.text.toString())
-        val yellowSec = RoastEngine.parseMMSS(actualYellowInput.text.toString())
-        val fcSec = RoastEngine.parseMMSS(actualFcInput.text.toString())
-        val dropSec = RoastEngine.parseMMSS(actualDropInput.text.toString())
-        val preFcRor = actualPreFcRorInput.text.toString().toDoubleOrNull()
-
-        if (turningSec == null || yellowSec == null || fcSec == null || dropSec == null || preFcRor == null) {
-            correctionResultView.text = "请输入完整且正确的实际数据。时间格式例如 1:28 / 4:35 / 8:52 / 9:38"
-            return
-        }
-
-        val actual = BatchActualInput(
-            turningSec = turningSec,
-            yellowSec = yellowSec,
-            firstCrackSec = fcSec,
-            dropSec = dropSec,
-            preFcRor = preFcRor
-        )
-
-        val correction = CorrectionEngine.correct(
-            plannerInput = plannerInput,
-            predicted = plannerResult,
-            actual = actual,
-            batchIndex = 1
-        )
-
-        correctionResultView.text = """
-Stage
-${correction.stageLabel}
-
-Deviation
-• Turning Δ ${correction.deltaTurningSec}s
-• Yellow Δ ${correction.deltaYellowSec}s
-• FC Δ ${correction.deltaFcSec}s
-• Drop Δ ${correction.deltaDropSec}s
-• Pre-FC ROR Δ ${"%.1f".format(correction.deltaPreFcRor)}
-
-Bias Scores
-• Heat ${"%.2f".format(correction.heatBiasScore)}
-• Air ${"%.2f".format(correction.airflowBiasScore)}
-• Inertia ${"%.2f".format(correction.inertiaBiasScore)}
-
-Diagnosis
-${correction.diagnosis.joinToString("\n") { "• $it" }}
-
-Actions
-${correction.actions.joinToString("\n") { "• $it" }}
-
-Batch 2 Execution Card
-${correction.batch2ExecutionCard}
-        """.trimIndent()
-    }
-}
+            "干净清晰"
