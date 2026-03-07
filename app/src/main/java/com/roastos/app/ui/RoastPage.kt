@@ -8,58 +8,52 @@ import android.widget.TextView
 object RoastPage {
 
     fun show(activity: Activity, container: LinearLayout) {
+
         container.removeAllViews()
 
         val title = TextView(activity)
         title.text = "Roast Center"
         title.textSize = 22f
+
         container.addView(title)
 
-        val tabs = LinearLayout(activity)
-        tabs.orientation = LinearLayout.HORIZONTAL
+        val planner = Button(activity)
+        planner.text = "Planner"
 
-        val plannerBtn = Button(activity)
-        plannerBtn.text = "Planner"
+        val live = Button(activity)
+        live.text = "Live Assist"
 
-        val liveBtn = Button(activity)
-        liveBtn.text = "Live"
+        val correction = Button(activity)
+        correction.text = "Batch Correction"
 
-        val correctionBtn = Button(activity)
-        correctionBtn.text = "Correction"
+        container.addView(planner)
+        container.addView(live)
+        container.addView(correction)
 
-        tabs.addView(plannerBtn)
-        tabs.addView(liveBtn)
-        tabs.addView(correctionBtn)
+        val area = LinearLayout(activity)
+        area.orientation = LinearLayout.VERTICAL
 
-        container.addView(tabs)
+        container.addView(area)
 
-        val sub = LinearLayout(activity)
-        sub.orientation = LinearLayout.VERTICAL
-        container.addView(sub)
-
-        plannerBtn.setOnClickListener {
-            sub.removeAllViews()
+        planner.setOnClickListener {
+            area.removeAllViews()
             val t = TextView(activity)
-            t.text = "Planner page placeholder"
-            sub.addView(t)
+            t.text = "Planner page"
+            area.addView(t)
         }
 
-        liveBtn.setOnClickListener {
-            sub.removeAllViews()
+        live.setOnClickListener {
+            area.removeAllViews()
             val t = TextView(activity)
-            t.text = "Live Assist page placeholder"
-            sub.addView(t)
+            t.text = "Live Assist page"
+            area.addView(t)
         }
 
-        correctionBtn.setOnClickListener {
-            sub.removeAllViews()
+        correction.setOnClickListener {
+            area.removeAllViews()
             val t = TextView(activity)
-            t.text = "Batch Correction page placeholder"
-            sub.addView(t)
+            t.text = "Batch Correction page"
+            area.addView(t)
         }
-
-        val first = TextView(activity)
-        first.text = "Planner page placeholder"
-        sub.addView(first)
     }
 }
