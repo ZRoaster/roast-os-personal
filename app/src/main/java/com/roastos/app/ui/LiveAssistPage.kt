@@ -17,7 +17,6 @@ object LiveAssistPage {
         container.removeAllViews()
 
         val predicted = AppState.lastPlannerResult
-
         if (predicted == null) {
             val t = TextView(context)
             t.text = "Run Planner first."
@@ -38,8 +37,7 @@ object LiveAssistPage {
 
         val summary = TextView(context)
         summary.text = """
-Loaded from Planner
-
+Predicted
 Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
@@ -50,72 +48,80 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
 
         // Turning
         val turningTitle = TextView(context)
-        turningTitle.text = "Turning Assist"
+        turningTitle.text = "Turning"
 
-        val turningInput = EditText(context)
-        turningInput.hint = "Actual Turning sec"
-        turningInput.inputType = InputType.TYPE_CLASS_NUMBER
-        turningInput.setText(predTurning.toString())
+        val actualTurningInput = EditText(context)
+        actualTurningInput.hint = "Actual Turning sec"
+        actualTurningInput.inputType = InputType.TYPE_CLASS_NUMBER
+        AppState.liveActualTurningSec?.let {
+            actualTurningInput.setText(it.toString())
+        } ?: actualTurningInput.setText(predTurning.toString())
 
         val turningBtn = Button(context)
-        turningBtn.text = "Turning Assist"
+        turningBtn.text = "Run Turning Assist"
 
         val turningResult = TextView(context)
 
         root.addView(turningTitle)
-        root.addView(turningInput)
+        root.addView(actualTurningInput)
         root.addView(turningBtn)
         root.addView(turningResult)
 
         // Yellow
         val yellowTitle = TextView(context)
-        yellowTitle.text = "Yellow Assist"
+        yellowTitle.text = "Yellow"
 
-        val yellowInput = EditText(context)
-        yellowInput.hint = "Actual Yellow sec"
-        yellowInput.inputType = InputType.TYPE_CLASS_NUMBER
-        yellowInput.setText(predYellow.toString())
+        val actualYellowInput = EditText(context)
+        actualYellowInput.hint = "Actual Yellow sec"
+        actualYellowInput.inputType = InputType.TYPE_CLASS_NUMBER
+        AppState.liveActualYellowSec?.let {
+            actualYellowInput.setText(it.toString())
+        } ?: actualYellowInput.setText(predYellow.toString())
 
-        val yellowRor = EditText(context)
-        yellowRor.hint = "Current ROR"
-        yellowRor.inputType =
+        val yellowRorInput = EditText(context)
+        yellowRorInput.hint = "Current ROR"
+        yellowRorInput.inputType =
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        yellowRor.setText("13")
+        yellowRorInput.setText("13.0")
 
         val yellowBtn = Button(context)
-        yellowBtn.text = "Yellow Assist"
+        yellowBtn.text = "Run Yellow Assist"
 
         val yellowResult = TextView(context)
 
         root.addView(yellowTitle)
-        root.addView(yellowInput)
-        root.addView(yellowRor)
+        root.addView(actualYellowInput)
+        root.addView(yellowRorInput)
         root.addView(yellowBtn)
         root.addView(yellowResult)
 
         // FC
         val fcTitle = TextView(context)
-        fcTitle.text = "First Crack Assist"
+        fcTitle.text = "First Crack"
 
-        val fcInput = EditText(context)
-        fcInput.hint = "Actual FC sec"
-        fcInput.inputType = InputType.TYPE_CLASS_NUMBER
-        fcInput.setText(predFc.toString())
+        val actualFcInput = EditText(context)
+        actualFcInput.hint = "Actual FC sec"
+        actualFcInput.inputType = InputType.TYPE_CLASS_NUMBER
+        AppState.liveActualFcSec?.let {
+            actualFcInput.setText(it.toString())
+        } ?: actualFcInput.setText(predFc.toString())
 
-        val fcRor = EditText(context)
-        fcRor.hint = "Pre-FC ROR"
-        fcRor.inputType =
+        val preFcRorInput = EditText(context)
+        preFcRorInput.hint = "Pre-FC ROR"
+        preFcRorInput.inputType =
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        fcRor.setText("9")
+        AppState.liveActualPreFcRor?.let {
+            preFcRorInput.setText(it.toString())
+        } ?: preFcRorInput.setText("9.0")
 
         val fcBtn = Button(context)
-        fcBtn.text = "FC Assist"
+        fcBtn.text = "Run FC Assist"
 
         val fcResult = TextView(context)
 
         root.addView(fcTitle)
-        root.addView(fcInput)
-        root.addView(fcRor)
+        root.addView(actualFcInput)
+        root.addView(preFcRorInput)
         root.addView(fcBtn)
         root.addView(fcResult)
 
@@ -124,27 +130,23 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
         turningBtn.setOnClickListener {
 
             val actualTurning =
-                turningInput.text.toString().toIntOrNull() ?: predTurning
+                actualTurningInput.text.toString().toIntOrNull() ?: predTurning
 
             AppState.liveActualTurningSec = actualTurning
 
-            val advice = LiveAssistEngine.turningAssist(
-                predTurning,
-                actualTurning
-            )
-
+            val advice = LiveAssistEngine.turningAssist(predTurning, actualTurning)
             val diff = actualTurning - predTurning
 
             val targetNext = when {
-                diff > 8 -> "Pull Yellow back toward ${RoastEngine.toMMSS((predYellow + diff / 2.0).toDouble())}"
-                diff < -8 -> "Prevent Yellow from arriving too early"
-                else -> "Hold Yellow near original window"
+                diff > 8 -> "Pull Yellow back toward target window"
+                diff < -8 -> "Delay Yellow slightly and reduce early push"
+                else -> "Hold Yellow near current prediction"
             }
 
             val risk = when {
-                diff > 8 -> "Front-end energy short / Yellow delay risk"
-                diff < -8 -> "Mid-phase push too fast risk"
-                else -> "No immediate front-end risk"
+                diff > 8 -> "Front-end energy short risk"
+                diff < -8 -> "Mid-phase acceleration risk"
+                else -> "No immediate Turning risk"
             }
 
             turningResult.text = """
@@ -170,33 +172,28 @@ $risk
         yellowBtn.setOnClickListener {
 
             val actualYellow =
-                yellowInput.text.toString().toIntOrNull() ?: predYellow
+                actualYellowInput.text.toString().toIntOrNull() ?: predYellow
 
             val ror =
-                yellowRor.text.toString().toDoubleOrNull() ?: 13.0
+                yellowRorInput.text.toString().toDoubleOrNull() ?: 13.0
 
             AppState.liveActualYellowSec = actualYellow
 
-            val advice = LiveAssistEngine.yellowAssist(
-                predYellow,
-                actualYellow,
-                ror
-            )
-
+            val advice = LiveAssistEngine.yellowAssist(predYellow, actualYellow, ror)
             val diff = actualYellow - predYellow
 
             val targetNext = when {
-                diff > 15 -> "Pull FC back earlier with stronger middle push"
-                diff < -15 -> "Delay FC slightly and protect pre-crack stability"
-                ror > 14.0 -> "Reduce mid-phase momentum before FC"
-                else -> "Keep FC on original prediction path"
+                diff > 15 -> "Recover FC timing with stronger mid push"
+                diff < -15 -> "Slow momentum before crack"
+                ror > 14.0 -> "Reduce ROR before pre-crack section"
+                else -> "Keep FC on current path"
             }
 
             val risk = when {
-                diff > 15 -> "Late FC / baked middle risk"
+                diff > 15 -> "Late crack / flat finish risk"
                 diff < -15 -> "Pre-FC overshoot risk"
                 ror > 14.0 -> "High ROR spike risk"
-                else -> "Middle phase relatively stable"
+                else -> "Middle phase stable"
             }
 
             yellowResult.text = """
@@ -223,44 +220,31 @@ $risk
         fcBtn.setOnClickListener {
 
             val actualFc =
-                fcInput.text.toString().toIntOrNull() ?: predFc
+                actualFcInput.text.toString().toIntOrNull() ?: predFc
 
             val ror =
-                fcRor.text.toString().toDoubleOrNull() ?: 9.0
+                preFcRorInput.text.toString().toDoubleOrNull() ?: 9.0
 
             AppState.liveActualFcSec = actualFc
             AppState.liveActualPreFcRor = ror
 
-            val advice = LiveAssistEngine.fcAssist(
-                predFc,
-                actualFc,
-                ror
-            )
-
+            val advice = LiveAssistEngine.fcAssist(predFc, actualFc, ror)
             val diff = actualFc - predFc
 
             val targetNext = when {
                 ror > 10.0 -> "Stabilize development and prevent overshoot"
-                ror < 7.0 -> "Support development energy and avoid crash"
-                diff > 15 -> "Avoid dragging development too long"
-                diff < -15 -> "Protect sweetness and avoid sharp finish"
+                ror < 7.0 -> "Preserve energy and avoid crash"
+                diff > 15 -> "Avoid dragging development"
+                diff < -15 -> "Protect sweetness and avoid harsh finish"
                 else -> "Hold development in controlled window"
             }
 
             val risk = when {
                 ror > 10.0 -> "Development overshoot risk"
-                ror < 7.0 -> "Development crash / hollow finish risk"
+                ror < 7.0 -> "Development crash risk"
                 diff > 15 -> "Late crack / flat finish risk"
                 diff < -15 -> "Fast crack / sharp finish risk"
-                else -> "Development risk moderate"
-            }
-
-            turningInput.text?.toString()?.toIntOrNull()?.let {
-                AppState.liveActualTurningSec = it
-            }
-
-            yellowInput.text?.toString()?.toIntOrNull()?.let {
-                AppState.liveActualYellowSec = it
+                else -> "Moderate development risk"
             }
 
             fcResult.text = """
