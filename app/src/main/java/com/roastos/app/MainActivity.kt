@@ -3,6 +3,7 @@ package com.roastos.app
 import android.app.Activity
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -359,8 +360,8 @@ class MainActivity : Activity() {
     }
 
     private fun dp(value: Int): Int {
-        return (value * resources.displayMetrics.density).toInt()
-    }
+    return (value * getResources().displayMetrics.density).toInt()
+}
 }    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = "Roast OS"
