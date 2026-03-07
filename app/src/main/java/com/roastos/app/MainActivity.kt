@@ -1,18 +1,18 @@
 package com.roastos.app
 
 import android.os.Bundle
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val text = TextView(this)
-        text.text = "Roast OS\nHB M2SE Roasting Console"
-        text.textSize = 24f
+        val textView = TextView(this)
+        textView.text = "Roast OS\n\n系统启动成功"
+        textView.textSize = 24f
 
-        setContentView(text)
+        setContentView(textView)
     }
 }
