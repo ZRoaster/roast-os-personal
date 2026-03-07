@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.LiveAssistEngine
+import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
 
 object LiveAssistPage {
@@ -46,6 +47,18 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
 
+        val phaseTitle = TextView(context)
+        phaseTitle.text = "AUTO PHASE ENGINE"
+        phaseTitle.textSize = 18f
+
+        val phaseCard = TextView(context)
+        phaseCard.text = buildPhaseCard(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
         val currentCardTitle = TextView(context)
         currentCardTitle.text = "CURRENT CONTROL CARD"
         currentCardTitle.textSize = 18f
@@ -60,6 +73,8 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
 
         root.addView(title)
         root.addView(plannerSummary)
+        root.addView(phaseTitle)
+        root.addView(phaseCard)
         root.addView(currentCardTitle)
         root.addView(currentCard)
 
@@ -169,7 +184,7 @@ Air: ${advice.airflow}
 
             val targetNext = when {
                 diff > 8 -> "Push Yellow back toward target window"
-                diff < -8 -> "Slow early momentum and protect mid phase"
+                diff < -8 -> "Delay Yellow slightly and reduce early push"
                 else -> "Hold Yellow near current prediction"
             }
 
@@ -196,6 +211,13 @@ $targetNext
 Risk
 $risk
             """.trimIndent()
+
+            phaseCard.text = buildPhaseCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
 
             currentCard.text = buildControlCard(
                 predTurning = predTurning,
@@ -255,6 +277,13 @@ $targetNext
 Risk
 $risk
             """.trimIndent()
+
+            phaseCard.text = buildPhaseCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
 
             currentCard.text = buildControlCard(
                 predTurning = predTurning,
@@ -323,6 +352,13 @@ Risk
 $risk
             """.trimIndent()
 
+            phaseCard.text = buildPhaseCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
+
             currentCard.text = buildControlCard(
                 predTurning = predTurning,
                 predYellow = predYellow,
@@ -330,6 +366,40 @@ $risk
                 predDrop = predDrop
             )
         }
+    }
+
+    private fun buildPhaseCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+
+        val phase = PhaseEngine.detect(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            actualDrop = AppState.liveActualDropSec,
+            actualPreFcRor = AppState.liveActualPreFcRor
+        )
+
+        return """
+Current Phase
+${phase.currentPhase}
+
+Next Target
+${phase.nextTargetLabel} ${RoastEngine.toMMSS(phase.nextTargetSec.toDouble())}
+
+Phase Summary
+${phase.phaseSummary}
+
+Risk Hint
+${phase.riskHint}
+        """.trimIndent()
     }
 
     private fun buildControlCard(
@@ -346,6 +416,7 @@ $risk
         val actualRor = AppState.liveActualPreFcRor
 
         val currentStage = when {
+            actualDrop != null -> "Finished"
             actualFc != null -> "Development / Drop"
             actualYellow != null -> "Maillard / Pre-FC"
             actualTurning != null -> "Drying / To Yellow"
@@ -361,6 +432,7 @@ $risk
         }
 
         val biggestRisk = when {
+            actualDrop != null -> "Batch complete"
             actualFc != null && actualRor != null && actualRor > 10.0 -> "Overshoot in development"
             actualFc != null && actualRor != null && actualRor < 7.0 -> "Development crash"
             actualYellow != null && actualYellow - predYellow > 15 -> "Late crack / flat cup"
