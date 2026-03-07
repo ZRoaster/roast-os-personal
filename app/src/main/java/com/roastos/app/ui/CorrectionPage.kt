@@ -2,13 +2,8 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.text.InputType
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
-import com.roastos.app.AppState
-import com.roastos.app.BatchActualInput
-import com.roastos.app.CorrectionEngine
+import android.widget.*
+import com.roastos.app.*
 
 object CorrectionPage {
 
@@ -20,9 +15,11 @@ object CorrectionPage {
         val predicted = AppState.lastPlannerResult
 
         if (plannerInput == null || predicted == null) {
-            val text = TextView(context)
-            text.text = "No planner state found. Please run Planner first."
-            container.addView(text)
+
+            val t = TextView(context)
+            t.text = "Run Planner first."
+            container.addView(t)
+
             return
         }
 
@@ -33,105 +30,91 @@ object CorrectionPage {
         title.text = "BATCH CORRECTION"
         title.textSize = 22f
 
-        val stateSummary = TextView(context)
-        stateSummary.text = """
-Loaded from Planner
-
-Pred FC ${predicted.fcPredSec.toInt()} sec
-Pred Drop ${predicted.dropSec.toInt()} sec
-Charge ${predicted.chargeBT}℃
-        """.trimIndent()
-
-        val actualTurningInput = EditText(context)
-        actualTurningInput.hint = "Actual Turning sec"
-        actualTurningInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualTurningInput.setText((predicted.h1Sec - 60.0).toInt().toString())
-
-        val actualYellowInput = EditText(context)
-        actualYellowInput.hint = "Actual Yellow sec"
-        actualYellowInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualYellowInput.setText(predicted.h2Sec.toInt().toString())
-
-        val actualFcInput = EditText(context)
-        actualFcInput.hint = "Actual FC sec"
-        actualFcInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualFcInput.setText(predicted.fcPredSec.toInt().toString())
-
-        val actualDropInput = EditText(context)
-        actualDropInput.hint = "Actual Drop sec"
-        actualDropInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualDropInput.setText(predicted.dropSec.toInt().toString())
-
-        val actualPreFcRorInput = EditText(context)
-        actualPreFcRorInput.hint = "Actual Pre-FC ROR"
-        actualPreFcRorInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        actualPreFcRorInput.setText(predicted.rorFull5[3].toString())
-
-        val calculateBtn = Button(context)
-        calculateBtn.text = "Generate Batch 2 Strategy"
-
-        val resultView = TextView(context)
-
         root.addView(title)
-        root.addView(stateSummary)
-        root.addView(actualTurningInput)
-        root.addView(actualYellowInput)
-        root.addView(actualFcInput)
-        root.addView(actualDropInput)
-        root.addView(actualPreFcRorInput)
-        root.addView(calculateBtn)
-        root.addView(resultView)
+
+        val turningInput = EditText(context)
+        turningInput.hint = "Turning sec"
+        turningInput.inputType = InputType.TYPE_CLASS_NUMBER
+
+        val yellowInput = EditText(context)
+        yellowInput.hint = "Yellow sec"
+        yellowInput.inputType = InputType.TYPE_CLASS_NUMBER
+
+        val fcInput = EditText(context)
+        fcInput.hint = "FC sec"
+        fcInput.inputType = InputType.TYPE_CLASS_NUMBER
+
+        val dropInput = EditText(context)
+        dropInput.hint = "Drop sec"
+        dropInput.inputType = InputType.TYPE_CLASS_NUMBER
+        dropInput.setText(predicted.dropSec.toInt().toString())
+
+        val rorInput = EditText(context)
+        rorInput.hint = "Pre-FC ROR"
+        rorInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+
+        // 自动带入 Live 数据
+        AppState.liveActualTurningSec?.let {
+            turningInput.setText(it.toString())
+        }
+
+        AppState.liveActualYellowSec?.let {
+            yellowInput.setText(it.toString())
+        }
+
+        AppState.liveActualFcSec?.let {
+            fcInput.setText(it.toString())
+        }
+
+        AppState.liveActualPreFcRor?.let {
+            rorInput.setText(it.toString())
+        }
+
+        val runBtn = Button(context)
+        runBtn.text = "Generate Batch 2"
+
+        val result = TextView(context)
+
+        root.addView(turningInput)
+        root.addView(yellowInput)
+        root.addView(fcInput)
+        root.addView(dropInput)
+        root.addView(rorInput)
+        root.addView(runBtn)
+        root.addView(result)
 
         container.addView(root)
 
-        calculateBtn.setOnClickListener {
+        runBtn.setOnClickListener {
 
             val actual = BatchActualInput(
-                turningSec = actualTurningInput.text.toString().toIntOrNull()
-                    ?: (predicted.h1Sec - 60.0).toInt(),
-                yellowSec = actualYellowInput.text.toString().toIntOrNull()
-                    ?: predicted.h2Sec.toInt(),
-                firstCrackSec = actualFcInput.text.toString().toIntOrNull()
-                    ?: predicted.fcPredSec.toInt(),
-                dropSec = actualDropInput.text.toString().toIntOrNull()
+
+                turningSec =
+                turningInput.text.toString().toIntOrNull() ?: 80,
+
+                yellowSec =
+                yellowInput.text.toString().toIntOrNull() ?: 250,
+
+                firstCrackSec =
+                fcInput.text.toString().toIntOrNull() ?: 510,
+
+                dropSec =
+                dropInput.text.toString().toIntOrNull()
                     ?: predicted.dropSec.toInt(),
-                preFcRor = actualPreFcRorInput.text.toString().toDoubleOrNull()
-                    ?: predicted.rorFull5[3]
+
+                preFcRor =
+                rorInput.text.toString().toDoubleOrNull() ?: 9.0
             )
 
             val correction = CorrectionEngine.correct(
-                plannerInput = plannerInput,
-                predicted = predicted,
-                actual = actual,
-                batchIndex = plannerInput.batchNum
+                plannerInput,
+                predicted,
+                actual,
+                plannerInput.batchNum
             )
 
-            resultView.text = """
-Stage
-${correction.stageLabel}
-
-Deviation
-Turning Δ ${correction.deltaTurningSec}s
-Yellow Δ ${correction.deltaYellowSec}s
-FC Δ ${correction.deltaFcSec}s
-Drop Δ ${correction.deltaDropSec}s
-Pre-FC ROR Δ ${"%.1f".format(correction.deltaPreFcRor)}
-
-Bias Scores
-Heat ${"%.2f".format(correction.heatBiasScore)}
-Airflow ${"%.2f".format(correction.airflowBiasScore)}
-Inertia ${"%.2f".format(correction.inertiaBiasScore)}
-
-Diagnosis
-${correction.diagnosis.joinToString("\n")}
-
-Actions
-${correction.actions.joinToString("\n")}
-
-Batch 2 Execution Card
-${correction.batch2ExecutionCard}
-            """.trimIndent()
+            result.text = correction.batch2ExecutionCard
         }
     }
 }
