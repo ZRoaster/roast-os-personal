@@ -52,29 +52,6 @@ object PlannerPage {
         humidityInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         humidityInput.setText("40")
 
-        val roastLevelInput = EditText(context)
-        roastLevelInput.hint = "Roast Level: light / light_medium / medium / medium_dark"
-        roastLevelInput.setText("light_medium")
-
-        val orientationInput = EditText(context)
-        orientationInput.hint = "Orientation: clean / stable / thick"
-        orientationInput.setText("clean")
-
-        val batchInput = EditText(context)
-        batchInput.hint = "Batch Number"
-        batchInput.inputType = InputType.TYPE_CLASS_NUMBER
-        batchInput.setText("1")
-
-        val ttInput = EditText(context)
-        ttInput.hint = "Turning Time sec"
-        ttInput.inputType = InputType.TYPE_CLASS_NUMBER
-        ttInput.setText("80")
-
-        val tyInput = EditText(context)
-        tyInput.hint = "Yellow Time sec"
-        tyInput.inputType = InputType.TYPE_CLASS_NUMBER
-        tyInput.setText("250")
-
         val calculateBtn = Button(context)
         calculateBtn.text = "Generate Roast Card"
 
@@ -87,11 +64,6 @@ object PlannerPage {
         root.addView(awInput)
         root.addView(envTempInput)
         root.addView(humidityInput)
-        root.addView(roastLevelInput)
-        root.addView(orientationInput)
-        root.addView(batchInput)
-        root.addView(ttInput)
-        root.addView(tyInput)
         root.addView(calculateBtn)
         root.addView(resultView)
 
@@ -106,18 +78,21 @@ object PlannerPage {
                 aw = awInput.text.toString().toDoubleOrNull() ?: 0.55,
                 envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0,
                 envRH = humidityInput.text.toString().toDoubleOrNull() ?: 40.0,
-                roastLevel = roastLevelInput.text.toString().ifBlank { "light_medium" },
-                orientation = orientationInput.text.toString().ifBlank { "clean" },
+
+                roastLevel = "light_medium",
+                orientation = "clean",
                 purpose = "pourover",
-                batchNum = batchInput.text.toString().toIntOrNull() ?: 1,
+                batchNum = 1,
                 beanSize = "normal",
                 freshness = "fresh",
                 mode = "M2",
+
                 learnM = 5.5,
                 learnK = 26.0,
                 learnW = 0.65,
-                ttSec = ttInput.text.toString().toIntOrNull() ?: 80,
-                tySec = tyInput.text.toString().toIntOrNull() ?: 250
+
+                ttSec = 80,
+                tySec = 250
             )
 
             val plan = RoastEngine.calcCard(input)
@@ -137,18 +112,11 @@ object PlannerPage {
                 else -> "Low"
             }
 
-            val processRisk = when {
-                input.process == "anaerobic" -> "Fermentation / front-end pressure risk"
-                input.process == "natural" -> "Drying / momentum control risk"
-                input.process == "honey_washed" -> "Middle-stage thickness risk"
+            val riskFocus = when (input.process) {
+                "anaerobic" -> "Front-end pressure / overshoot risk"
+                "natural" -> "Drying momentum control risk"
+                "honey_washed" -> "Middle-stage thickness risk"
                 else -> "Relatively clean process"
-            }
-
-            val styleNote = when (input.orientation) {
-                "clean" -> "Prioritize clean cup, airflow clarity, controlled pre-FC ROR"
-                "stable" -> "Prioritize balance and replayability"
-                "thick" -> "Prioritize body and sweetness, avoid over-exhaust"
-                else -> "Balanced execution"
             }
 
             resultView.text = """
@@ -167,13 +135,12 @@ RH ${"%.1f".format(input.envRH)}%
 Core Setup
 Charge ${plan.chargeBT}℃
 RPM ${plan.rpm}
-Batch ${input.batchNum}
 Mode ${input.mode}
 
 Heat Demand
 $heatDemand
 
-Predicted Timeline
+Timeline
 Turning ${RoastEngine.toMMSS(turningSec.toDouble())}
 Yellow ${RoastEngine.toMMSS(yellowSec.toDouble())}
 FC ${RoastEngine.toMMSS(fcSec.toDouble())}
@@ -200,22 +167,11 @@ Protect @ ${RoastEngine.toMMSS(plan.protectSec)}
 ROR Targets
 ${plan.rorTargets.joinToString(" / ") { "%.1f".format(it) }}
 
-ROR Full Path
-${plan.rorFull.joinToString(" / ") { "%.1f".format(it) }}
-
-Execution Notes
-$styleNote
-
 Risk Focus
-$processRisk
-
-Flags
-awTol ${"%.1f".format(plan.awTol)}
-M3 Protected ${if (plan.m3Protected) "YES" else "NO"}
-LowDens Assist ${if (plan.m3LowDens) "YES" else "NO"}
+$riskFocus
 
 State
-Planner result saved for Live / Correction
+Planner saved for Live / Correction
             """.trimIndent()
         }
     }
