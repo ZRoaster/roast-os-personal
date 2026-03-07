@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.roastos.app.AppState
 import com.roastos.app.PlannerInput
 import com.roastos.app.RoastEngine
 
@@ -121,6 +122,9 @@ object PlannerPage {
 
             val plan = RoastEngine.calcCard(input)
 
+            AppState.lastPlannerInput = input
+            AppState.lastPlannerResult = plan
+
             resultView.text = """
 Process
 ${plan.ptLabel}
@@ -161,6 +165,9 @@ Flags
 awTol ${"%.1f".format(plan.awTol)}
 M3 Protected ${if (plan.m3Protected) "YES" else "NO"}
 LowDens Assist ${if (plan.m3LowDens) "YES" else "NO"}
+
+State
+Planner result saved for Live / Correction
             """.trimIndent()
         }
     }
