@@ -47,12 +47,7 @@ object RoastPage {
         }
 
         correctionBtn.setOnClickListener {
-            content.removeAllViews()
-
-            val text = TextView(context)
-            text.text = "Correction Engine Ready"
-
-            content.addView(text)
+            CorrectionPage.show(context, content)
         }
 
         PlannerPage.show(context, content)
