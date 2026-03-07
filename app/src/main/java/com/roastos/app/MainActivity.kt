@@ -3,13 +3,13 @@ package com.roastos.app
 import android.app.Activity
 import android.os.Bundle
 import android.text.InputType
-import android.view.View
 import android.widget.*
 
 class MainActivity : Activity() {
 
     private lateinit var container: LinearLayout
 
+    // Planner inputs
     private lateinit var densityInput: EditText
     private lateinit var moistureInput: EditText
     private lateinit var awInput: EditText
@@ -22,6 +22,18 @@ class MainActivity : Activity() {
     private lateinit var batchSpinner: Spinner
 
     private lateinit var plannerResultView: TextView
+
+    // Correction inputs
+    private lateinit var actualTurningInput: EditText
+    private lateinit var actualYellowInput: EditText
+    private lateinit var actualFcInput: EditText
+    private lateinit var actualDropInput: EditText
+    private lateinit var actualPreFcRorInput: EditText
+    private lateinit var correctionResultView: TextView
+
+    // Shared state
+    private var lastPlannerInput: PlannerInput? = null
+    private var lastPlannerResult: PlannerResult? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,6 +147,12 @@ class MainActivity : Activity() {
         return e
     }
 
+    private fun textInput(hint: String): EditText {
+        val e = EditText(this)
+        e.hint = hint
+        return e
+    }
+
     private fun spinner(list: List<String>): Spinner {
         val s = Spinner(this)
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, list)
@@ -154,13 +172,13 @@ class MainActivity : Activity() {
         container.addView(normalText("Max Power: 1450W"))
 
         container.addView(cardTitle("Quick Access"))
-        container.addView(normalText("• Roast Planner：调用原生 RoastEngine"))
-        container.addView(normalText("• Batch Correction：下一步实装"))
+        container.addView(normalText("• Roast Planner：生成第一锅执行卡"))
+        container.addView(normalText("• Batch Correction：生成第二锅修正执行卡"))
         container.addView(normalText("• Bean Library：架构预留位"))
 
         container.addView(cardTitle("Current Build"))
-        container.addView(normalText("• Android 原生多页面骨架"))
-        container.addView(normalText("• Planner 已切到 RoastEngine"))
+        container.addView(normalText("• Planner 已接原生 RoastEngine"))
+        container.addView(normalText("• Correction 已接原生 CorrectionEngine"))
         container.addView(normalText("• Beans / Brew / AI 先保留架构位"))
     }
 
@@ -266,12 +284,43 @@ class MainActivity : Activity() {
         fun showCorrection() {
             subContainer.removeAllViews()
             subContainer.addView(cardTitle("Batch Correction"))
-            subContainer.addView(normalText("下一步实装："))
-            subContainer.addView(normalText("• 实际 Turning"))
-            subContainer.addView(normalText("• 实际 Yellow"))
-            subContainer.addView(normalText("• 实际 FC"))
-            subContainer.addView(normalText("• 实际 Drop"))
-            subContainer.addView(normalText("• 实际 Pre-FC ROR"))
+
+            subContainer.addView(normalText("实际 Turning (mm:ss)"))
+            actualTurningInput = textInput("例如 1:28")
+            subContainer.addView(actualTurningInput)
+
+            subContainer.addView(normalText("实际 Yellow (mm:ss)"))
+            actualYellowInput = textInput("例如 4:35")
+            subContainer.addView(actualYellowInput)
+
+            subContainer.addView(normalText("实际 First Crack (mm:ss)"))
+            actualFcInput = textInput("例如 8:52")
+            subContainer.addView(actualFcInput)
+
+            subContainer.addView(normalText("实际 Drop (mm:ss)"))
+            actualDropInput = textInput("例如 9:38")
+            subContainer.addView(actualDropInput)
+
+            subContainer.addView(normalText("实际 Pre-FC ROR"))
+            actualPreFcRorInput = decimalInput("例如 9.5")
+            subContainer.addView(actualPreFcRorInput)
+
+            val correctionBtnInner = Button(this)
+            correctionBtnInner.text = "生成 Batch 2 修正策略"
+            subContainer.addView(correctionBtnInner)
+
+            correctionResultView = TextView(this)
+            correctionResultView.text = "\n等待生成 Batch 2 修正策略"
+            correctionResultView.textSize = 16f
+            subContainer.addView(correctionResultView)
+
+            correctionBtnInner.setOnClickListener {
+                generateCorrectionStrategy()
+            }
+
+            if (lastPlannerResult == null) {
+                correctionResultView.text = "请先在 Planner 中生成第一锅策略。"
+            }
         }
 
         fun showReplay() {
@@ -326,7 +375,7 @@ class MainActivity : Activity() {
         container.addView(normalText("• 机器 DNA 学到了什么"))
     }
 
-    private fun generatePlannerStrategy() {
+    private fun buildPlannerInputFromUi(): PlannerInput {
         val density = densityInput.text.toString().toDoubleOrNull() ?: 820.0
         val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 10.5
         val aw = awInput.text.toString().toDoubleOrNull() ?: 0.55
@@ -362,7 +411,7 @@ class MainActivity : Activity() {
             else -> "clean"
         }
 
-        val input = PlannerInput(
+        return PlannerInput(
             process = process,
             density = density,
             moisture = moisture,
@@ -376,8 +425,14 @@ class MainActivity : Activity() {
             ttSec = 80,
             tySec = 250
         )
+    }
 
+    private fun generatePlannerStrategy() {
+        val input = buildPlannerInputFromUi()
         val result = RoastEngine.calcCard(input)
+
+        lastPlannerInput = input
+        lastPlannerResult = result
 
         plannerResultView.text = """
 Bean Process
@@ -426,6 +481,68 @@ Flags
 awTol ${"%.1f".format(result.awTol)}
 M3 Protected ${if (result.m3Protected) "YES" else "NO"}
 LowDens Assist ${if (result.m3LowDens) "YES" else "NO"}
+        """.trimIndent()
+    }
+
+    private fun generateCorrectionStrategy() {
+        val plannerInput = lastPlannerInput
+        val plannerResult = lastPlannerResult
+
+        if (plannerInput == null || plannerResult == null) {
+            correctionResultView.text = "请先在 Planner 中生成第一锅策略。"
+            return
+        }
+
+        val turningSec = RoastEngine.parseMMSS(actualTurningInput.text.toString())
+        val yellowSec = RoastEngine.parseMMSS(actualYellowInput.text.toString())
+        val fcSec = RoastEngine.parseMMSS(actualFcInput.text.toString())
+        val dropSec = RoastEngine.parseMMSS(actualDropInput.text.toString())
+        val preFcRor = actualPreFcRorInput.text.toString().toDoubleOrNull()
+
+        if (turningSec == null || yellowSec == null || fcSec == null || dropSec == null || preFcRor == null) {
+            correctionResultView.text = "请输入完整且正确的实际数据。时间格式例如 1:28 / 4:35 / 8:52 / 9:38"
+            return
+        }
+
+        val actual = BatchActualInput(
+            turningSec = turningSec,
+            yellowSec = yellowSec,
+            firstCrackSec = fcSec,
+            dropSec = dropSec,
+            preFcRor = preFcRor
+        )
+
+        val correction = CorrectionEngine.correct(
+            plannerInput = plannerInput,
+            predicted = plannerResult,
+            actual = actual,
+            batchIndex = 1
+        )
+
+        correctionResultView.text = """
+Stage
+${correction.stageLabel}
+
+Deviation
+• Turning Δ ${correction.deltaTurningSec}s
+• Yellow Δ ${correction.deltaYellowSec}s
+• FC Δ ${correction.deltaFcSec}s
+• Drop Δ ${correction.deltaDropSec}s
+• Pre-FC ROR Δ ${"%.1f".format(correction.deltaPreFcRor)}
+
+Bias Scores
+• Heat ${"%.2f".format(correction.heatBiasScore)}
+• Air ${"%.2f".format(correction.airflowBiasScore)}
+• Inertia ${"%.2f".format(correction.inertiaBiasScore)}
+
+Diagnosis
+${correction.diagnosis.joinToString("\n") { "• $it" }}
+
+Actions
+${correction.actions.joinToString("\n") { "• $it" }}
+
+Batch 2 Execution Card
+${correction.batch2ExecutionCard}
         """.trimIndent()
     }
 }
