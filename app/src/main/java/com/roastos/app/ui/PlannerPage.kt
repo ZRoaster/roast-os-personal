@@ -76,7 +76,7 @@ object PlannerPage {
         tyInput.setText("250")
 
         val calculateBtn = Button(context)
-        calculateBtn.text = "Generate Plan"
+        calculateBtn.text = "Generate Roast Card"
 
         val resultView = TextView(context)
 
@@ -125,21 +125,62 @@ object PlannerPage {
             AppState.lastPlannerInput = input
             AppState.lastPlannerResult = plan
 
+            val turningSec = (plan.h1Sec - 60.0).toInt().coerceAtLeast(50)
+            val yellowSec = plan.h2Sec.toInt()
+            val fcSec = plan.fcPredSec.toInt()
+            val dropSec = plan.dropSec.toInt()
+
+            val heatDemand = when {
+                plan.chargeBT >= 206 -> "Very High"
+                plan.chargeBT >= 205 -> "High"
+                plan.chargeBT >= 203 -> "Medium"
+                else -> "Low"
+            }
+
+            val processRisk = when {
+                input.process == "anaerobic" -> "Fermentation / front-end pressure risk"
+                input.process == "natural" -> "Drying / momentum control risk"
+                input.process == "honey_washed" -> "Middle-stage thickness risk"
+                else -> "Relatively clean process"
+            }
+
+            val styleNote = when (input.orientation) {
+                "clean" -> "Prioritize clean cup, airflow clarity, controlled pre-FC ROR"
+                "stable" -> "Prioritize balance and replayability"
+                "thick" -> "Prioritize body and sweetness, avoid over-exhaust"
+                else -> "Balanced execution"
+            }
+
             resultView.text = """
-Process
-${plan.ptLabel}
+ROAST OS EXECUTION CARD
 
-Charge
-${plan.chargeBT}℃
+Bean
+Process ${plan.ptLabel}
+Density ${"%.1f".format(input.density)}
+Moisture ${"%.1f".format(input.moisture)}
+aw ${"%.2f".format(input.aw)}
 
-Predicted FC
-${RoastEngine.toMMSS(plan.fcPredSec)}
+Environment
+Temp ${"%.1f".format(input.envTemp)}℃
+RH ${"%.1f".format(input.envRH)}%
 
-Drop
-${RoastEngine.toMMSS(plan.dropSec)}
+Core Setup
+Charge ${plan.chargeBT}℃
+RPM ${plan.rpm}
+Batch ${input.batchNum}
+Mode ${input.mode}
+
+Heat Demand
+$heatDemand
+
+Predicted Timeline
+Turning ${RoastEngine.toMMSS(turningSec.toDouble())}
+Yellow ${RoastEngine.toMMSS(yellowSec.toDouble())}
+FC ${RoastEngine.toMMSS(fcSec.toDouble())}
+Drop ${RoastEngine.toMMSS(dropSec.toDouble())}
 
 Development
-${plan.devTime}s
+Dev ${plan.devTime}s
 DTR ${"%.1f".format(plan.dtrPercent)}%
 
 Heat Plan
@@ -150,6 +191,7 @@ H4 ${plan.h4W}W @ ${RoastEngine.toMMSS(plan.h4Sec)}
 H5 ${plan.h5W}W @ ${RoastEngine.toMMSS(plan.h5Sec)}
 
 Air Plan
+Preheat ${plan.preheatPa}Pa
 Wind1 ${plan.wind1Pa}Pa @ ${RoastEngine.toMMSS(plan.wind1Sec)}
 Wind2 ${plan.wind2Pa}Pa @ ${RoastEngine.toMMSS(plan.wind2Sec)}
 Dev ${plan.devPa}Pa
@@ -158,8 +200,14 @@ Protect @ ${RoastEngine.toMMSS(plan.protectSec)}
 ROR Targets
 ${plan.rorTargets.joinToString(" / ") { "%.1f".format(it) }}
 
-ROR Full
+ROR Full Path
 ${plan.rorFull.joinToString(" / ") { "%.1f".format(it) }}
+
+Execution Notes
+$styleNote
+
+Risk Focus
+$processRisk
 
 Flags
 awTol ${"%.1f".format(plan.awTol)}
