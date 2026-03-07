@@ -10,7 +10,6 @@ class MainActivity : Activity() {
 
     private lateinit var container: LinearLayout
 
-    // Roast Planner inputs
     private lateinit var densityInput: EditText
     private lateinit var moistureInput: EditText
     private lateinit var awInput: EditText
@@ -143,15 +142,6 @@ class MainActivity : Activity() {
         return s
     }
 
-    private fun addDivider() {
-        val divider = View(this)
-        divider.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            2
-        )
-        container.addView(divider)
-    }
-
     private fun showDashboard() {
         clearPage()
 
@@ -163,18 +153,15 @@ class MainActivity : Activity() {
         container.addView(normalText("Charge Base: 204℃"))
         container.addView(normalText("Max Power: 1450W"))
 
-        container.addView(cardTitle("Today Bean"))
-        container.addView(normalText("当前版本先从 Roast Planner 进入选择与生成策略。"))
-
         container.addView(cardTitle("Quick Access"))
-        container.addView(normalText("• Roast Planner：生成第一锅执行卡"))
-        container.addView(normalText("• Batch Correction：修正第二锅"))
-        container.addView(normalText("• Bean Library：管理豆子 DNA"))
+        container.addView(normalText("• Roast Planner：调用原生 RoastEngine"))
+        container.addView(normalText("• Batch Correction：下一步实装"))
+        container.addView(normalText("• Bean Library：架构预留位"))
 
-        container.addView(cardTitle("Current Build Status"))
-        container.addView(normalText("• 多页面导航骨架已建立"))
-        container.addView(normalText("• Roast Planner 已可用"))
-        container.addView(normalText("• Beans / Brew / AI 为架构预留位"))
+        container.addView(cardTitle("Current Build"))
+        container.addView(normalText("• Android 原生多页面骨架"))
+        container.addView(normalText("• Planner 已切到 RoastEngine"))
+        container.addView(normalText("• Beans / Brew / AI 先保留架构位"))
     }
 
     private fun showRoastPage() {
@@ -220,7 +207,7 @@ class MainActivity : Activity() {
             subContainer.addView(cardTitle("Roast Planner"))
 
             subContainer.addView(normalText("处理法"))
-            processSpinner = spinner(listOf("水洗", "日晒", "蜜处理", "厌氧"))
+            processSpinner = spinner(listOf("水洗", "蜜处理", "日晒", "厌氧"))
             subContainer.addView(processSpinner)
 
             subContainer.addView(normalText("密度"))
@@ -264,27 +251,33 @@ class MainActivity : Activity() {
             plannerResultView.textSize = 16f
             subContainer.addView(plannerResultView)
 
-            generateBtn.setOnClickListener { generatePlannerStrategy() }
+            generateBtn.setOnClickListener {
+                generatePlannerStrategy()
+            }
         }
 
         fun showLive() {
             subContainer.removeAllViews()
             subContainer.addView(cardTitle("Roast Live"))
-            subContainer.addView(normalText("预留位：未来接入 HB M2SE 实时数据"))
-            subContainer.addView(normalText("未来显示：BT / ET / ROR / 阶段 / FC 预测 / 下一步动作"))
+            subContainer.addView(normalText("预留位：未来接入 BT / ET / ROR 实时数据"))
+            subContainer.addView(normalText("未来显示：阶段、目标 ROR、FC 预测、下一步动作"))
         }
 
         fun showCorrection() {
             subContainer.removeAllViews()
             subContainer.addView(cardTitle("Batch Correction"))
-            subContainer.addView(normalText("预留位：下一版加入实际 Turning / Yellow / FC / Drop / Pre-FC ROR 输入"))
-            subContainer.addView(normalText("目标：生成 Batch 2 修正执行卡"))
+            subContainer.addView(normalText("下一步实装："))
+            subContainer.addView(normalText("• 实际 Turning"))
+            subContainer.addView(normalText("• 实际 Yellow"))
+            subContainer.addView(normalText("• 实际 FC"))
+            subContainer.addView(normalText("• 实际 Drop"))
+            subContainer.addView(normalText("• 实际 Pre-FC ROR"))
         }
 
         fun showReplay() {
             subContainer.removeAllViews()
             subContainer.addView(cardTitle("Roast Replay"))
-            subContainer.addView(normalText("预留位：未来做预测 vs 实际对比、偏差解释、下一锅修正建议"))
+            subContainer.addView(normalText("预留位：未来做预测 vs 实际对比与复盘"))
         }
 
         plannerBtn.setOnClickListener { showPlanner() }
@@ -299,19 +292,15 @@ class MainActivity : Activity() {
         clearPage()
 
         container.addView(sectionTitle("Bean Library"))
-
         container.addView(cardTitle("Bean DNA Center"))
-        container.addView(normalText("这里未来存放："))
+        container.addView(normalText("预留位："))
         container.addView(normalText("• 名称"))
         container.addView(normalText("• 处理法"))
         container.addView(normalText("• 密度"))
         container.addView(normalText("• 含水率"))
         container.addView(normalText("• aw"))
         container.addView(normalText("• 推荐烘焙窗口"))
-        container.addView(normalText("• 过往批次表现"))
-
-        container.addView(cardTitle("Current Stage"))
-        container.addView(normalText("当前版本先保留 Bean Library 架构位。"))
+        container.addView(normalText("• 历史批次表现"))
     }
 
     private fun showBrewPage() {
@@ -338,198 +327,105 @@ class MainActivity : Activity() {
     }
 
     private fun generatePlannerStrategy() {
-        val density = densityInput.text.toString().toDoubleOrNull() ?: 800.0
-        val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 11.0
+        val density = densityInput.text.toString().toDoubleOrNull() ?: 820.0
+        val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 10.5
         val aw = awInput.text.toString().toDoubleOrNull() ?: 0.55
         val envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0
-        val humidity = humidityInput.text.toString().toDoubleOrNull() ?: 40.0
+        val humidity = humidityInput.text.toString().toDoubleOrNull() ?: 35.0
 
-        val process = processSpinner.selectedItem.toString()
-        val roastLevel = roastLevelSpinner.selectedItem.toString()
-        val flavor = flavorSpinner.selectedItem.toString()
-        val batch = batchSpinner.selectedItem.toString()
+        val processCn = processSpinner.selectedItem.toString()
+        val roastLevelCn = roastLevelSpinner.selectedItem.toString()
+        val flavorCn = flavorSpinner.selectedItem.toString()
+        val batchCn = batchSpinner.selectedItem.toString()
 
-        val inertia =
-            (density - 800.0) / 60.0 +
-            (moisture - 11.0) * 0.9 +
-            (aw - 0.55) * 12.0
-
-        var heatDemand =
-            (density - 800.0) / 40.0 +
-            (moisture - 11.0) * 1.2 +
-            (0.60 - aw) * 8.0 +
-            (22.0 - envTemp) * 0.4 +
-            (45.0 - humidity) * 0.06
-
-        if (process == "日晒") heatDemand += 0.30
-        if (process == "蜜处理") heatDemand += 0.15
-        if (process == "厌氧") heatDemand += 0.40
-        if (batch == "连续批") heatDemand -= 0.35
-
-        val demandLevel = when {
-            heatDemand < -0.2 -> "低"
-            heatDemand < 0.8 -> "中"
-            else -> "高"
+        val process = when (processCn) {
+            "水洗" -> "washed"
+            "蜜处理" -> "honey_washed"
+            "日晒" -> "natural"
+            "厌氧" -> "anaerobic"
+            else -> "washed"
         }
 
-        val turning = when (demandLevel) {
-            "低" -> "1:30-1:40"
-            "中" -> "1:20-1:35"
-            else -> "1:10-1:25"
+        val roastLevel = when (roastLevelCn) {
+            "浅烘" -> "light"
+            "浅中" -> "light_medium"
+            "中烘" -> "medium"
+            "中深" -> "medium_dark"
+            else -> "light_medium"
         }
 
-        val yellow = when (demandLevel) {
-            "低" -> "4:20-4:40"
-            "中" -> "4:05-4:35"
-            else -> "3:50-4:20"
+        val orientation = when (flavorCn) {
+            "干净清晰" -> "clean"
+            "平衡甜感" -> "stable"
+            "高风味强度" -> "stable"
+            "厚重Body" -> "thick"
+            else -> "clean"
         }
 
-        val firstCrack = when (demandLevel) {
-            "低" -> "8:40-9:10"
-            "中" -> "8:20-8:50"
-            else -> "8:00-8:30"
-        }
+        val input = PlannerInput(
+            process = process,
+            density = density,
+            moisture = moisture,
+            aw = aw,
+            envTemp = envTemp,
+            envRH = humidity,
+            roastLevel = roastLevel,
+            purpose = "pourover",
+            orientation = orientation,
+            mode = if (batchCn == "连续批") "M2" else "M1",
+            ttSec = 80,
+            tySec = 250
+        )
 
-        val drop = when (roastLevel) {
-            "浅烘" -> when (demandLevel) {
-                "低" -> "9:20-9:50"
-                "中" -> "9:10-9:40"
-                else -> "8:50-9:20"
-            }
-            "浅中" -> when (demandLevel) {
-                "低" -> "9:40-10:10"
-                "中" -> "9:25-9:55"
-                else -> "9:05-9:35"
-            }
-            "中烘" -> when (demandLevel) {
-                "低" -> "9:55-10:25"
-                "中" -> "9:40-10:10"
-                else -> "9:20-9:50"
-            }
-            else -> when (demandLevel) {
-                "低" -> "10:15-10:45"
-                "中" -> "10:00-10:30"
-                else -> "9:40-10:10"
-            }
-        }
+        val result = RoastEngine.calcCard(input)
 
-        val rorText = when {
-            inertia < -0.2 ->
-                """
-• 回温 20-22
-• 转黄 15-17
-• 梅纳 12-14
-• 爆前 10-11
-• 发展 6-7
-                """.trimIndent()
+        plannerResultView.text = """
+Bean Process
+${result.ptLabel}
 
-            inertia < 0.5 ->
-                """
-• 回温 18-20
-• 转黄 13-15
-• 梅纳 10-12
-• 爆前 8-9
-• 发展 5-6
-                """.trimIndent()
+Charge BT
+${result.chargeBT}℃
 
-            else ->
-                """
-• 回温 16-18
-• 转黄 11-13
-• 梅纳 9-11
-• 爆前 7-8
-• 发展 4-5
-                """.trimIndent()
-        }
+RPM
+${result.rpm}
 
-        val charge = when (demandLevel) {
-            "低" -> "200-202"
-            "中" -> "202-204"
-            else -> "204-206"
-        }
+Preheat / Dev PA
+${result.preheatPa}Pa / ${result.devPa}Pa
 
-        val firePlan = when (demandLevel) {
-            "低" ->
-                """
-• Charge后 1380W
-• 回温后 1320W
-• 转黄阶段 1260W
-• 梅纳阶段 1200W
-• 爆前阶段 1160W
-                """.trimIndent()
+Predicted First Crack
+FC1 ${RoastEngine.toMMSS(result.fc1)}
+FC2 ${result.fc2?.let { RoastEngine.toMMSS(it) } ?: "-"}
+FC Pred ${RoastEngine.toMMSS(result.fcPredSec)}
 
-            "中" ->
-                """
-• Charge后 1450W
-• 回温后 1380W
-• 转黄阶段 1320W
-• 梅纳阶段 1260W
-• 爆前阶段 1200W
-                """.trimIndent()
+Drop / Development
+Drop ${RoastEngine.toMMSS(result.dropSec)}
+Dev ${result.devTime}s
+DTR ${"%.1f".format(result.dtrPercent)}%
 
-            else ->
-                """
-• Charge后 1450W
-• 回温后 1450/1380W
-• 转黄阶段 1380W
-• 梅纳阶段 1320W
-• 爆前阶段 1260W
-                """.trimIndent()
-        }
+Heat Plan
+H1 ${result.h1W}W @ ${RoastEngine.toMMSS(result.h1Sec)}
+H2 ${result.h2W}W @ ${RoastEngine.toMMSS(result.h2Sec)}
+H3 ${result.h3W}W @ ${RoastEngine.toMMSS(result.h3Sec)}
+H4 ${result.h4W}W @ ${RoastEngine.toMMSS(result.h4Sec)}
+H5 ${result.h5W}W @ ${RoastEngine.toMMSS(result.h5Sec)}
 
-        val airPlan = when (flavor) {
-            "干净清晰" ->
-                """
-• 脱水 8-12 Pa
-• 梅纳 12-16 Pa
-• 爆前 16-20 Pa
-                """.trimIndent()
+Air Plan
+Wind1 ${result.wind1Pa}Pa @ ${RoastEngine.toMMSS(result.wind1Sec)}
+Wind2 ${result.wind2Pa}Pa @ ${RoastEngine.toMMSS(result.wind2Sec)}
+Protect @ ${RoastEngine.toMMSS(result.protectSec)}
 
-            "厚重Body" ->
-                """
-• 脱水 5-8 Pa
-• 梅纳 8-12 Pa
-• 爆前 12-16 Pa
-                """.trimIndent()
+ROR Targets
+Target 1 ${"%.1f".format(result.rorTargets[0])}
+Target 2 ${"%.1f".format(result.rorTargets[1])}
+Target 3 ${"%.1f".format(result.rorTargets[2])}
 
-            else ->
-                """
-• 脱水 5-10 Pa
-• 梅纳 10-15 Pa
-• 爆前 15-20 Pa
-                """.trimIndent()
-        }
+ROR Full
+${result.rorFull.joinToString(" / ") { "%.1f".format(it) }}
 
-        plannerResultView.text =
-            """
-热惯性指数
-• ${String.format("%.2f", inertia)}
-
-热需求等级
-• $demandLevel
-
-核心预测
-• Turning $turning
-• Yellow $yellow
-• First Crack $firstCrack
-• Drop $drop
-
-ROR轨迹
-$rorText
-
-HB M2SE 火力建议
-• Charge ${charge}℃
-$firePlan
-
-风压建议
-$airPlan
-
-Execution Card
-• Charge ${charge}℃
-• Turning $turning
-• Yellow $yellow
-• FC $firstCrack
-• Drop $drop
-            """.trimIndent()
+Flags
+awTol ${"%.1f".format(result.awTol)}
+M3 Protected ${if (result.m3Protected) "YES" else "NO"}
+LowDens Assist ${if (result.m3LowDens) "YES" else "NO"}
+        """.trimIndent()
     }
 }
