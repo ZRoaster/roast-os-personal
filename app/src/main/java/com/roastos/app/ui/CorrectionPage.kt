@@ -1,9 +1,7 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.text.InputType
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
@@ -27,6 +25,19 @@ object CorrectionPage {
             return
         }
 
+        val actualTurning = AppState.liveActualTurningSec
+        val actualYellow = AppState.liveActualYellowSec
+        val actualFc = AppState.liveActualFcSec
+        val actualRor = AppState.liveActualPreFcRor
+        val actualDrop = AppState.liveActualDropSec
+
+        if (actualTurning == null || actualYellow == null || actualFc == null || actualRor == null || actualDrop == null) {
+            val t = TextView(context)
+            t.text = "Run Live Assist first and complete Turning / Yellow / FC / Drop."
+            container.addView(t)
+            return
+        }
+
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
 
@@ -36,51 +47,19 @@ object CorrectionPage {
 
         val stateSummary = TextView(context)
         stateSummary.text = """
-Loaded from Planner
+Loaded State
 
 Process ${predicted.ptLabel}
 Charge ${predicted.chargeBT}℃
 Pred FC ${RoastEngine.toMMSS(predicted.fcPredSec)}
 Pred Drop ${RoastEngine.toMMSS(predicted.dropSec)}
+
+Actual Turning ${RoastEngine.toMMSS(actualTurning.toDouble())}
+Actual Yellow ${RoastEngine.toMMSS(actualYellow.toDouble())}
+Actual FC ${RoastEngine.toMMSS(actualFc.toDouble())}
+Actual Drop ${RoastEngine.toMMSS(actualDrop.toDouble())}
+Actual Pre-FC ROR ${"%.1f".format(actualRor)}
         """.trimIndent()
-
-        val turningInput = EditText(context)
-        turningInput.hint = "Turning sec"
-        turningInput.inputType = InputType.TYPE_CLASS_NUMBER
-
-        val yellowInput = EditText(context)
-        yellowInput.hint = "Yellow sec"
-        yellowInput.inputType = InputType.TYPE_CLASS_NUMBER
-
-        val fcInput = EditText(context)
-        fcInput.hint = "FC sec"
-        fcInput.inputType = InputType.TYPE_CLASS_NUMBER
-
-        val dropInput = EditText(context)
-        dropInput.hint = "Drop sec"
-        dropInput.inputType = InputType.TYPE_CLASS_NUMBER
-        dropInput.setText(predicted.dropSec.toInt().toString())
-
-        val rorInput = EditText(context)
-        rorInput.hint = "Pre-FC ROR"
-        rorInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-
-        AppState.liveActualTurningSec?.let {
-            turningInput.setText(it.toString())
-        } ?: turningInput.setText((predicted.h1Sec - 60.0).toInt().toString())
-
-        AppState.liveActualYellowSec?.let {
-            yellowInput.setText(it.toString())
-        } ?: yellowInput.setText(predicted.h2Sec.toInt().toString())
-
-        AppState.liveActualFcSec?.let {
-            fcInput.setText(it.toString())
-        } ?: fcInput.setText(predicted.fcPredSec.toInt().toString())
-
-        AppState.liveActualPreFcRor?.let {
-            rorInput.setText(it.toString())
-        } ?: rorInput.setText(predicted.rorFull5[3].toString())
 
         val runBtn = Button(context)
         runBtn.text = "Generate Batch 2"
@@ -89,11 +68,6 @@ Pred Drop ${RoastEngine.toMMSS(predicted.dropSec)}
 
         root.addView(title)
         root.addView(stateSummary)
-        root.addView(turningInput)
-        root.addView(yellowInput)
-        root.addView(fcInput)
-        root.addView(dropInput)
-        root.addView(rorInput)
         root.addView(runBtn)
         root.addView(result)
 
@@ -102,25 +76,11 @@ Pred Drop ${RoastEngine.toMMSS(predicted.dropSec)}
         runBtn.setOnClickListener {
 
             val actual = BatchActualInput(
-                turningSec =
-                turningInput.text.toString().toIntOrNull()
-                    ?: (predicted.h1Sec - 60.0).toInt(),
-
-                yellowSec =
-                yellowInput.text.toString().toIntOrNull()
-                    ?: predicted.h2Sec.toInt(),
-
-                firstCrackSec =
-                fcInput.text.toString().toIntOrNull()
-                    ?: predicted.fcPredSec.toInt(),
-
-                dropSec =
-                dropInput.text.toString().toIntOrNull()
-                    ?: predicted.dropSec.toInt(),
-
-                preFcRor =
-                rorInput.text.toString().toDoubleOrNull()
-                    ?: predicted.rorFull5[3]
+                turningSec = actualTurning,
+                yellowSec = actualYellow,
+                firstCrackSec = actualFc,
+                dropSec = actualDrop,
+                preFcRor = actualRor
             )
 
             val correction = CorrectionEngine.correct(
