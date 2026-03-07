@@ -1,26 +1,32 @@
 package com.roastos.app.ui
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import android.app.Activity
+import android.widget.LinearLayout
+import android.widget.TextView
 
-@Composable
-fun DashboardPage() {
+object DashboardPage {
 
-    Text(
-        """
-Roast OS
+    fun show(activity: Activity, container: LinearLayout) {
+        container.removeAllViews()
 
+        val title = TextView(activity)
+        title.text = "Dashboard"
+        title.textSize = 22f
+
+        val info = TextView(activity)
+        info.text = """
 Machine
 HB M2SE
 Batch 200g
-
-Charge 204°C
+Charge 204℃
 Max Power 1450W
 
 Planner → RoastEngine
 Correction → CorrectionEngine
 Live Assist → LiveAssistEngine
 """.trimIndent()
-    )
 
+        container.addView(title)
+        container.addView(info)
+    }
 }
