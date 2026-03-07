@@ -6,13 +6,27 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.roastos.app.AppState
 import com.roastos.app.LiveAssistEngine
+import com.roastos.app.RoastEngine
 
 object LiveAssistPage {
 
     fun show(context: Context, container: LinearLayout) {
 
         container.removeAllViews()
+
+        val predicted = AppState.lastPlannerResult
+        if (predicted == null) {
+            val text = TextView(context)
+            text.text = "No planner state found. Please run Planner first."
+            container.addView(text)
+            return
+        }
+
+        val predTurning = (predicted.h1Sec - 60.0).toInt().coerceAtLeast(50)
+        val predYellow = predicted.h2Sec.toInt()
+        val predFc = predicted.fcPredSec.toInt()
 
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
@@ -21,19 +35,23 @@ object LiveAssistPage {
         title.text = "LIVE ASSIST"
         title.textSize = 22f
 
+        val predSummary = TextView(context)
+        predSummary.text = """
+Loaded from Planner
+
+Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC ${RoastEngine.toMMSS(predFc.toDouble())}
+        """.trimIndent()
+
         // Turning Assist
         val turningTitle = TextView(context)
         turningTitle.text = "Turning Assist"
 
-        val predTurningInput = EditText(context)
-        predTurningInput.hint = "Pred Turning sec"
-        predTurningInput.inputType = InputType.TYPE_CLASS_NUMBER
-        predTurningInput.setText("80")
-
         val actualTurningInput = EditText(context)
         actualTurningInput.hint = "Actual Turning sec"
         actualTurningInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualTurningInput.setText("88")
+        actualTurningInput.setText(predTurning.toString())
 
         val turningBtn = Button(context)
         turningBtn.text = "Assist to Yellow"
@@ -44,15 +62,10 @@ object LiveAssistPage {
         val yellowTitle = TextView(context)
         yellowTitle.text = "Yellow Assist"
 
-        val predYellowInput = EditText(context)
-        predYellowInput.hint = "Pred Yellow sec"
-        predYellowInput.inputType = InputType.TYPE_CLASS_NUMBER
-        predYellowInput.setText("250")
-
         val actualYellowInput = EditText(context)
         actualYellowInput.hint = "Actual Yellow sec"
         actualYellowInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualYellowInput.setText("265")
+        actualYellowInput.setText(predYellow.toString())
 
         val yellowRorInput = EditText(context)
         yellowRorInput.hint = "Current ROR"
@@ -69,15 +82,10 @@ object LiveAssistPage {
         val fcTitle = TextView(context)
         fcTitle.text = "First Crack Assist"
 
-        val predFcInput = EditText(context)
-        predFcInput.hint = "Pred FC sec"
-        predFcInput.inputType = InputType.TYPE_CLASS_NUMBER
-        predFcInput.setText("510")
-
         val actualFcInput = EditText(context)
         actualFcInput.hint = "Actual FC sec"
         actualFcInput.inputType = InputType.TYPE_CLASS_NUMBER
-        actualFcInput.setText("520")
+        actualFcInput.setText(predFc.toString())
 
         val fcRorInput = EditText(context)
         fcRorInput.hint = "Pre-FC ROR"
@@ -91,22 +99,20 @@ object LiveAssistPage {
         val fcResult = TextView(context)
 
         root.addView(title)
+        root.addView(predSummary)
 
         root.addView(turningTitle)
-        root.addView(predTurningInput)
         root.addView(actualTurningInput)
         root.addView(turningBtn)
         root.addView(turningResult)
 
         root.addView(yellowTitle)
-        root.addView(predYellowInput)
         root.addView(actualYellowInput)
         root.addView(yellowRorInput)
         root.addView(yellowBtn)
         root.addView(yellowResult)
 
         root.addView(fcTitle)
-        root.addView(predFcInput)
         root.addView(actualFcInput)
         root.addView(fcRorInput)
         root.addView(fcBtn)
@@ -115,8 +121,7 @@ object LiveAssistPage {
         container.addView(root)
 
         turningBtn.setOnClickListener {
-            val predTurning = predTurningInput.text.toString().toIntOrNull() ?: 80
-            val actualTurning = actualTurningInput.text.toString().toIntOrNull() ?: 80
+            val actualTurning = actualTurningInput.text.toString().toIntOrNull() ?: predTurning
 
             val advice = LiveAssistEngine.turningAssist(
                 predTurning = predTurning,
@@ -138,8 +143,7 @@ ${advice.note}
         }
 
         yellowBtn.setOnClickListener {
-            val predYellow = predYellowInput.text.toString().toIntOrNull() ?: 250
-            val actualYellow = actualYellowInput.text.toString().toIntOrNull() ?: 250
+            val actualYellow = actualYellowInput.text.toString().toIntOrNull() ?: predYellow
             val ror = yellowRorInput.text.toString().toDoubleOrNull() ?: 13.0
 
             val advice = LiveAssistEngine.yellowAssist(
@@ -163,8 +167,7 @@ ${advice.note}
         }
 
         fcBtn.setOnClickListener {
-            val predFc = predFcInput.text.toString().toIntOrNull() ?: 510
-            val actualFc = actualFcInput.text.toString().toIntOrNull() ?: 510
+            val actualFc = actualFcInput.text.toString().toIntOrNull() ?: predFc
             val ror = fcRorInput.text.toString().toDoubleOrNull() ?: 9.0
 
             val advice = LiveAssistEngine.fcAssist(
