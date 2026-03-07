@@ -1,29 +1,12 @@
 package com.roastos.app
 
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 object RoastEngine {
 
     private fun clamp(v: Double, lo: Double, hi: Double): Double {
         return max(lo, min(hi, v))
-    }
-
-    fun parseMMSS(str: String): Int? {
-        val parts = str.trim().split(":")
-        if (parts.size != 2) return null
-        val m = parts[0].toIntOrNull() ?: return null
-        val s = parts[1].toIntOrNull() ?: return null
-        return m * 60 + s
-    }
-
-    fun toMMSS(sec: Double): String {
-        val total = sec.roundToInt().coerceAtLeast(0)
-        val m = total / 60
-        val s = total % 60
-        return "%d:%02d".format(m, s)
     }
 
     private fun processLabel(process: String): String {
@@ -36,6 +19,13 @@ object RoastEngine {
             "fermented" -> "特殊发酵"
             else -> process
         }
+    }
+
+    fun toMMSS(sec: Double): String {
+        val total = sec.toInt().coerceAtLeast(0)
+        val m = total / 60
+        val s = total % 60
+        return "%d:%02d".format(m, s)
     }
 
     fun calcCard(input: PlannerInput): PlannerResult {
@@ -57,7 +47,8 @@ object RoastEngine {
             else -> 202
         }
 
-        chargeBT -= ( ((temp - 22.0) / 5.0).roundToInt() * 2 )
+        if (temp > 27) chargeBT -= 2
+        if (temp < 18) chargeBT += 2
         if (rh >= 55) chargeBT -= 1
         if (rh <= 25) chargeBT += 1
 
@@ -85,11 +76,11 @@ object RoastEngine {
         }
         fcPredSec = clamp(fcPredSec, 430.0, 490.0)
 
-        var dH1 = 0
-        var dH2 = 0
-        var dH3 = 0
-        var dH4 = 0
-        var dH5 = 0
+        var dH1: Int
+        var dH2: Int
+        var dH3: Int
+        var dH4: Int
+        var dH5: Int
 
         if (dens < 760) {
             dH1 = -30
@@ -144,7 +135,7 @@ object RoastEngine {
             devAdjust = -6
             devPa += 1
             if (dens < 760) {
-                h3W = 1260 - 10
+                h3W = 1250
             }
         }
 
@@ -204,8 +195,10 @@ object RoastEngine {
         }
 
         val rorRaw = rorBase.mapIndexed { i, v ->
-            v + if (i < 3) mcAdj else 0.0 + 0.0
-        }.mapIndexed { i, v -> v + ptAdj[i] }
+            v + if (i < 3) mcAdj else 0.0
+        }.mapIndexed { i, v ->
+            v + ptAdj[i]
+        }
 
         val negCap = listOf(0.5, 0.5, 0.4, 0.3, 0.3)
 
@@ -289,5 +282,15 @@ object RoastEngine {
             m3Protected = isM3HeavyProcess,
             m3LowDens = m3LowDens
         )
+    }
+
+    fun parseMMSS(text: String): Int? {
+        val parts = text.split(":")
+        if (parts.size != 2) return null
+
+        val min = parts[0].toIntOrNull() ?: return null
+        val sec = parts[1].toIntOrNull() ?: return null
+
+        return min * 60 + sec
     }
 }
