@@ -9,5 +9,5 @@ object AppState {
     var liveActualYellowSec: Int? = null
     var liveActualFcSec: Int? = null
     var liveActualPreFcRor: Double? = null
-
+    var liveActualDropSec: Int? = null
 }
