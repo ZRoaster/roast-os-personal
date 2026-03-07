@@ -1,8 +1,8 @@
 package com.roastos.app
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -10,7 +10,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val text = TextView(this)
-        text.text = "Roast OS\nHB M2SE Console"
+        text.text = "Roast OS\nHB M2SE Roasting Console"
         text.textSize = 24f
 
         setContentView(text)
