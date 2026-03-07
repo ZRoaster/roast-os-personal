@@ -3,38 +3,201 @@ package com.roastos.app
 import android.app.Activity
 import android.os.Bundle
 import android.text.InputType
-import android.view.Gravity
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.Spinner
-import android.widget.TextView
+import android.widget.*
 
 class MainActivity : Activity() {
 
-    private lateinit var densityInput: EditText
-    private lateinit var moistureInput: EditText
-    private lateinit var awInput: EditText
-    private lateinit var envTempInput: EditText
-    private lateinit var humidityInput: EditText
+    lateinit var densityInput: EditText
+    lateinit var moistureInput: EditText
+    lateinit var awInput: EditText
+    lateinit var envTempInput: EditText
+    lateinit var humidityInput: EditText
 
-    private lateinit var processSpinner: Spinner
-    private lateinit var roastLevelSpinner: Spinner
-    private lateinit var flavorGoalSpinner: Spinner
-    private lateinit var freshnessSpinner: Spinner
-    private lateinit var beanShapeSpinner: Spinner
-    private lateinit var batchModeSpinner: Spinner
+    lateinit var processSpinner: Spinner
+    lateinit var roastLevelSpinner: Spinner
+    lateinit var flavorGoalSpinner: Spinner
+    lateinit var freshnessSpinner: Spinner
+    lateinit var beanShapeSpinner: Spinner
+    lateinit var batchModeSpinner: Spinner
 
-    private lateinit var resultCore: TextView
-    private lateinit var resultControl: TextView
-    private lateinit var resultRisk: TextView
-    private lateinit var resultNotes: TextView
+    lateinit var resultCore: TextView
+    lateinit var resultControl: TextView
+    lateinit var resultRisk: TextView
+    lateinit var resultNotes: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val scroll = ScrollView(this)
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.setPadding(30,30,30,30)
+
+        scroll.addView(root)
+
+        val title = TextView(this)
+        title.text = "Roast OS"
+        title.textSize = 28f
+        root.addView(title)
+
+        val sub = TextView(this)
+        sub.text = "HB M2SE · 200g"
+        root.addView(sub)
+
+        root.addView(section("Bean Input"))
+
+        processSpinner = spinner(listOf("水洗","日晒","蜜处理","厌氧"))
+        roastLevelSpinner = spinner(listOf("浅","浅中","中浅","中"))
+        flavorGoalSpinner = spinner(listOf("平衡清晰","甜感优先","层次优先","body优先"))
+        freshnessSpinner = spinner(listOf("正常","偏新","偏陈"))
+        beanShapeSpinner = spinner(listOf("小粒","中等","大粒"))
+
+        densityInput = numberInput("密度 818")
+        moistureInput = decimalInput("含水率 11.1")
+        awInput = decimalInput("aw 0.55")
+
+        root.addView(label("处理法"))
+        root.addView(processSpinner)
+
+        root.addView(label("密度"))
+        root.addView(densityInput)
+
+        root.addView(label("含水率"))
+        root.addView(moistureInput)
+
+        root.addView(label("aw"))
+        root.addView(awInput)
+
+        root.addView(label("新鲜度"))
+        root.addView(freshnessSpinner)
+
+        root.addView(label("豆形"))
+        root.addView(beanShapeSpinner)
+
+        root.addView(label("烘焙度"))
+        root.addView(roastLevelSpinner)
+
+        root.addView(label("风味目标"))
+        root.addView(flavorGoalSpinner)
+
+        root.addView(section("Environment"))
+
+        envTempInput = decimalInput("环境温度")
+        humidityInput = numberInput("湿度")
+
+        batchModeSpinner = spinner(listOf("单锅","连续批"))
+
+        root.addView(label("环境温度"))
+        root.addView(envTempInput)
+
+        root.addView(label("湿度"))
+        root.addView(humidityInput)
+
+        root.addView(label("批次"))
+        root.addView(batchModeSpinner)
+
+        val btn = Button(this)
+        btn.text = "生成 Roast OS 策略"
+        btn.setOnClickListener { generateStrategy() }
+
+        root.addView(btn)
+
+        root.addView(section("Strategy Output"))
+
+        resultCore = TextView(this)
+        resultControl = TextView(this)
+        resultRisk = TextView(this)
+
+        root.addView(resultCore)
+        root.addView(resultControl)
+        root.addView(resultRisk)
+
+        root.addView(section("Notes"))
+
+        resultNotes = TextView(this)
+        root.addView(resultNotes)
+
+        setContentView(scroll)
+    }
+
+    fun generateStrategy() {
+
+        val density = densityInput.text.toString().toDoubleOrNull() ?: 800.0
+        val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 11.0
+        val aw = awInput.text.toString().toDoubleOrNull() ?: 0.55
+        val envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0
+
+        var thermal = 0.0
+
+        thermal += (density-800)/25
+        thermal += (moisture-11)*2
+        thermal += (aw-0.55)*80
+
+        val rebound = if (thermal>2)
+            "回温偏慢 1:35-1:50"
+        else
+            "回温正常 1:15-1:30"
+
+        val crack = if (density>830)
+            "一爆 8:50-9:20"
+        else
+            "一爆 8:30-9:00"
+
+        val drop = when(roastLevelSpinner.selectedItem.toString()){
+            "浅" -> "下豆 9:20"
+            "浅中" -> "下豆 9:40"
+            "中浅" -> "下豆 10:00"
+            else -> "下豆 10:30"
+        }
+
+        resultCore.text =
+            "核心预测\n\n$rebound\n$crack\n$drop"
+
+        resultControl.text =
+            "\n过程控制\n\n初始火力中高\n稳定ROR推进\n爆前小收火"
+
+        resultRisk.text =
+            "\n风险\n\n避免爆前冲高\n避免拖闷"
+
+        resultNotes.text =
+            "\n执行原则\n\n爆前稳ROR\n不要临时大修正"
+    }
+
+    fun label(t:String):TextView{
+        val v = TextView(this)
+        v.text = t
+        return v
+    }
+
+    fun section(t:String):TextView{
+        val v = TextView(this)
+        v.text = "\n$t"
+        v.textSize = 18f
+        return v
+    }
+
+    fun spinner(items:List<String>):Spinner{
+        val s = Spinner(this)
+        val ad = ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,items)
+        s.adapter = ad
+        return s
+    }
+
+    fun numberInput(h:String):EditText{
+        val e = EditText(this)
+        e.hint = h
+        e.inputType = InputType.TYPE_CLASS_NUMBER
+        return e
+    }
+
+    fun decimalInput(h:String):EditText{
+        val e = EditText(this)
+        e.hint = h
+        e.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        return e
+    }
+}        super.onCreate(savedInstanceState)
 
         val rootScroll = ScrollView(this)
         val root = LinearLayout(this)
