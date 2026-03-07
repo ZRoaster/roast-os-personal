@@ -27,6 +27,7 @@ object LiveAssistPage {
         val predTurning = (predicted.h1Sec - 60.0).toInt().coerceAtLeast(50)
         val predYellow = predicted.h2Sec.toInt()
         val predFc = predicted.fcPredSec.toInt()
+        val predDrop = predicted.dropSec.toInt()
 
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
@@ -41,6 +42,7 @@ Predicted
 Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
 
         root.addView(title)
@@ -95,9 +97,9 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
         root.addView(yellowBtn)
         root.addView(yellowResult)
 
-        // FC
+        // FC + Drop
         val fcTitle = TextView(context)
-        fcTitle.text = "First Crack"
+        fcTitle.text = "First Crack / Development"
 
         val actualFcInput = EditText(context)
         actualFcInput.hint = "Actual FC sec"
@@ -114,6 +116,13 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
             preFcRorInput.setText(it.toString())
         } ?: preFcRorInput.setText("9.0")
 
+        val actualDropInput = EditText(context)
+        actualDropInput.hint = "Actual Drop sec"
+        actualDropInput.inputType = InputType.TYPE_CLASS_NUMBER
+        AppState.liveActualDropSec?.let {
+            actualDropInput.setText(it.toString())
+        } ?: actualDropInput.setText(predDrop.toString())
+
         val fcBtn = Button(context)
         fcBtn.text = "Run FC Assist"
 
@@ -122,6 +131,7 @@ FC ${RoastEngine.toMMSS(predFc.toDouble())}
         root.addView(fcTitle)
         root.addView(actualFcInput)
         root.addView(preFcRorInput)
+        root.addView(actualDropInput)
         root.addView(fcBtn)
         root.addView(fcResult)
 
@@ -225,8 +235,12 @@ $risk
             val ror =
                 preFcRorInput.text.toString().toDoubleOrNull() ?: 9.0
 
+            val actualDrop =
+                actualDropInput.text.toString().toIntOrNull() ?: predDrop
+
             AppState.liveActualFcSec = actualFc
             AppState.liveActualPreFcRor = ror
+            AppState.liveActualDropSec = actualDrop
 
             val advice = LiveAssistEngine.fcAssist(predFc, actualFc, ror)
             val diff = actualFc - predFc
@@ -251,6 +265,7 @@ $risk
 Current State
 Pred FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Actual FC ${RoastEngine.toMMSS(actualFc.toDouble())}
+Actual Drop ${RoastEngine.toMMSS(actualDrop.toDouble())}
 Pre-FC ROR ${"%.1f".format(ror)}
 
 Deviation
