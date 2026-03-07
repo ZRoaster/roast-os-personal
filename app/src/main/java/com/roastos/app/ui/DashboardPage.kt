@@ -1,6 +1,7 @@
 package com.roastos.app.ui
 
 import android.app.Activity
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
@@ -9,7 +10,11 @@ import com.roastos.app.RoastEngine
 object DashboardPage {
 
     fun show(activity: Activity, container: LinearLayout) {
+
         container.removeAllViews()
+
+        val root = LinearLayout(activity)
+        root.orientation = LinearLayout.VERTICAL
 
         val title = TextView(activity)
         title.text = "Dashboard"
@@ -25,18 +30,22 @@ Max Power 1450W
         """.trimIndent()
 
         val planner = AppState.lastPlannerResult
+
         val plannerCard = TextView(activity)
 
         if (planner == null) {
+
             plannerCard.text = """
 Planner Status
-No planner card yet.
+No roast card yet
 
 Action
-Go to Roast → Planner
+Roast → Planner
 Generate first roast card
             """.trimIndent()
+
         } else {
+
             val turningSec = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
             val yellowSec = planner.h2Sec.toInt()
             val fcSec = planner.fcPredSec.toInt()
@@ -61,42 +70,17 @@ Drop ${RoastEngine.toMMSS(dropSec.toDouble())}
         val liveDrop = AppState.liveActualDropSec
         val liveRor = AppState.liveActualPreFcRor
 
-        val liveProgress = buildString {
-            appendLine("Live Status")
-
-            appendLine(
-                "Turning: " + (
-                    liveTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-                )
-            )
-
-            appendLine(
-                "Yellow: " + (
-                    liveYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-                )
-            )
-
-            appendLine(
-                "FC: " + (
-                    liveFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-                )
-            )
-
-            appendLine(
-                "Drop: " + (
-                    liveDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-                )
-            )
-
-            append(
-                "Pre-FC ROR: " + (
-                    liveRor?.let { "%.1f".format(it) } ?: "-"
-                )
-            )
-        }
-
         val liveCard = TextView(activity)
-        liveCard.text = liveProgress
+
+        liveCard.text = """
+Live Status
+
+Turning ${liveTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${liveYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${liveFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${liveDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Pre-FC ROR ${liveRor?.let { "%.1f".format(it) } ?: "-"}
+        """.trimIndent()
 
         val correctionReady =
             planner != null &&
@@ -107,44 +91,52 @@ Drop ${RoastEngine.toMMSS(dropSec.toDouble())}
             liveRor != null
 
         val correctionCard = TextView(activity)
+
         correctionCard.text = if (correctionReady) {
             """
 Correction Status
 Ready
 
 Action
-Go to Roast → Correction
-Generate Batch 2 in one tap
+Roast → Correction
+Generate Batch 2
             """.trimIndent()
         } else {
             """
 Correction Status
-Not ready
-
-Needed
-${if (planner == null) "• Planner card" else ""}
-${if (liveTurning == null) "• Turning actual" else ""}
-${if (liveYellow == null) "• Yellow actual" else ""}
-${if (liveFc == null) "• FC actual" else ""}
-${if (liveDrop == null) "• Drop actual" else ""}
-${if (liveRor == null) "• Pre-FC ROR" else ""}
+Waiting For Data
             """.trimIndent()
         }
 
-        val engineCard = TextView(activity)
-        engineCard.text = """
-Core Engines
-Planner → RoastEngine
-Live → LiveAssistEngine
-Correction → CorrectionEngine
-State → AppState
-        """.trimIndent()
+        val resetBatchBtn = Button(activity)
+        resetBatchBtn.text = "Reset Current Batch"
 
-        container.addView(title)
-        container.addView(machineCard)
-        container.addView(plannerCard)
-        container.addView(liveCard)
-        container.addView(correctionCard)
-        container.addView(engineCard)
+        val resetAllBtn = Button(activity)
+        resetAllBtn.text = "Reset Planner + Batch"
+
+        resetBatchBtn.setOnClickListener {
+
+            AppState.resetBatch()
+
+            show(activity, container)
+        }
+
+        resetAllBtn.setOnClickListener {
+
+            AppState.resetAll()
+
+            show(activity, container)
+        }
+
+        root.addView(title)
+        root.addView(machineCard)
+        root.addView(plannerCard)
+        root.addView(liveCard)
+        root.addView(correctionCard)
+
+        root.addView(resetBatchBtn)
+        root.addView(resetAllBtn)
+
+        container.addView(root)
     }
 }
