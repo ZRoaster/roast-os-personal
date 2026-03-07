@@ -43,12 +43,7 @@ object RoastPage {
         }
 
         liveBtn.setOnClickListener {
-            content.removeAllViews()
-
-            val text = TextView(context)
-            text.text = "Live Assist Ready"
-
-            content.addView(text)
+            LiveAssistPage.show(context, content)
         }
 
         correctionBtn.setOnClickListener {
