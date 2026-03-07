@@ -1,10 +1,10 @@
 package com.roastos.app
 
+import android.app.Activity
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import android.widget.TextView
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -12,6 +12,7 @@ class MainActivity : AppCompatActivity() {
         val textView = TextView(this)
         textView.text = "Roast OS\n\n系统启动成功"
         textView.textSize = 24f
+        textView.setPadding(48, 96, 48, 48)
 
         setContentView(textView)
     }
