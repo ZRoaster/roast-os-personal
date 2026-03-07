@@ -52,22 +52,4 @@ object RoastPage {
 
         PlannerPage.show(context, content)
     }
-}        root.addView(content)
-
-        container.addView(root)
-
-        plannerBtn.setOnClickListener {
-            PlannerPage.show(context, content)
-        }
-
-        liveBtn.setOnClickListener {
-            LiveAssistPage.show(context, content)
-        }
-
-        correctionBtn.setOnClickListener {
-            CorrectionPage.show(context, content)
-        }
-
-        PlannerPage.show(context, content)
-    }
 }
