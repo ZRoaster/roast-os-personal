@@ -2,6 +2,7 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.text.InputType
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -23,34 +24,80 @@ object PlannerPage {
         title.text = "ROAST PLANNER"
         title.textSize = 22f
 
+        val subtitle = TextView(context)
+        subtitle.text = "Quick Inputs + Advanced Parameters"
+
+        // Quick inputs
         val processInput = EditText(context)
         processInput.hint = "Process: washed / honey_washed / natural / anaerobic"
         processInput.setText("washed")
 
         val densityInput = EditText(context)
         densityInput.hint = "Density (g/L)"
-        densityInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        densityInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         densityInput.setText("840")
 
         val moistureInput = EditText(context)
         moistureInput.hint = "Moisture %"
-        moistureInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        moistureInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         moistureInput.setText("10.5")
 
         val awInput = EditText(context)
         awInput.hint = "Water Activity (aw)"
-        awInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        awInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         awInput.setText("0.55")
 
         val envTempInput = EditText(context)
         envTempInput.hint = "Environment Temp °C"
-        envTempInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        envTempInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         envTempInput.setText("22")
 
         val humidityInput = EditText(context)
         humidityInput.hint = "Humidity %"
-        humidityInput.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        humidityInput.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         humidityInput.setText("40")
+
+        // Advanced block
+        val advancedToggle = Button(context)
+        advancedToggle.text = "Show Advanced Parameters"
+
+        val advancedBlock = LinearLayout(context)
+        advancedBlock.orientation = LinearLayout.VERTICAL
+        advancedBlock.visibility = View.GONE
+
+        val roastLevelInput = EditText(context)
+        roastLevelInput.hint = "Roast Level"
+        roastLevelInput.setText("light_medium")
+
+        val orientationInput = EditText(context)
+        orientationInput.hint = "Orientation"
+        orientationInput.setText("clean")
+
+        val batchInput = EditText(context)
+        batchInput.hint = "Batch Number"
+        batchInput.inputType = InputType.TYPE_CLASS_NUMBER
+        batchInput.setText("1")
+
+        val ttInput = EditText(context)
+        ttInput.hint = "Turning Time sec"
+        ttInput.inputType = InputType.TYPE_CLASS_NUMBER
+        ttInput.setText("80")
+
+        val tyInput = EditText(context)
+        tyInput.hint = "Yellow Time sec"
+        tyInput.inputType = InputType.TYPE_CLASS_NUMBER
+        tyInput.setText("250")
+
+        advancedBlock.addView(roastLevelInput)
+        advancedBlock.addView(orientationInput)
+        advancedBlock.addView(batchInput)
+        advancedBlock.addView(ttInput)
+        advancedBlock.addView(tyInput)
 
         val calculateBtn = Button(context)
         calculateBtn.text = "Generate Roast Card"
@@ -58,16 +105,32 @@ object PlannerPage {
         val resultView = TextView(context)
 
         root.addView(title)
+        root.addView(subtitle)
+
         root.addView(processInput)
         root.addView(densityInput)
         root.addView(moistureInput)
         root.addView(awInput)
         root.addView(envTempInput)
         root.addView(humidityInput)
+
+        root.addView(advancedToggle)
+        root.addView(advancedBlock)
+
         root.addView(calculateBtn)
         root.addView(resultView)
 
         container.addView(root)
+
+        advancedToggle.setOnClickListener {
+            if (advancedBlock.visibility == View.GONE) {
+                advancedBlock.visibility = View.VISIBLE
+                advancedToggle.text = "Hide Advanced Parameters"
+            } else {
+                advancedBlock.visibility = View.GONE
+                advancedToggle.text = "Show Advanced Parameters"
+            }
+        }
 
         calculateBtn.setOnClickListener {
 
@@ -79,10 +142,10 @@ object PlannerPage {
                 envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0,
                 envRH = humidityInput.text.toString().toDoubleOrNull() ?: 40.0,
 
-                roastLevel = "light_medium",
-                orientation = "clean",
+                roastLevel = roastLevelInput.text.toString().ifBlank { "light_medium" },
+                orientation = orientationInput.text.toString().ifBlank { "clean" },
                 purpose = "pourover",
-                batchNum = 1,
+                batchNum = batchInput.text.toString().toIntOrNull() ?: 1,
                 beanSize = "normal",
                 freshness = "fresh",
                 mode = "M2",
@@ -91,8 +154,8 @@ object PlannerPage {
                 learnK = 26.0,
                 learnW = 0.65,
 
-                ttSec = 80,
-                tySec = 250
+                ttSec = ttInput.text.toString().toIntOrNull() ?: 80,
+                tySec = tyInput.text.toString().toIntOrNull() ?: 250
             )
 
             val plan = RoastEngine.calcCard(input)
@@ -112,11 +175,18 @@ object PlannerPage {
                 else -> "Low"
             }
 
-            val riskFocus = when (input.process) {
+            val processRisk = when (input.process) {
                 "anaerobic" -> "Front-end pressure / overshoot risk"
                 "natural" -> "Drying momentum control risk"
                 "honey_washed" -> "Middle-stage thickness risk"
                 else -> "Relatively clean process"
+            }
+
+            val executionFocus = when (input.orientation) {
+                "clean" -> "Prioritize clarity and controlled pre-FC momentum"
+                "stable" -> "Prioritize balance and replayability"
+                "thick" -> "Prioritize body and sweetness, avoid over-exhaust"
+                else -> "Balanced execution"
             }
 
             resultView.text = """
@@ -136,11 +206,12 @@ Core Setup
 Charge ${plan.chargeBT}℃
 RPM ${plan.rpm}
 Mode ${input.mode}
+Batch ${input.batchNum}
 
 Heat Demand
 $heatDemand
 
-Timeline
+Predicted Timeline
 Turning ${RoastEngine.toMMSS(turningSec.toDouble())}
 Yellow ${RoastEngine.toMMSS(yellowSec.toDouble())}
 FC ${RoastEngine.toMMSS(fcSec.toDouble())}
@@ -167,8 +238,11 @@ Protect @ ${RoastEngine.toMMSS(plan.protectSec)}
 ROR Targets
 ${plan.rorTargets.joinToString(" / ") { "%.1f".format(it) }}
 
+Execution Focus
+$executionFocus
+
 Risk Focus
-$riskFocus
+$processRisk
 
 State
 Planner saved for Live / Correction
