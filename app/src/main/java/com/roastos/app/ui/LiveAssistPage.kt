@@ -7,6 +7,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
+import com.roastos.app.CurveEngine
 import com.roastos.app.LiveAssistEngine
 import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
@@ -59,6 +60,18 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
             predDrop = predDrop
         )
 
+        val curveTitle = TextView(context)
+        curveTitle.text = "CURVE PREDICTION"
+        curveTitle.textSize = 18f
+
+        val curveCard = TextView(context)
+        curveCard.text = buildCurvePredictionCard(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
         val currentCardTitle = TextView(context)
         currentCardTitle.text = "CURRENT CONTROL CARD"
         currentCardTitle.textSize = 18f
@@ -75,6 +88,8 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         root.addView(plannerSummary)
         root.addView(phaseTitle)
         root.addView(phaseCard)
+        root.addView(curveTitle)
+        root.addView(curveCard)
         root.addView(currentCardTitle)
         root.addView(currentCard)
 
@@ -212,19 +227,9 @@ Risk
 $risk
             """.trimIndent()
 
-            phaseCard.text = buildPhaseCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
-
-            currentCard.text = buildControlCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
+            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
+            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
+            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
         }
 
         yellowBtn.setOnClickListener {
@@ -278,19 +283,9 @@ Risk
 $risk
             """.trimIndent()
 
-            phaseCard.text = buildPhaseCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
-
-            currentCard.text = buildControlCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
+            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
+            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
+            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
         }
 
         fcBtn.setOnClickListener {
@@ -352,19 +347,9 @@ Risk
 $risk
             """.trimIndent()
 
-            phaseCard.text = buildPhaseCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
-
-            currentCard.text = buildControlCard(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
+            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
+            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
+            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
         }
     }
 
@@ -402,6 +387,40 @@ ${phase.riskHint}
         """.trimIndent()
     }
 
+    private fun buildCurvePredictionCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+
+        val prediction = CurveEngine.predict(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            currentRor = AppState.liveActualPreFcRor
+        )
+
+        return """
+Predicted Curve
+
+Yellow ${RoastEngine.toMMSS(prediction.predictedYellowSec.toDouble())}
+FC ${RoastEngine.toMMSS(prediction.predictedFcSec.toDouble())}
+Drop ${RoastEngine.toMMSS(prediction.predictedDropSec.toDouble())}
+Dev ${prediction.predictedDevSec}s
+
+Confidence
+${prediction.confidence}
+
+Logic
+${prediction.summary}
+        """.trimIndent()
+    }
+
     private fun buildControlCard(
         predTurning: Int,
         predYellow: Int,
@@ -424,6 +443,7 @@ ${phase.riskHint}
         }
 
         val nextAction = when {
+            actualDrop != null -> "Review roast and move to Correction"
             actualFc != null && actualRor != null && actualRor > 10.0 -> "Reduce heat, add air, protect development"
             actualFc != null && actualRor != null && actualRor < 7.0 -> "Preserve heat, avoid collapse"
             actualYellow != null -> "Control middle momentum toward FC"
