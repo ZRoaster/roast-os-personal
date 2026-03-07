@@ -1,59 +1,71 @@
 package com.roastos.app.ui
 
-import android.app.Activity
+import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
 object RoastPage {
 
-    fun show(activity: Activity, container: LinearLayout) {
+    fun show(context: Context, container: LinearLayout) {
 
         container.removeAllViews()
 
-        val title = TextView(activity)
-        title.text = "Roast Center"
+        val root = LinearLayout(context)
+        root.orientation = LinearLayout.VERTICAL
+
+        val title = TextView(context)
+        title.text = "ROAST CENTER"
         title.textSize = 22f
 
-        container.addView(title)
+        val plannerBtn = Button(context)
+        plannerBtn.text = "Planner"
 
-        val planner = Button(activity)
-        planner.text = "Planner"
+        val liveBtn = Button(context)
+        liveBtn.text = "Live Assist"
 
-        val live = Button(activity)
-        live.text = "Live Assist"
+        val correctionBtn = Button(context)
+        correctionBtn.text = "Correction"
 
-        val correction = Button(activity)
-        correction.text = "Batch Correction"
+        val content = LinearLayout(context)
+        content.orientation = LinearLayout.VERTICAL
 
-        container.addView(planner)
-        container.addView(live)
-        container.addView(correction)
+        root.addView(title)
+        root.addView(plannerBtn)
+        root.addView(liveBtn)
+        root.addView(correctionBtn)
+        root.addView(content)
 
-        val area = LinearLayout(activity)
-        area.orientation = LinearLayout.VERTICAL
+        container.addView(root)
 
-        container.addView(area)
+        plannerBtn.setOnClickListener {
 
-        planner.setOnClickListener {
-            area.removeAllViews()
-            val t = TextView(activity)
-            t.text = "Planner page"
-            area.addView(t)
+            content.removeAllViews()
+
+            val text = TextView(context)
+            text.text = "Planner Engine Ready"
+
+            content.addView(text)
         }
 
-        live.setOnClickListener {
-            area.removeAllViews()
-            val t = TextView(activity)
-            t.text = "Live Assist page"
-            area.addView(t)
+        liveBtn.setOnClickListener {
+
+            content.removeAllViews()
+
+            val text = TextView(context)
+            text.text = "Live Assist Ready"
+
+            content.addView(text)
         }
 
-        correction.setOnClickListener {
-            area.removeAllViews()
-            val t = TextView(activity)
-            t.text = "Batch Correction page"
-            area.addView(t)
+        correctionBtn.setOnClickListener {
+
+            content.removeAllViews()
+
+            val text = TextView(context)
+            text.text = "Correction Engine Ready"
+
+            content.addView(text)
         }
     }
 }
