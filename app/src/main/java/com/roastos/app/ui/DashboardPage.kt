@@ -5,13 +5,13 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
+import com.roastos.app.CurveEngine
 import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
 
 object DashboardPage {
 
     fun show(activity: Activity, container: LinearLayout) {
-
         container.removeAllViews()
 
         val root = LinearLayout(activity)
@@ -33,6 +33,7 @@ Max Power 1450W
         val plannerCard = TextView(activity)
         val batchCard = TextView(activity)
         val liveCard = TextView(activity)
+        val curveCard = TextView(activity)
         val correctionCard = TextView(activity)
         val nextStepCard = TextView(activity)
 
@@ -68,6 +69,14 @@ Yellow -
 FC -
 Drop -
 Pre-FC ROR -
+            """.trimIndent()
+
+            curveCard.text = """
+Curve Prediction
+No prediction yet
+
+Action
+Run Planner first
             """.trimIndent()
 
             correctionCard.text = """
@@ -107,15 +116,15 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
             """.trimIndent()
 
             val phase = PhaseEngine.detect(
-                predTurning,
-                predYellow,
-                predFc,
-                predDrop,
-                liveTurning,
-                liveYellow,
-                liveFc,
-                liveDrop,
-                liveRor
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop,
+                actualTurning = liveTurning,
+                actualYellow = liveYellow,
+                actualFc = liveFc,
+                actualDrop = liveDrop,
+                actualPreFcRor = liveRor
             )
 
             batchCard.text = """
@@ -139,6 +148,32 @@ Yellow ${liveYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 FC ${liveFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Drop ${liveDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Pre-FC ROR ${liveRor?.let { "%.1f".format(it) } ?: "-"}
+            """.trimIndent()
+
+            val curve = CurveEngine.predict(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop,
+                actualTurning = liveTurning,
+                actualYellow = liveYellow,
+                actualFc = liveFc,
+                currentRor = liveRor
+            )
+
+            curveCard.text = """
+Curve Prediction
+
+Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}
+FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}
+Drop ${RoastEngine.toMMSS(curve.predictedDropSec.toDouble())}
+Dev ${curve.predictedDevSec}s
+
+Confidence
+${curve.confidence}
+
+Logic
+${curve.summary}
             """.trimIndent()
 
             val correctionReady =
@@ -180,17 +215,13 @@ $nextStep
         }
 
         resetBatchBtn.setOnClickListener {
-
             AppState.resetBatch()
             show(activity, container)
-
         }
 
         resetAllBtn.setOnClickListener {
-
             AppState.resetAll()
             show(activity, container)
-
         }
 
         root.addView(title)
@@ -198,6 +229,7 @@ $nextStep
         root.addView(plannerCard)
         root.addView(batchCard)
         root.addView(liveCard)
+        root.addView(curveCard)
         root.addView(correctionCard)
         root.addView(nextStepCard)
         root.addView(resetBatchBtn)
