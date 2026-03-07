@@ -39,17 +39,10 @@ object RoastPage {
         container.addView(root)
 
         plannerBtn.setOnClickListener {
-
-            content.removeAllViews()
-
-            val text = TextView(context)
-            text.text = "Planner Engine Ready"
-
-            content.addView(text)
+            PlannerPage.show(context, content)
         }
 
         liveBtn.setOnClickListener {
-
             content.removeAllViews()
 
             val text = TextView(context)
@@ -59,7 +52,6 @@ object RoastPage {
         }
 
         correctionBtn.setOnClickListener {
-
             content.removeAllViews()
 
             val text = TextView(context)
@@ -67,5 +59,7 @@ object RoastPage {
 
             content.addView(text)
         }
+
+        PlannerPage.show(context, content)
     }
 }
