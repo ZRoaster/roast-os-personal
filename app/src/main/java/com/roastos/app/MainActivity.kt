@@ -597,32 +597,71 @@ FC 偏快 ${-diff}s
     }
 
     private fun buildPlannerInputFromUi(): PlannerInput {
-        val density = densityInput.text.toString().toDoubleOrNull() ?: 820.0
-        val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 10.5
-        val aw = awInput.text.toString().toDoubleOrNull() ?: 0.55
-        val envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0
-        val humidity = humidityInput.text.toString().toDoubleOrNull() ?: 35.0
 
-        val processCn = processSpinner.selectedItem.toString()
-        val roastLevelCn = roastLevelSpinner.selectedItem.toString()
-        val flavorCn = flavorSpinner.selectedItem.toString()
-        val batchCn = batchSpinner.selectedItem.toString()
+    val density = densityInput.text.toString().toDoubleOrNull() ?: 820.0
+    val moisture = moistureInput.text.toString().toDoubleOrNull() ?: 11.0
+    val aw = awInput.text.toString().toDoubleOrNull() ?: 0.55
+    val envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0
+    val humidity = humidityInput.text.toString().toDoubleOrNull() ?: 40.0
 
-        val process = when (processCn) {
-            "水洗" -> "washed"
-            "蜜处理" -> "honey_washed"
-            "日晒" -> "natural"
-            "厌氧" -> "anaerobic"
-            else -> "washed"
-        }
+    val processCn = processSpinner.selectedItem.toString()
+    val roastLevelCn = roastLevelSpinner.selectedItem.toString()
+    val flavorCn = flavorSpinner.selectedItem.toString()
+    val batchCn = batchSpinner.selectedItem.toString()
 
-        val roastLevel = when (roastLevelCn) {
-            "浅烘" -> "light"
-            "浅中" -> "light_medium"
-            "中烘" -> "medium"
-            "中深" -> "medium_dark"
-            else -> "light_medium"
-        }
+    val process = when (processCn) {
+        "水洗" -> "washed"
+        "蜜处理" -> "honey_washed"
+        "日晒" -> "natural"
+        "厌氧" -> "anaerobic"
+        else -> "washed"
+    }
 
-        val orientation = when (flavorCn) {
-            "干净清晰"
+    val roastLevel = when (roastLevelCn) {
+        "浅烘" -> "light"
+        "浅中" -> "light_medium"
+        "中烘" -> "medium"
+        "中深" -> "medium_dark"
+        else -> "light_medium"
+    }
+
+    val orientation = when (flavorCn) {
+        "干净清晰" -> "clean"
+        "均衡" -> "stable"
+        "厚重" -> "thick"
+        else -> "stable"
+    }
+
+    val batch = when (batchCn) {
+        "第一锅" -> 1
+        "第二锅" -> 2
+        "第三锅" -> 3
+        else -> 1
+    }
+
+    return PlannerInput(
+        process = process,
+        density = density,
+        moisture = moisture,
+        aw = aw,
+        envTemp = envTemp,
+        envRH = humidity,
+
+        roastLevel = roastLevel,
+        orientation = orientation,
+
+        purpose = "pour_over",
+
+        batchNum = batch,
+
+        beanSize = "normal",
+        mode = "M2",
+
+        learnM = 0.8,
+        learnK = 340.0,
+        learnW = 0.6,
+
+        ttSec = 85,
+        tySec = null
+    )
+    }
