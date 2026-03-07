@@ -36,21 +36,36 @@ object LiveAssistPage {
         title.text = "LIVE ASSIST"
         title.textSize = 22f
 
-        val summary = TextView(context)
-        summary.text = """
-Predicted
+        val plannerSummary = TextView(context)
+        plannerSummary.text = """
+Planner Baseline
+
 Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
 
+        val currentCardTitle = TextView(context)
+        currentCardTitle.text = "CURRENT CONTROL CARD"
+        currentCardTitle.textSize = 18f
+
+        val currentCard = TextView(context)
+        currentCard.text = buildControlCard(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
         root.addView(title)
-        root.addView(summary)
+        root.addView(plannerSummary)
+        root.addView(currentCardTitle)
+        root.addView(currentCard)
 
         // Turning
         val turningTitle = TextView(context)
-        turningTitle.text = "Turning"
+        turningTitle.text = "Turning Event"
 
         val actualTurningInput = EditText(context)
         actualTurningInput.hint = "Actual Turning sec"
@@ -71,7 +86,7 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
 
         // Yellow
         val yellowTitle = TextView(context)
-        yellowTitle.text = "Yellow"
+        yellowTitle.text = "Yellow Event"
 
         val actualYellowInput = EditText(context)
         actualYellowInput.hint = "Actual Yellow sec"
@@ -147,16 +162,21 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
             val advice = LiveAssistEngine.turningAssist(predTurning, actualTurning)
             val diff = actualTurning - predTurning
 
+            val actionNow = """
+Heat: ${advice.heat}
+Air: ${advice.airflow}
+            """.trimIndent()
+
             val targetNext = when {
-                diff > 8 -> "Pull Yellow back toward target window"
-                diff < -8 -> "Delay Yellow slightly and reduce early push"
+                diff > 8 -> "Push Yellow back toward target window"
+                diff < -8 -> "Slow early momentum and protect mid phase"
                 else -> "Hold Yellow near current prediction"
             }
 
             val risk = when {
                 diff > 8 -> "Front-end energy short risk"
-                diff < -8 -> "Mid-phase acceleration risk"
-                else -> "No immediate Turning risk"
+                diff < -8 -> "Early acceleration risk"
+                else -> "Low immediate Turning risk"
             }
 
             turningResult.text = """
@@ -168,8 +188,7 @@ Deviation
 ${advice.deviation}
 
 Action Now
-Heat: ${advice.heat}
-Air: ${advice.airflow}
+$actionNow
 
 Target Next
 $targetNext
@@ -177,6 +196,13 @@ $targetNext
 Risk
 $risk
             """.trimIndent()
+
+            currentCard.text = buildControlCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
         }
 
         yellowBtn.setOnClickListener {
@@ -192,8 +218,13 @@ $risk
             val advice = LiveAssistEngine.yellowAssist(predYellow, actualYellow, ror)
             val diff = actualYellow - predYellow
 
+            val actionNow = """
+Heat: ${advice.heat}
+Air: ${advice.airflow}
+            """.trimIndent()
+
             val targetNext = when {
-                diff > 15 -> "Recover FC timing with stronger mid push"
+                diff > 15 -> "Recover FC timing with stronger middle push"
                 diff < -15 -> "Slow momentum before crack"
                 ror > 14.0 -> "Reduce ROR before pre-crack section"
                 else -> "Keep FC on current path"
@@ -216,8 +247,7 @@ Deviation
 ${advice.deviation}
 
 Action Now
-Heat: ${advice.heat}
-Air: ${advice.airflow}
+$actionNow
 
 Target Next
 $targetNext
@@ -225,6 +255,13 @@ $targetNext
 Risk
 $risk
             """.trimIndent()
+
+            currentCard.text = buildControlCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
         }
 
         fcBtn.setOnClickListener {
@@ -245,10 +282,15 @@ $risk
             val advice = LiveAssistEngine.fcAssist(predFc, actualFc, ror)
             val diff = actualFc - predFc
 
+            val actionNow = """
+Heat: ${advice.heat}
+Air: ${advice.airflow}
+            """.trimIndent()
+
             val targetNext = when {
                 ror > 10.0 -> "Stabilize development and prevent overshoot"
                 ror < 7.0 -> "Preserve energy and avoid crash"
-                diff > 15 -> "Avoid dragging development"
+                diff > 15 -> "Avoid dragging development too long"
                 diff < -15 -> "Protect sweetness and avoid harsh finish"
                 else -> "Hold development in controlled window"
             }
@@ -272,8 +314,7 @@ Deviation
 ${advice.deviation}
 
 Action Now
-Heat: ${advice.heat}
-Air: ${advice.airflow}
+$actionNow
 
 Target Next
 $targetNext
@@ -281,6 +322,76 @@ $targetNext
 Risk
 $risk
             """.trimIndent()
+
+            currentCard.text = buildControlCard(
+                predTurning = predTurning,
+                predYellow = predYellow,
+                predFc = predFc,
+                predDrop = predDrop
+            )
         }
+    }
+
+    private fun buildControlCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+
+        val actualTurning = AppState.liveActualTurningSec
+        val actualYellow = AppState.liveActualYellowSec
+        val actualFc = AppState.liveActualFcSec
+        val actualDrop = AppState.liveActualDropSec
+        val actualRor = AppState.liveActualPreFcRor
+
+        val currentStage = when {
+            actualFc != null -> "Development / Drop"
+            actualYellow != null -> "Maillard / Pre-FC"
+            actualTurning != null -> "Drying / To Yellow"
+            else -> "Pre-Turning"
+        }
+
+        val nextAction = when {
+            actualFc != null && actualRor != null && actualRor > 10.0 -> "Reduce heat, add air, protect development"
+            actualFc != null && actualRor != null && actualRor < 7.0 -> "Preserve heat, avoid collapse"
+            actualYellow != null -> "Control middle momentum toward FC"
+            actualTurning != null -> "Shape drying so Yellow stays on plan"
+            else -> "Watch first anchor point"
+        }
+
+        val biggestRisk = when {
+            actualFc != null && actualRor != null && actualRor > 10.0 -> "Overshoot in development"
+            actualFc != null && actualRor != null && actualRor < 7.0 -> "Development crash"
+            actualYellow != null && actualYellow - predYellow > 15 -> "Late crack / flat cup"
+            actualYellow != null && actualYellow - predYellow < -15 -> "Pre-FC spike"
+            actualTurning != null && actualTurning - predTurning > 8 -> "Front-end energy short"
+            actualTurning != null && actualTurning - predTurning < -8 -> "Early push too strong"
+            else -> "No dominant risk yet"
+        }
+
+        return """
+Current Stage
+$currentStage
+
+Predicted Anchors
+Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
+
+Actual Anchors
+Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
+
+Next Action
+$nextAction
+
+Biggest Risk
+$biggestRisk
+        """.trimIndent()
     }
 }
