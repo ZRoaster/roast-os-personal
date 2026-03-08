@@ -15,7 +15,6 @@ data class RoastReportSection(
 object RoastReportEngine {
 
     fun buildFromCurrentState(): RoastReport {
-
         val planner = AppState.lastPlannerResult
         val plannerInput = AppState.lastPlannerInput
         val timeline = RoastTimelineStore.current
@@ -26,75 +25,47 @@ object RoastReportEngine {
         val batchId = session?.batchId ?: "NO-BATCH"
         val title = "Roast Report"
 
-        val sections = listOf(
-            RoastReportSection(
-                "BATCH OVERVIEW",
-                buildOverviewBody(session)
-            ),
+        val predTurning = timeline.predicted.turningSec
+            ?: planner?.let { (it.h1Sec - 60.0).toInt().coerceAtLeast(50) }
 
-            RoastReportSection(
-                "BEAN / ENVIRONMENT",
-                buildBeanEnvBody(plannerInput)
-            ),
+        val predYellow = timeline.predicted.yellowSec
+            ?: planner?.h2Sec?.toInt()
 
-            RoastReportSection(
-                "PREDICTED PLAN",
-                buildPredictedBody(planner, timeline)
-            ),
+        val predFc = timeline.predicted.fcSec
+            ?: planner?.fcPredSec?.toInt()
 
-            RoastReportSection(
-                "ACTUAL TIMELINE",
-                buildActualBody(timeline)
-            ),
+        val predDrop = timeline.predicted.dropSec
+            ?: planner?.dropSec?.toInt()
 
-            RoastReportSection(
-                "DEVIATION SUMMARY",
-                buildDeviationBody(timeline, planner)
-            ),
+        val actualTurning = timeline.actual.turningSec
+        val actualYellow = timeline.actual.yellowSec
+        val actualFc = timeline.actual.fcSec
+        val actualDrop = timeline.actual.dropSec
+        val actualRor = AppState.liveActualPreFcRor
 
-            RoastReportSection(
-                "DIAGNOSIS",
-                diagnosis.summary
-            ),
+        val elapsedSec = BatchSessionEngine.currentElapsedSec()
+        val elapsedText = if (elapsedSec != null) {
+            "${elapsedSec / 60}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+        } else {
+            "-"
+        }
 
-            RoastReportSection(
-                "NEXT-BATCH CORRECTION",
-                bridge.summary
-            )
-        )
-
-        val reportText = buildString {
-
-            appendLine(title)
-            appendLine()
-
-            appendLine("Batch ID")
-            appendLine(batchId)
-            appendLine()
-
-            for (section in sections) {
-
-                appendLine(section.heading)
-                appendLine(section.body)
-                appendLine()
-
+        val predictedDevText =
+            if (predFc != null && predDrop != null && predDrop > predFc) {
+                "${predDrop - predFc}s"
+            } else {
+                "-"
             }
 
-        }.trim()
+        val predictedDtrText =
+            if (predFc != null && predDrop != null && predDrop > predFc && predDrop > 0) {
+                "%.1f".format(((predDrop - predFc).toDouble() / predDrop.toDouble()) * 100.0) + "%"
+            } else {
+                "-"
+            }
 
-        return RoastReport(
-            title = title,
-            batchId = batchId,
-            summary = reportText,
-            sections = sections
-        )
-    }
-
-    private fun buildOverviewBody(session: BatchSession?): String {
-
-        if (session == null) {
-
-            return """
+        val overviewBody = if (session == null) {
+            """
 Batch ID
 -
 
@@ -106,19 +77,9 @@ Elapsed
 
 Notes
 No active session
-""".trimIndent()
-
-        }
-
-        val elapsed = BatchSessionEngine.currentElapsedSec()
-
-        val elapsedText =
-            if (elapsed != null)
-                "${elapsed / 60}:${(elapsed % 60).toString().padStart(2, '0')}"
-            else
-                "-"
-
-        return """
+            """.trimIndent()
+        } else {
+            """
 Batch ID
 ${session.batchId}
 
@@ -132,171 +93,145 @@ Started
 ${session.startTimeMillis}
 
 Ended
-${session.endTimeMillis ?: "-"}
+${session.endTimeMillis?.toString() ?: "-"}
 
 Notes
 ${if (session.notes.isBlank()) "-" else session.notes}
-""".trimIndent()
-    }
-
-    private fun buildBeanEnvBody(input: PlannerInput?): String {
-
-        if (input == null) {
-
-            return """
-Bean
-No planner input available
-
-Environment
-No planner input available
-""".trimIndent()
-
+            """.trimIndent()
         }
 
-        return """
+        val beanEnvBody = if (plannerInput == null) {
+            """
 Bean
-Process    ${input.process}
-Density    ${"%.1f".format(input.density)}
-Moisture   ${"%.1f".format(input.moisture)}
-aw         ${"%.2f".format(input.aw)}
+No planner input available
 
 Environment
-Temp       ${"%.1f".format(input.envTemp)}℃
-RH         ${"%.1f".format(input.envRH)}%
+No planner input available
+            """.trimIndent()
+        } else {
+            """
+Bean
+Process    ${plannerInput.process}
+Density    ${"%.1f".format(plannerInput.density)}
+Moisture   ${"%.1f".format(plannerInput.moisture)}
+aw         ${"%.2f".format(plannerInput.aw)}
+
+Environment
+Temp       ${"%.1f".format(plannerInput.envTemp)}℃
+RH         ${"%.1f".format(plannerInput.envRH)}%
 
 Intent
-Roast      ${input.roastLevel}
-Direction  ${input.orientation}
-Mode       ${input.mode}
-Batch No   ${input.batchNum}
-""".trimIndent()
-    }
+Roast      ${plannerInput.roastLevel}
+Direction  ${plannerInput.orientation}
+Mode       ${plannerInput.mode}
+Batch No   ${plannerInput.batchNum}
+            """.trimIndent()
+        }
 
-    private fun buildPredictedBody(
-        planner: Any?,
-        timeline: RoastTimelineStore.State
-    ): String {
+        val predictedBody = """
+Charge
+${planner?.chargeBT?.toString()?.plus("℃") ?: "-"}
 
-        val predTurning = timeline.predicted.turningSec
-        val predYellow = timeline.predicted.yellowSec
-        val predFc = timeline.predicted.fcSec
-        val predDrop = timeline.predicted.dropSec
-
-        val turningText =
-            if (predTurning != null) RoastEngine.toMMSS(predTurning.toDouble()) else "-"
-
-        val yellowText =
-            if (predYellow != null) RoastEngine.toMMSS(predYellow.toDouble()) else "-"
-
-        val fcText =
-            if (predFc != null) RoastEngine.toMMSS(predFc.toDouble()) else "-"
-
-        val dropText =
-            if (predDrop != null) RoastEngine.toMMSS(predDrop.toDouble()) else "-"
-
-        val devText =
-            if (predFc != null && predDrop != null && predDrop > predFc)
-                "${predDrop - predFc}s"
-            else
-                "-"
-
-        val dtrText =
-            if (predFc != null && predDrop != null && predDrop > predFc)
-                "%.1f".format((predDrop - predFc).toDouble() / predDrop * 100.0) + "%"
-            else
-                "-"
-
-        return """
 Predicted Anchors
-Turning   $turningText
-Yellow    $yellowText
-FC        $fcText
-Drop      $dropText
+Turning   ${predTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${predYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${predFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${predDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
 Development
-Dev       $devText
-DTR       $dtrText
-""".trimIndent()
-    }
+Dev       $predictedDevText
+DTR       $predictedDtrText
+        """.trimIndent()
 
-    private fun buildActualBody(timeline: RoastTimelineStore.State): String {
-
-        val turning =
-            timeline.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-
-        val yellow =
-            timeline.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-
-        val fc =
-            timeline.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-
-        val drop =
-            timeline.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"
-
-        val ror =
-            timeline.currentRor?.let { "%.1f".format(it) } ?: "-"
-
-        val dev =
-            timeline.devSec?.toString() ?: "-"
-
-        val dtr =
-            timeline.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
-
-        return """
+        val actualBody = """
 Actual Anchors
-Turning   $turning
-Yellow    $yellow
-FC        $fc
-Drop      $drop
+Turning   ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
 Current
 Phase     ${timeline.currentPhase}
-ROR       $ror
-Dev       $dev
-DTR       $dtr
-""".trimIndent()
+ROR       ${timeline.currentRor?.let { "%.1f".format(it) } ?: "-"}
+Dev       ${timeline.devSec?.toString() ?: "-"}
+DTR       ${timeline.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+        """.trimIndent()
+
+        fun deviationLine(label: String, predicted: Int?, actual: Int?): String {
+            return when {
+                predicted == null -> "$label   Pred - / Actual ${actual?.toString() ?: "-"} / Δ -"
+                actual == null -> "$label   Pred ${predicted}s / Actual - / Δ -"
+                else -> {
+                    val delta = actual - predicted
+                    "$label   Pred ${predicted}s / Actual ${actual}s / Δ ${formatSigned(delta)}s"
+                }
+            }
+        }
+
+        val deviationBody = """
+${deviationLine("Turning", predTurning, actualTurning)}
+${deviationLine("Yellow", predYellow, actualYellow)}
+${deviationLine("FC", predFc, actualFc)}
+${deviationLine("Drop", predDrop, actualDrop)}
+Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
+        """.trimIndent()
+
+        val sections = listOf(
+            RoastReportSection(
+                heading = "BATCH OVERVIEW",
+                body = overviewBody
+            ),
+            RoastReportSection(
+                heading = "BEAN / ENVIRONMENT",
+                body = beanEnvBody
+            ),
+            RoastReportSection(
+                heading = "PREDICTED PLAN",
+                body = predictedBody
+            ),
+            RoastReportSection(
+                heading = "ACTUAL TIMELINE",
+                body = actualBody
+            ),
+            RoastReportSection(
+                heading = "DEVIATION SUMMARY",
+                body = deviationBody
+            ),
+            RoastReportSection(
+                heading = "DIAGNOSIS",
+                body = diagnosis.summary
+            ),
+            RoastReportSection(
+                heading = "NEXT-BATCH CORRECTION",
+                body = bridge.summary
+            )
+        )
+
+        val summary = buildString {
+            appendLine(title)
+            appendLine()
+            appendLine("Batch ID")
+            appendLine(batchId)
+            appendLine()
+
+            sections.forEachIndexed { index, section ->
+                appendLine(section.heading)
+                appendLine(section.body)
+                if (index != sections.lastIndex) {
+                    appendLine()
+                }
+            }
+        }.trim()
+
+        return RoastReport(
+            title = title,
+            batchId = batchId,
+            summary = summary,
+            sections = sections
+        )
     }
 
-    private fun buildDeviationBody(
-        timeline: RoastTimelineStore.State,
-        planner: Any?
-    ): String {
-
-        val lines = mutableListOf<String>()
-
-        lines.add(buildDeviationLine("Turning", timeline.predicted.turningSec, timeline.actual.turningSec))
-        lines.add(buildDeviationLine("Yellow", timeline.predicted.yellowSec, timeline.actual.yellowSec))
-        lines.add(buildDeviationLine("FC", timeline.predicted.fcSec, timeline.actual.fcSec))
-        lines.add(buildDeviationLine("Drop", timeline.predicted.dropSec, timeline.actual.dropSec))
-
-        val rorText =
-            AppState.liveActualPreFcRor?.let { "%.1f".format(it) } ?: "-"
-
-        lines.add("Pre-FC ROR $rorText")
-
-        return lines.joinToString("\n")
-    }
-
-    private fun buildDeviationLine(
-        label: String,
-        predicted: Int?,
-        actual: Int?
-    ): String {
-
-        if (predicted == null)
-            return "$label   Pred - / Actual ${actual ?: "-"} / Δ -"
-
-        if (actual == null)
-            return "$label   Pred ${predicted}s / Actual - / Δ -"
-
-        val delta = actual - predicted
-
-        val deltaText =
-            if (delta > 0)
-                "+${delta}s"
-            else
-                "${delta}s"
-
-        return "$label   Pred ${predicted}s / Actual ${actual}s / Δ $deltaText"
+    private fun formatSigned(value: Int): String {
+        return if (value > 0) "+$value" else value.toString()
     }
 }
