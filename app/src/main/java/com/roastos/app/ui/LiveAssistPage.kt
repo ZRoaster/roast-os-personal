@@ -14,8 +14,19 @@ object LiveAssistPage {
     private const val DEFAULT_DRUM_RPM = 60
 
     fun buildLiveAssist(): String {
-        val planner = AppState.lastPlannerResult ?: return "No planner result available"
-        val plannerInput = AppState.lastPlannerInput ?: return "No planner input available"
+        val planner = AppState.lastPlannerResult ?: return """
+LIVE ASSIST
+
+No planner result available
+Go to Planner first.
+        """.trimIndent()
+
+        val plannerInput = AppState.lastPlannerInput ?: return """
+LIVE ASSIST
+
+No planner input available
+Go to Planner first.
+        """.trimIndent()
 
         val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
         val predYellow = planner.h2Sec.toInt()
@@ -58,101 +69,63 @@ object LiveAssistPage {
             ror = AppState.liveActualPreFcRor
         )
 
-        val decisionCard = buildDecisionCard(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop
-        )
-
-        val controlCard = buildControlCard(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop
-        )
-
-        val timelineCard = buildTimelineCard()
-        val sessionCard = buildSessionCard()
-
         return """
-LIVE ASSIST
+LIVE EXECUTION OVERVIEW
 
-Planner Baseline
-Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
+${buildPlannerBaselineCard(predTurning, predYellow, predFc, predDrop)}
 
-$timelineCard
+${buildTimelineCard()}
 
-$decisionCard
+${buildDecisionCard(predTurning, predYellow, predFc, predDrop)}
 
-$controlCard
+${buildControlCard(predTurning, predYellow, predFc, predDrop)}
 
-$sessionCard
+${buildSessionCard()}
+        """.trimIndent()
+    }
+
+    private fun buildPlannerBaselineCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+        return """
+━━━━━━━━━━━━━━━━━━
+PLANNER BASELINE
+━━━━━━━━━━━━━━━━━━
+Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC        ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
     }
 
     private fun buildTimelineCard(): String {
         val tl = RoastTimelineStore.current
-        return """
-Timeline
 
+        return """
+━━━━━━━━━━━━━━━━━━
+ROAST TIMELINE
+━━━━━━━━━━━━━━━━━━
 Predicted
-Turning ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Turning   ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
 Actual
-Turning ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Turning   ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
-Phase
-${tl.currentPhase}
-
-ROR
-${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
-
-Dev
-${tl.devSec?.toString() ?: "-"}
-
-DTR
-${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+Current
+Phase     ${tl.currentPhase}
+ROR       ${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
+Dev       ${tl.devSec?.toString() ?: "-"}
+DTR       ${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
         """.trimIndent()
-    }
-
-    private fun buildSessionCard(): String {
-        val session = BatchSessionEngine.current()
-        return if (session == null) {
-            """
-Batch Session
-
-No active session
-            """.trimIndent()
-        } else {
-            """
-Batch Session
-
-Batch ID
-${session.batchId}
-
-Status
-${session.status}
-
-Bean
-Process ${session.beanSnapshot.process}
-Density ${"%.1f".format(session.beanSnapshot.density)}
-Moisture ${"%.1f".format(session.beanSnapshot.moisture)}
-aw ${"%.2f".format(session.beanSnapshot.aw)}
-
-Planner Snapshot
-Charge ${session.plannerSnapshot.chargeTemp}℃
-            """.trimIndent()
-        }
     }
 
     private fun buildDecisionCard(
@@ -161,7 +134,12 @@ Charge ${session.plannerSnapshot.chargeTemp}℃
         predFc: Int,
         predDrop: Int
     ): String {
-        val plannerInput = AppState.lastPlannerInput ?: return "Planner not initialized"
+        val plannerInput = AppState.lastPlannerInput ?: return """
+━━━━━━━━━━━━━━━━━━
+DECISION CENTER
+━━━━━━━━━━━━━━━━━━
+Planner not initialized
+        """.trimIndent()
 
         val decision = DecisionEngine.decide(
             predTurning = predTurning,
@@ -185,8 +163,9 @@ Charge ${session.plannerSnapshot.chargeTemp}℃
         )
 
         return """
-Decision Engine
-
+━━━━━━━━━━━━━━━━━━
+DECISION CENTER
+━━━━━━━━━━━━━━━━━━
 Current Phase
 ${decision.currentPhase}
 
@@ -208,7 +187,7 @@ ${decision.riskLevel}
 Reason
 ${decision.reason}
 
-Physics
+Physics / Energy
 ${decision.physicsSummary}
         """.trimIndent()
     }
@@ -235,40 +214,53 @@ ${decision.physicsSummary}
 
         val nextAction = when {
             actualDrop != null -> "Roast complete"
-            actualFc != null && actualRor != null && actualRor > 10.0 -> "Reduce heat slightly"
-            actualFc != null && actualRor != null && actualRor < 7.0 -> "Maintain energy"
-            actualYellow != null -> "Manage Maillard energy"
-            actualTurning != null -> "Guide drying phase"
-            else -> "Watch turning point"
+            actualFc != null && actualRor != null && actualRor > 10.0 ->
+                "Reduce heat slightly"
+            actualFc != null && actualRor != null && actualRor < 7.0 ->
+                "Maintain energy"
+            actualYellow != null ->
+                "Manage Maillard energy"
+            actualTurning != null ->
+                "Guide drying phase"
+            else ->
+                "Watch turning point"
         }
 
         val biggestRisk = when {
-            actualFc != null && actualRor != null && actualRor > 10.0 -> "Flick risk"
-            actualFc != null && actualRor != null && actualRor < 7.0 -> "Crash risk"
-            actualYellow != null && actualYellow - predYellow > 15 -> "Late development"
-            actualYellow != null && actualYellow - predYellow < -15 -> "Early spike"
-            actualTurning != null && actualTurning - predTurning > 8 -> "Front energy low"
-            actualTurning != null && actualTurning - predTurning < -8 -> "Front energy high"
-            else -> "No dominant risk yet"
+            actualFc != null && actualRor != null && actualRor > 10.0 ->
+                "Flick risk"
+            actualFc != null && actualRor != null && actualRor < 7.0 ->
+                "Crash risk"
+            actualYellow != null && actualYellow - predYellow > 15 ->
+                "Late development"
+            actualYellow != null && actualYellow - predYellow < -15 ->
+                "Early spike"
+            actualTurning != null && actualTurning - predTurning > 8 ->
+                "Front energy low"
+            actualTurning != null && actualTurning - predTurning < -8 ->
+                "Front energy high"
+            else ->
+                "No dominant risk yet"
         }
 
         return """
-Control Analysis
-
+━━━━━━━━━━━━━━━━━━
+CONTROL ANALYSIS
+━━━━━━━━━━━━━━━━━━
 Current Stage
 $currentStage
 
 Predicted Anchors
-Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
+Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC        ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
 
 Actual Anchors
-Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Turning   ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
 
 Next Action
@@ -277,6 +269,42 @@ $nextAction
 Biggest Risk
 $biggestRisk
         """.trimIndent()
+    }
+
+    private fun buildSessionCard(): String {
+        val session = BatchSessionEngine.current()
+        return if (session == null) {
+            """
+━━━━━━━━━━━━━━━━━━
+BATCH SESSION
+━━━━━━━━━━━━━━━━━━
+No active session
+            """.trimIndent()
+        } else {
+            """
+━━━━━━━━━━━━━━━━━━
+BATCH SESSION
+━━━━━━━━━━━━━━━━━━
+Batch ID
+${session.batchId}
+
+Status
+${session.status}
+
+Bean Snapshot
+Process   ${session.beanSnapshot.process}
+Density   ${"%.1f".format(session.beanSnapshot.density)}
+Moisture  ${"%.1f".format(session.beanSnapshot.moisture)}
+aw        ${"%.2f".format(session.beanSnapshot.aw)}
+
+Environment
+Temp      ${"%.1f".format(session.envSnapshot.tempC)}℃
+RH        ${"%.1f".format(session.envSnapshot.humidityRh)}%
+
+Planner Snapshot
+Charge    ${session.plannerSnapshot.chargeTemp}℃
+            """.trimIndent()
+        }
     }
 
     private fun currentPhase(): String {
