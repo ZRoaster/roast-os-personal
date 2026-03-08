@@ -22,7 +22,6 @@ object LiveAssistPage {
     private const val DEFAULT_DRUM_RPM = 7
 
     fun show(context: Context, container: LinearLayout) {
-
         container.removeAllViews()
 
         val predicted = AppState.lastPlannerResult
@@ -228,7 +227,6 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         container.addView(root)
 
         turningBtn.setOnClickListener {
-
             val actualTurning =
                 actualTurningInput.text.toString().toIntOrNull() ?: predTurning
 
@@ -295,7 +293,6 @@ $risk
         }
 
         yellowBtn.setOnClickListener {
-
             val actualYellow =
                 actualYellowInput.text.toString().toIntOrNull() ?: predYellow
 
@@ -369,7 +366,6 @@ $risk
         }
 
         fcBtn.setOnClickListener {
-
             val actualFc =
                 actualFcInput.text.toString().toIntOrNull() ?: predFc
 
@@ -650,4 +646,11 @@ Target Window
 ${decision.targetWindow}
 
 Risk Level
-${decis
+${decision.riskLevel}
+
+Reason
+${decision.reason}
+
+Physics
+${decision.physicsSummary}
+""".trimIndent()
