@@ -22,10 +22,33 @@ object CurveEngine {
         currentRor: Double?
     ): CurvePrediction {
 
-        val baseDev = (predDrop - predFc).coerceAtLeast(45)
+        val calibration = RoastStateModel.calibration
 
-        // 已经到 FC：只需要预测 Drop
+        val calibratedPredFc =
+            (predFc + calibration.fcBias).toInt()
+
+        val calibratedPredDrop =
+            (predDrop + calibration.dropBias).toInt()
+
+        val baseDev =
+            (calibratedPredDrop - calibratedPredFc).coerceAtLeast(45)
+
+        val beanMomentumShift = beanMomentumShift(
+            beanBias = calibration.beanBias
+        )
+
+        val machineResponseShift = machineResponseShift(
+            machineResponseFactor = calibration.machineResponseFactor
+        )
+
+        val heatAirShift = controlBiasShift(
+            heatBias = calibration.heatBias,
+            airBias = calibration.airBias
+        )
+
+        // FC 已记录：主要预测 Drop / Dev
         if (actualFc != null) {
+
             val ror = currentRor ?: 9.0
 
             val devAdjust = when {
@@ -36,8 +59,16 @@ object CurveEngine {
                 else -> 0
             }
 
-            val predictedDev = (baseDev + devAdjust).coerceIn(45, 150)
-            val predictedDrop = actualFc + predictedDev
+            val calibrationAdjust =
+                (-heatAirShift * 2.0).toInt() +
+                (-machineResponseShift * 2.0).toInt()
+
+            val predictedDev =
+                (baseDev + devAdjust + calibrationAdjust)
+                    .coerceIn(45, 150)
+
+            val predictedDrop =
+                actualFc + predictedDev
 
             return CurvePrediction(
                 predictedYellowSec = actualYellow ?: predYellow,
@@ -45,16 +76,18 @@ object CurveEngine {
                 predictedDropSec = predictedDrop,
                 predictedDevSec = predictedDev,
                 confidence = "High",
-                summary = "FC already recorded. Development projection is driven mainly by current pre-FC energy."
+                summary = "FC already recorded. Development projection is calibrated by current energy plus learned machine and control response."
             )
         }
 
-        // 已经到 Yellow：重点预测 FC / Drop
+        // Yellow 已记录：重点预测 FC / Drop
         if (actualYellow != null) {
+
             val yellowDelta = actualYellow - predYellow
             val ror = currentRor ?: 13.0
 
-            val fcFromYellowShift = (yellowDelta * 0.65).toInt()
+            val fcFromYellowShift =
+                (yellowDelta * 0.65).toInt()
 
             val rorAdjust = when {
                 ror > 14.0 -> -18
@@ -64,8 +97,14 @@ object CurveEngine {
                 else -> 0
             }
 
-            val predictedFc = (predFc + fcFromYellowShift + rorAdjust)
-                .coerceAtLeast(actualYellow + 60)
+            val calibrationAdjust =
+                (-beanMomentumShift * 6.0).toInt() +
+                (-machineResponseShift * 5.0).toInt() +
+                (-heatAirShift * 4.0).toInt()
+
+            val predictedFc =
+                (calibratedPredFc + fcFromYellowShift + rorAdjust + calibrationAdjust)
+                    .coerceAtLeast(actualYellow + 60)
 
             val devAdjust = when {
                 ror > 14.0 -> -8
@@ -73,50 +112,129 @@ object CurveEngine {
                 else -> 0
             }
 
-            val predictedDev = (baseDev + devAdjust).coerceIn(45, 150)
-            val predictedDrop = predictedFc + predictedDev
+            val predictedDev =
+                (baseDev + devAdjust + (-heatAirShift * 2.0).toInt())
+                    .coerceIn(45, 150)
+
+            val predictedDrop =
+                predictedFc + predictedDev
 
             return CurvePrediction(
                 predictedYellowSec = actualYellow,
                 predictedFcSec = predictedFc,
                 predictedDropSec = predictedDrop,
                 predictedDevSec = predictedDev,
-                confidence = "Medium-High",
-                summary = "Yellow already recorded. FC / Drop projection is corrected by Yellow deviation and current ROR."
+                confidence = confidenceForYellow(
+                    yellowDelta = yellowDelta,
+                    ror = ror,
+                    calibration = calibration
+                ),
+                summary = "Yellow already recorded. FC / Drop projection is corrected by Yellow deviation, current ROR, and learned calibration."
             )
         }
 
-        // 已经到 Turning：先推 Yellow，再推 FC / Drop
+        // Turning 已记录：先推 Yellow，再推 FC / Drop
         if (actualTurning != null) {
+
             val turningDelta = actualTurning - predTurning
 
-            val predictedYellow = (predYellow + (turningDelta * 0.75).toInt())
-                .coerceAtLeast(actualTurning + 90)
+            val calibrationAdjustYellow =
+                (beanMomentumShift * 8.0).toInt() +
+                (machineResponseShift * 6.0).toInt()
 
-            val predictedFc = (predFc + (turningDelta * 0.70).toInt())
-                .coerceAtLeast(predictedYellow + 120)
+            val predictedYellow =
+                (predYellow + (turningDelta * 0.75).toInt() + calibrationAdjustYellow)
+                    .coerceAtLeast(actualTurning + 90)
 
-            val predictedDrop = (predDrop + (turningDelta * 0.70).toInt())
-                .coerceAtLeast(predictedFc + baseDev)
+            val calibrationAdjustFc =
+                (beanMomentumShift * 10.0).toInt() +
+                (machineResponseShift * 8.0).toInt() +
+                (heatAirShift * 4.0).toInt()
+
+            val predictedFc =
+                (calibratedPredFc + (turningDelta * 0.70).toInt() + calibrationAdjustFc)
+                    .coerceAtLeast(predictedYellow + 120)
+
+            val calibrationAdjustDrop =
+                (beanMomentumShift * 8.0).toInt() +
+                (machineResponseShift * 8.0).toInt() +
+                (heatAirShift * 3.0).toInt()
+
+            val predictedDrop =
+                (calibratedPredDrop + (turningDelta * 0.70).toInt() + calibrationAdjustDrop)
+                    .coerceAtLeast(predictedFc + baseDev)
 
             return CurvePrediction(
                 predictedYellowSec = predictedYellow,
                 predictedFcSec = predictedFc,
                 predictedDropSec = predictedDrop,
                 predictedDevSec = (predictedDrop - predictedFc).coerceAtLeast(45),
-                confidence = "Medium",
-                summary = "Turning already recorded. Curve projection is estimated from early energy shift."
+                confidence = confidenceForTurning(
+                    turningDelta = turningDelta,
+                    calibration = calibration
+                ),
+                summary = "Turning already recorded. Curve projection is estimated from early energy shift and learned machine / bean calibration."
             )
         }
 
-        // 还没到 Turning：只能返回基准预测
+        // 尚未到 Turning：仅使用 Planner 基线 + 校准偏差
         return CurvePrediction(
             predictedYellowSec = predYellow,
-            predictedFcSec = predFc,
-            predictedDropSec = predDrop,
-            predictedDevSec = baseDev,
-            confidence = "Baseline",
-            summary = "No actual anchor recorded yet. Using planner baseline only."
+            predictedFcSec = calibratedPredFc,
+            predictedDropSec = calibratedPredDrop,
+            predictedDevSec = (calibratedPredDrop - calibratedPredFc).coerceAtLeast(45),
+            confidence = confidenceForBaseline(calibration),
+            summary = "No actual anchor recorded yet. Using planner baseline with learned FC / Drop calibration."
         )
+    }
+
+    private fun beanMomentumShift(beanBias: Double): Double {
+        return beanBias.coerceIn(-2.5, 2.5)
+    }
+
+    private fun machineResponseShift(machineResponseFactor: Double): Double {
+        return ((machineResponseFactor - 1.0) * 10.0).coerceIn(-2.5, 2.5)
+    }
+
+    private fun controlBiasShift(
+        heatBias: Double,
+        airBias: Double
+    ): Double {
+        return (heatBias - airBias * 0.6).coerceIn(-3.0, 3.0)
+    }
+
+    private fun confidenceForBaseline(
+        calibration: RoastStateModel.CalibrationState
+    ): String {
+        return when {
+            calibration.learningCount >= 12 -> "Medium-High"
+            calibration.learningCount >= 5 -> "Medium"
+            else -> "Baseline"
+        }
+    }
+
+    private fun confidenceForTurning(
+        turningDelta: Int,
+        calibration: RoastStateModel.CalibrationState
+    ): String {
+        return when {
+            kotlin.math.abs(turningDelta) <= 6 && calibration.learningCount >= 8 -> "Medium-High"
+            kotlin.math.abs(turningDelta) <= 10 -> "Medium"
+            else -> "Low-Medium"
+        }
+    }
+
+    private fun confidenceForYellow(
+        yellowDelta: Int,
+        ror: Double,
+        calibration: RoastStateModel.CalibrationState
+    ): String {
+        return when {
+            kotlin.math.abs(yellowDelta) <= 10 &&
+                ror in 11.0..14.0 &&
+                calibration.learningCount >= 8 -> "High"
+            kotlin.math.abs(yellowDelta) <= 15 -> "Medium-High"
+            else -> "Medium"
+        }
     }
 }
