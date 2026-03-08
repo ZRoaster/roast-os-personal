@@ -1,7 +1,6 @@
 package com.roastos.app
 
 import kotlin.math.max
-import kotlin.math.min
 
 data class CurvePoint(
     val timeSec: Int,
@@ -91,35 +90,35 @@ object RoastCurveEngine {
             )
         }
 
-        val actualPoints = if (actualTurning != null || actualYellow != null || actualFc != null || actualDrop != null) {
-            val aTurning = actualTurning ?: predTurning
-            val aYellow = actualYellow ?: predYellow
-            val aFc = actualFc ?: predFc
-            val aDrop = actualDrop ?: predDrop
+        val actualPoints =
+            if (actualTurning != null || actualYellow != null || actualFc != null || actualDrop != null) {
+                val aTurning = actualTurning ?: predTurning
+                val aYellow = actualYellow ?: predYellow
+                val aFc = actualFc ?: predFc
+                val aDrop = actualDrop ?: predDrop
 
-            val actualBtSeries = buildActualBtSeries(
-                finalSec = finalSec,
-                actualTurning = aTurning,
-                actualYellow = aYellow,
-                actualFc = aFc,
-                actualDrop = aDrop,
-                planner = planner
-            )
-
-            val actualRorSeries = buildControlledRor(actualBtSeries)
-
-            actualBtSeries.indices.map { i ->
-                CurvePoint(
-                    timeSec = i,
-                    bt = actualBtSeries[i],
-                    ror = actualRorSeries.getOrElse(i) { 0.0 },
-                    phase = detectPhaseAtTime(i, aTurning, aYellow, aFc, aDrop),
-                    isActual = true
+                val actualBtSeries = buildActualBtSeries(
+                    finalSec = finalSec,
+                    actualTurning = aTurning,
+                    actualYellow = aYellow,
+                    actualFc = aFc,
+                    actualDrop = aDrop
                 )
+
+                val actualRorSeries = buildControlledRor(actualBtSeries)
+
+                actualBtSeries.indices.map { i ->
+                    CurvePoint(
+                        timeSec = i,
+                        bt = actualBtSeries[i],
+                        ror = actualRorSeries.getOrElse(i) { 0.0 },
+                        phase = detectPhaseAtTime(i, aTurning, aYellow, aFc, aDrop),
+                        isActual = true
+                    )
+                }
+            } else {
+                emptyList()
             }
-        } else {
-            emptyList()
-        }
 
         val anchors = buildAnchors(
             predTurning = predTurning,
@@ -213,14 +212,9 @@ Phase tagging enabled
         actualTurning: Int,
         actualYellow: Int,
         actualFc: Int,
-        actualDrop: Int,
-        planner: Any?
+        actualDrop: Int
     ): List<Double> {
-        val dropBt = when (planner) {
-            is RoastCard -> planner.chargeBT.toDouble().coerceAtLeast(205.0)
-            else -> 206.0
-        }
-
+        val dropBt = 206.0
         val result = mutableListOf<Double>()
 
         for (t in 0..finalSec) {
@@ -235,7 +229,7 @@ Phase tagging enabled
                     turningBt = 92.0,
                     yellowBt = 150.0,
                     fcBt = 196.0,
-                    dropBt = min(dropBt + 2.0, 210.0)
+                    dropBt = dropBt
                 )
             )
         }
