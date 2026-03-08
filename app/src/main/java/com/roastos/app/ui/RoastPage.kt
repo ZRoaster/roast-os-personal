@@ -8,6 +8,9 @@ import com.roastos.app.RoastCurveEngine
 
 object RoastPage {
 
+    private var autoRefreshEnabled = false
+    private var autoRefreshRunnable: Runnable? = null
+
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
@@ -24,7 +27,12 @@ object RoastPage {
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh Curve"
 
+        val autoRefreshBtn = Button(context)
+        autoRefreshBtn.text = "Auto Refresh OFF"
+
         actionCard.addView(refreshBtn)
+        actionCard.addView(autoRefreshBtn)
+
         root.addView(actionCard)
         root.addView(UiKit.spacer(context))
 
@@ -55,8 +63,40 @@ object RoastPage {
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
 
+        fun stopAutoRefresh() {
+            autoRefreshRunnable?.let { root.removeCallbacks(it) }
+            autoRefreshRunnable = null
+            autoRefreshEnabled = false
+            autoRefreshBtn.text = "Auto Refresh OFF"
+        }
+
+        fun startAutoRefresh() {
+            stopAutoRefresh()
+            autoRefreshEnabled = true
+            autoRefreshBtn.text = "Auto Refresh ON"
+
+            val runnable = object : Runnable {
+                override fun run() {
+                    if (!autoRefreshEnabled) return
+                    refreshAll()
+                    root.postDelayed(this, 2000)
+                }
+            }
+
+            autoRefreshRunnable = runnable
+            root.post(runnable)
+        }
+
         refreshBtn.setOnClickListener {
             refreshAll()
+        }
+
+        autoRefreshBtn.setOnClickListener {
+            if (autoRefreshEnabled) {
+                stopAutoRefresh()
+            } else {
+                startAutoRefresh()
+            }
         }
 
         refreshAll()
