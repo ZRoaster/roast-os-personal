@@ -1,9 +1,11 @@
 package com.roastos.app.ui
 
 import com.roastos.app.AppState
+import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastEngine
 import com.roastos.app.RoastStateModel
+import com.roastos.app.RoastTimelineStore
 
 object LiveAssistPage {
 
@@ -33,6 +35,29 @@ object LiveAssistPage {
             drumRpm = DEFAULT_DRUM_RPM
         )
 
+        RoastTimelineStore.syncPredicted(
+            turningSec = predTurning,
+            yellowSec = predYellow,
+            fcSec = predFc,
+            dropSec = predDrop
+        )
+
+        RoastTimelineStore.syncActual(
+            turningSec = AppState.liveActualTurningSec,
+            yellowSec = AppState.liveActualYellowSec,
+            fcSec = AppState.liveActualFcSec,
+            dropSec = AppState.liveActualDropSec,
+            ror = AppState.liveActualPreFcRor
+        )
+
+        BatchSessionEngine.syncLiveData(
+            turningSec = AppState.liveActualTurningSec,
+            yellowSec = AppState.liveActualYellowSec,
+            fcSec = AppState.liveActualFcSec,
+            dropSec = AppState.liveActualDropSec,
+            ror = AppState.liveActualPreFcRor
+        )
+
         val decisionCard = buildDecisionCard(
             predTurning = predTurning,
             predYellow = predYellow,
@@ -47,6 +72,9 @@ object LiveAssistPage {
             predDrop = predDrop
         )
 
+        val timelineCard = buildTimelineCard()
+        val sessionCard = buildSessionCard()
+
         return """
 LIVE ASSIST
 
@@ -56,10 +84,75 @@ Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
 
+$timelineCard
+
 $decisionCard
 
 $controlCard
+
+$sessionCard
         """.trimIndent()
+    }
+
+    private fun buildTimelineCard(): String {
+        val tl = RoastTimelineStore.current
+        return """
+Timeline
+
+Predicted
+Turning ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Actual
+Turning ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Phase
+${tl.currentPhase}
+
+ROR
+${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
+
+Dev
+${tl.devSec?.toString() ?: "-"}
+
+DTR
+${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+        """.trimIndent()
+    }
+
+    private fun buildSessionCard(): String {
+        val session = BatchSessionEngine.current()
+        return if (session == null) {
+            """
+Batch Session
+
+No active session
+            """.trimIndent()
+        } else {
+            """
+Batch Session
+
+Batch ID
+${session.batchId}
+
+Status
+${session.status}
+
+Bean
+Process ${session.beanSnapshot.process}
+Density ${"%.1f".format(session.beanSnapshot.density)}
+Moisture ${"%.1f".format(session.beanSnapshot.moisture)}
+aw ${"%.2f".format(session.beanSnapshot.aw)}
+
+Planner Snapshot
+Charge ${session.plannerSnapshot.chargeTemp}℃
+            """.trimIndent()
+        }
     }
 
     private fun buildDecisionCard(
@@ -142,33 +235,21 @@ ${decision.physicsSummary}
 
         val nextAction = when {
             actualDrop != null -> "Roast complete"
-            actualFc != null && actualRor != null && actualRor > 10.0 ->
-                "Reduce heat slightly"
-            actualFc != null && actualRor != null && actualRor < 7.0 ->
-                "Maintain energy"
-            actualYellow != null ->
-                "Manage Maillard energy"
-            actualTurning != null ->
-                "Guide drying phase"
-            else ->
-                "Watch turning point"
+            actualFc != null && actualRor != null && actualRor > 10.0 -> "Reduce heat slightly"
+            actualFc != null && actualRor != null && actualRor < 7.0 -> "Maintain energy"
+            actualYellow != null -> "Manage Maillard energy"
+            actualTurning != null -> "Guide drying phase"
+            else -> "Watch turning point"
         }
 
         val biggestRisk = when {
-            actualFc != null && actualRor != null && actualRor > 10.0 ->
-                "Flick risk"
-            actualFc != null && actualRor != null && actualRor < 7.0 ->
-                "Crash risk"
-            actualYellow != null && actualYellow - predYellow > 15 ->
-                "Late development"
-            actualYellow != null && actualYellow - predYellow < -15 ->
-                "Early spike"
-            actualTurning != null && actualTurning - predTurning > 8 ->
-                "Front energy low"
-            actualTurning != null && actualTurning - predTurning < -8 ->
-                "Front energy high"
-            else ->
-                "No dominant risk yet"
+            actualFc != null && actualRor != null && actualRor > 10.0 -> "Flick risk"
+            actualFc != null && actualRor != null && actualRor < 7.0 -> "Crash risk"
+            actualYellow != null && actualYellow - predYellow > 15 -> "Late development"
+            actualYellow != null && actualYellow - predYellow < -15 -> "Early spike"
+            actualTurning != null && actualTurning - predTurning > 8 -> "Front energy low"
+            actualTurning != null && actualTurning - predTurning < -8 -> "Front energy high"
+            else -> "No dominant risk yet"
         }
 
         return """
