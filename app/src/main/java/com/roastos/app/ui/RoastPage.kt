@@ -7,6 +7,7 @@ import android.widget.ScrollView
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
+import com.roastos.app.RoastCorrectionBridge
 import com.roastos.app.RoastCurveEngine
 import com.roastos.app.RoastDeviationEngine
 import com.roastos.app.RoastStateModel
@@ -24,7 +25,7 @@ object RoastPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
-        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, deviation diagnosis, timeline tracking, roast curve, and actual input"))
+        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, diagnosis, correction bridge, timeline tracking, roast curve, and actual input"))
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -82,6 +83,13 @@ object RoastPage {
         root.addView(diagnosisCard)
         root.addView(UiKit.spacer(context))
 
+        val bridgeCard = UiKit.card(context)
+        bridgeCard.addView(UiKit.cardTitle(context, "CORRECTION BRIDGE"))
+        val bridgeBody = UiKit.bodyText(context, "")
+        bridgeCard.addView(bridgeBody)
+        root.addView(bridgeCard)
+        root.addView(UiKit.spacer(context))
+
         val summaryCard = UiKit.card(context)
         summaryCard.addView(UiKit.cardTitle(context, "CURVE ENGINE SUMMARY"))
         val summaryBody = UiKit.bodyText(context, "")
@@ -100,12 +108,14 @@ object RoastPage {
         fun refreshAll() {
             val curve = RoastCurveEngine.buildFromCurrentState()
             val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
+            val bridge = RoastCorrectionBridge.buildFromCurrentState()
 
             summaryBody.text = curve.summary
             sessionBody.text = BatchSessionEngine.summary()
             statusBody.text = buildTopStatus()
             workflowBody.text = RoastWorkflowGuide.buildText()
             diagnosisBody.text = diagnosis.summary
+            bridgeBody.text = bridge.summary
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
