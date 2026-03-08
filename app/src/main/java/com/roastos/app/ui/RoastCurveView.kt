@@ -82,6 +82,20 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
+    private val rorBandPaint = Paint().apply {
+        color = Color.parseColor("#BBDEFB")
+        style = Paint.Style.FILL
+        alpha = 90
+        isAntiAlias = true
+    }
+
+    private val rorBandEdgePaint = Paint().apply {
+        color = Color.parseColor("#64B5F6")
+        strokeWidth = 2f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
     fun setCurve(curveResult: RoastCurveResult) {
         curve = curveResult
         invalidate()
@@ -122,6 +136,17 @@ class RoastCurveView(context: Context) : View(context) {
         val maxTime = max(1, allPoints.maxOf { it.timeSec })
         val minBt = allPoints.minOf { it.bt }
         val maxBt = allPoints.maxOf { it.bt }
+
+        drawRorTargetBand(
+            canvas = canvas,
+            anchors = data.anchors,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime
+        )
 
         drawDevelopmentWindow(
             canvas = canvas,
@@ -199,6 +224,90 @@ class RoastCurveView(context: Context) : View(context) {
             val x = left + (right - left) * i / vLines
             canvas.drawLine(x, top, x, bottom, gridPaint)
         }
+    }
+
+    private fun drawRorTargetBand(
+        canvas: Canvas,
+        anchors: List<CurveAnchor>,
+        left: Float,
+        top: Float,
+        bottom: Float,
+        plotWidth: Float,
+        plotHeight: Float,
+        maxTime: Int
+    ) {
+        val predTurning = anchors.firstOrNull { it.label == "Turning" && !it.isActual }?.timeSec ?: return
+        val predYellow = anchors.firstOrNull { it.label == "Yellow" && !it.isActual }?.timeSec ?: return
+        val predFc = anchors.firstOrNull { it.label == "FC" && !it.isActual }?.timeSec ?: return
+        val predDrop = anchors.firstOrNull { it.label == "Drop" && !it.isActual }?.timeSec ?: return
+
+        // 用图区域上半部分大致表达 ROR 目标带，不与 BT 轴严格绑定
+        drawBandSegment(
+            canvas = canvas,
+            startSec = predTurning,
+            endSec = predYellow,
+            upperRatio = 0.16f,
+            lowerRatio = 0.28f,
+            left = left,
+            top = top,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime,
+            label = "ROR D"
+        )
+
+        drawBandSegment(
+            canvas = canvas,
+            startSec = predYellow,
+            endSec = predFc,
+            upperRatio = 0.24f,
+            lowerRatio = 0.36f,
+            left = left,
+            top = top,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime,
+            label = "ROR M"
+        )
+
+        drawBandSegment(
+            canvas = canvas,
+            startSec = predFc,
+            endSec = predDrop,
+            upperRatio = 0.34f,
+            lowerRatio = 0.46f,
+            left = left,
+            top = top,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime,
+            label = "ROR DEV"
+        )
+    }
+
+    private fun drawBandSegment(
+        canvas: Canvas,
+        startSec: Int,
+        endSec: Int,
+        upperRatio: Float,
+        lowerRatio: Float,
+        left: Float,
+        top: Float,
+        plotWidth: Float,
+        plotHeight: Float,
+        maxTime: Int,
+        label: String
+    ) {
+        if (endSec <= startSec) return
+
+        val x0 = left + (startSec.toFloat() / maxTime) * plotWidth
+        val x1 = left + (endSec.toFloat() / maxTime) * plotWidth
+        val y0 = top + plotHeight * upperRatio
+        val y1 = top + plotHeight * lowerRatio
+
+        canvas.drawRect(x0, y0, x1, y1, rorBandPaint)
+        canvas.drawRect(x0, y0, x1, y1, rorBandEdgePaint)
+        canvas.drawText(label, x0 + 8f, y0 + 26f, smallTextPaint)
     }
 
     private fun drawDevelopmentWindow(
