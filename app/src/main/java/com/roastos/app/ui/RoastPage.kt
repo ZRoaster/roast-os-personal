@@ -10,6 +10,7 @@ import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastCorrectionBridge
 import com.roastos.app.RoastCurveEngine
 import com.roastos.app.RoastDeviationEngine
+import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastStateModel
 import com.roastos.app.RoastTimelineStore
 
@@ -25,7 +26,12 @@ object RoastPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
-        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, diagnosis, correction bridge, timeline tracking, roast curve, and actual input"))
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "Live assist, workflow, diagnosis, correction bridge, history, timeline tracking, roast curve, and actual input"
+            )
+        )
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -67,6 +73,13 @@ object RoastPage {
         actionCard.addView(autoRefreshBtn)
 
         root.addView(actionCard)
+        root.addView(UiKit.spacer(context))
+
+        val historyCard = UiKit.card(context)
+        historyCard.addView(UiKit.cardTitle(context, "ROAST HISTORY"))
+        val historyBody = UiKit.bodyText(context, "")
+        historyCard.addView(historyBody)
+        root.addView(historyCard)
         root.addView(UiKit.spacer(context))
 
         val sessionCard = UiKit.card(context)
@@ -112,6 +125,7 @@ object RoastPage {
 
             summaryBody.text = curve.summary
             sessionBody.text = BatchSessionEngine.summary()
+            historyBody.text = RoastHistoryEngine.summary()
             statusBody.text = buildTopStatus()
             workflowBody.text = RoastWorkflowGuide.buildText()
             diagnosisBody.text = diagnosis.summary
@@ -167,6 +181,7 @@ object RoastPage {
 
         finishBtn.setOnClickListener {
             BatchSessionEngine.finish("Finished from RoastPage")
+            RoastHistoryEngine.saveCurrentState()
             refreshAll()
         }
 
