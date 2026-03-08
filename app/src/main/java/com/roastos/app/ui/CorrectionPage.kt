@@ -4,9 +4,8 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.roastos.app.AdaptiveCalibrationEngine
 import com.roastos.app.AppState
-import com.roastos.app.BatchActualInput
-import com.roastos.app.CorrectionEngine
 import com.roastos.app.RoastEngine
 
 object CorrectionPage {
@@ -15,10 +14,10 @@ object CorrectionPage {
 
         container.removeAllViews()
 
+        val planner = AppState.lastPlannerResult
         val plannerInput = AppState.lastPlannerInput
-        val predicted = AppState.lastPlannerResult
 
-        if (plannerInput == null || predicted == null) {
+        if (planner == null || plannerInput == null) {
             val t = TextView(context)
             t.text = "Run Planner first."
             container.addView(t)
@@ -28,15 +27,13 @@ object CorrectionPage {
         val actualTurning = AppState.liveActualTurningSec
         val actualYellow = AppState.liveActualYellowSec
         val actualFc = AppState.liveActualFcSec
-        val actualRor = AppState.liveActualPreFcRor
         val actualDrop = AppState.liveActualDropSec
+        val actualRor = AppState.liveActualPreFcRor
 
-        if (actualTurning == null || actualYellow == null || actualFc == null || actualRor == null || actualDrop == null) {
-            val t = TextView(context)
-            t.text = "Run Live Assist first and complete Turning / Yellow / FC / Drop."
-            container.addView(t)
-            return
-        }
+        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
+        val predYellow = planner.h2Sec.toInt()
+        val predFc = planner.fcPredSec.toInt()
+        val predDrop = planner.dropSec.toInt()
 
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
@@ -45,114 +42,201 @@ object CorrectionPage {
         title.text = "BATCH CORRECTION"
         title.textSize = 22f
 
-        val stateSummary = TextView(context)
-        stateSummary.text = """
-Loaded State
+        val baselineCard = TextView(context)
+        baselineCard.text = """
+Planner Baseline
 
-Process ${predicted.ptLabel}
-Charge ${predicted.chargeBT}℃
-Pred FC ${RoastEngine.toMMSS(predicted.fcPredSec)}
-Pred Drop ${RoastEngine.toMMSS(predicted.dropSec)}
-
-Actual Turning ${RoastEngine.toMMSS(actualTurning.toDouble())}
-Actual Yellow ${RoastEngine.toMMSS(actualYellow.toDouble())}
-Actual FC ${RoastEngine.toMMSS(actualFc.toDouble())}
-Actual Drop ${RoastEngine.toMMSS(actualDrop.toDouble())}
-Actual Pre-FC ROR ${"%.1f".format(actualRor)}
+Charge ${planner.chargeBT}℃
+Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
 
-        val runBtn = Button(context)
-        runBtn.text = "Generate Batch 2"
+        val liveCard = TextView(context)
+        liveCard.text = """
+Actual Batch Data
 
-        val result = TextView(context)
+Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
+        """.trimIndent()
+
+        val resultCard = TextView(context)
+        val learningCard = TextView(context)
+
+        val runBtn = Button(context)
+        runBtn.text = "Generate Batch 2 Correction"
 
         root.addView(title)
-        root.addView(stateSummary)
+        root.addView(baselineCard)
+        root.addView(liveCard)
         root.addView(runBtn)
-        root.addView(result)
+        root.addView(resultCard)
+        root.addView(learningCard)
 
         container.addView(root)
 
         runBtn.setOnClickListener {
 
-            val actual = BatchActualInput(
-                turningSec = actualTurning,
-                yellowSec = actualYellow,
-                firstCrackSec = actualFc,
-                dropSec = actualDrop,
-                preFcRor = actualRor
-            )
+            if (actualTurning == null ||
+                actualYellow == null ||
+                actualFc == null ||
+                actualDrop == null ||
+                actualRor == null
+            ) {
+                resultCard.text = """
+Correction Status
+Not ready
 
-            val correction = CorrectionEngine.correct(
-                plannerInput = plannerInput,
-                predicted = predicted,
-                actual = actual,
-                batchIndex = plannerInput.batchNum
-            )
+Needed
+${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow == null) "• Yellow actual\n" else ""}${if (actualFc == null) "• FC actual\n" else ""}${if (actualDrop == null) "• Drop actual\n" else ""}${if (actualRor == null) "• Pre-FC ROR" else ""}
+                """.trimIndent()
 
-            val summary = when {
-                correction.deltaFcSec > 15 ->
-                    "Batch 1 ran slow into FC. Batch 2 should recover middle-to-late momentum."
-                correction.deltaFcSec < -15 ->
-                    "Batch 1 reached FC too early. Batch 2 should reduce push before crack."
-                correction.deltaPreFcRor > 1.0 ->
-                    "Batch 1 carried too much energy into crack. Batch 2 should protect development."
-                correction.deltaPreFcRor < -1.0 ->
-                    "Batch 1 lacked energy before crack. Batch 2 should preserve more momentum."
-                else ->
-                    "Batch 1 stayed close to target. Batch 2 needs only light correction."
+                learningCard.text = ""
+                return@setOnClickListener
             }
 
-            val diagnosisText = if (correction.diagnosis.isEmpty()) {
-                "No major diagnosis."
-            } else {
-                correction.diagnosis.joinToString("\n") { "• $it" }
-            }
+            val turningDelta = actualTurning - predTurning
+            val yellowDelta = actualYellow - predYellow
+            val fcDelta = actualFc - predFc
+            val dropDelta = actualDrop - predDrop
 
-            val actionsText = if (correction.actions.isEmpty()) {
-                "• Keep core plan and apply only small manual adjustments."
-            } else {
-                correction.actions.joinToString("\n") { "• $it" }
-            }
+            val chargeCorrection = chargeCorrection(turningDelta)
+            val heatCorrection = heatCorrection(yellowDelta, actualRor)
+            val airCorrection = airCorrection(yellowDelta, actualRor)
+            val devCorrection = devCorrection(fcDelta, actualRor)
+            val diagnosis = diagnosis(turningDelta, yellowDelta, fcDelta, actualRor)
 
-            val riskFocus = when {
-                correction.deltaPreFcRor > 1.0 -> "Pre-FC overshoot risk"
-                correction.deltaPreFcRor < -1.0 -> "Energy collapse risk"
-                correction.deltaFcSec > 15 -> "Late crack / flat finish risk"
-                correction.deltaFcSec < -15 -> "Fast crack / sharp finish risk"
-                else -> "Moderate replay risk"
-            }
+            val batch2Charge = planner.chargeBT + chargeCorrection
 
-            result.text = """
-BATCH 2 CORRECTION CARD
+            val predictedBatch2Fc = predFc - (fcDelta * 0.45).toInt()
+            val predictedBatch2Drop = predDrop - (dropDelta * 0.45).toInt()
 
-Summary
-$summary
+            resultCard.text = """
+Correction Diagnosis
 
-Deviation
-Turning Δ ${correction.deltaTurningSec}s
-Yellow Δ ${correction.deltaYellowSec}s
-FC Δ ${correction.deltaFcSec}s
-Drop Δ ${correction.deltaDropSec}s
-Pre-FC ROR Δ ${"%.1f".format(correction.deltaPreFcRor)}
-
-Bias Scores
-Heat ${"%.2f".format(correction.heatBiasScore)}
-Airflow ${"%.2f".format(correction.airflowBiasScore)}
-Inertia ${"%.2f".format(correction.inertiaBiasScore)}
+Turning Δ ${formatSigned(turningDelta)}s
+Yellow Δ ${formatSigned(yellowDelta)}s
+FC Δ ${formatSigned(fcDelta)}s
+Drop Δ ${formatSigned(dropDelta)}s
+Pre-FC ROR ${"%.1f".format(actualRor)}
 
 Diagnosis
-$diagnosisText
+$diagnosis
 
-Batch 2 Actions
-$actionsText
+Batch 2 Action Card
 
-Risk Focus
-$riskFocus
+Charge
+${planner.chargeBT}℃ → ${batch2Charge}℃
 
-Execution Card
-${correction.batch2ExecutionCard}
+Front-End
+$chargeCorrectionHint(chargeCorrection)
+
+Middle Phase
+$heatCorrection
+$airCorrection
+
+Development
+$devCorrection
+
+Batch 2 Predicted Targets
+FC ${RoastEngine.toMMSS(predictedBatch2Fc.toDouble())}
+Drop ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
+            """.trimIndent()
+
+            val update = AdaptiveCalibrationEngine.update(
+                current = AppState.calibrationState,
+                predictedFcSec = predFc,
+                predictedDropSec = predDrop,
+                actualFcSec = actualFc,
+                actualDropSec = actualDrop,
+                actualPreFcRor = actualRor
+            )
+
+            AppState.calibrationState = update.newState
+
+            learningCard.text = """
+Adaptive Learning
+
+${update.summary}
             """.trimIndent()
         }
+    }
+
+    private fun chargeCorrection(turningDelta: Int): Int {
+        return when {
+            turningDelta >= 12 -> 2
+            turningDelta >= 6 -> 1
+            turningDelta <= -12 -> -2
+            turningDelta <= -6 -> -1
+            else -> 0
+        }
+    }
+
+    private fun chargeCorrectionHint(correction: Int): String {
+        return when {
+            correction > 0 -> "Charge +${correction}℃ to recover front-end energy"
+            correction < 0 -> "Charge ${correction}℃ to soften front-end push"
+            else -> "Hold charge temperature"
+        }
+    }
+
+    private fun heatCorrection(yellowDelta: Int, actualRor: Double): String {
+        return when {
+            yellowDelta >= 15 -> "Heat +40W to +60W through Maillard"
+            yellowDelta <= -15 -> "Heat -40W to -60W before FC"
+            actualRor > 10.5 -> "Heat -40W around pre-FC"
+            actualRor < 7.5 -> "Heat +40W to protect development"
+            else -> "Heat Hold"
+        }
+    }
+
+    private fun airCorrection(yellowDelta: Int, actualRor: Double): String {
+        return when {
+            yellowDelta <= -15 || actualRor > 10.5 -> "Air +1Pa to +2Pa"
+            yellowDelta >= 15 || actualRor < 7.5 -> "Air Hold / slight delay"
+            else -> "Air Hold"
+        }
+    }
+
+    private fun devCorrection(fcDelta: Int, actualRor: Double): String {
+        return when {
+            actualRor > 10.5 -> "Reduce development energy and protect finish"
+            actualRor < 7.5 -> "Preserve development energy and avoid crash"
+            fcDelta >= 15 -> "Do not drag post-crack too long"
+            fcDelta <= -15 -> "Protect sweetness and avoid harsh finish"
+            else -> "Hold development structure"
+        }
+    }
+
+    private fun diagnosis(
+        turningDelta: Int,
+        yellowDelta: Int,
+        fcDelta: Int,
+        actualRor: Double
+    ): String {
+        return when {
+            turningDelta > 8 && yellowDelta > 12 ->
+                "Front-end energy weak, drying and middle phase both late"
+            turningDelta < -8 && yellowDelta < -12 ->
+                "Front-end push too strong, early acceleration compressed structure"
+            yellowDelta > 15 && actualRor < 9.0 ->
+                "Middle phase weak, FC likely delayed and cup may flatten"
+            yellowDelta < -15 && actualRor > 10.5 ->
+                "Middle phase too aggressive, pre-FC spike risk high"
+            fcDelta > 15 && actualRor < 8.0 ->
+                "Crack arrived late with weak energy, development support insufficient"
+            fcDelta < -15 && actualRor > 10.5 ->
+                "Crack arrived early with strong energy, overshoot risk elevated"
+            else ->
+                "Batch was near target, only moderate correction needed"
+        }
+    }
+
+    private fun formatSigned(value: Int): String {
+        return if (value > 0) "+$value" else value.toString()
     }
 }
