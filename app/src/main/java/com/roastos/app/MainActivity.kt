@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
+import com.roastos.app.ui.HistoryPage
 import com.roastos.app.ui.PlannerPage
 import com.roastos.app.ui.RoastPage
 
@@ -18,17 +19,18 @@ class MainActivity : Activity() {
     private lateinit var plannerBtn: Button
     private lateinit var roastBtn: Button
     private lateinit var correctionBtn: Button
+    private lateinit var historyBtn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
-        root.setPadding(16,16,16,16)
+        root.setPadding(16, 16, 16, 16)
 
         val navBar = LinearLayout(this)
         navBar.orientation = LinearLayout.HORIZONTAL
-        navBar.setPadding(0,0,0,16)
+        navBar.setPadding(0, 0, 0, 16)
 
         val navParams = LinearLayout.LayoutParams(
             0,
@@ -52,6 +54,10 @@ class MainActivity : Activity() {
         correctionBtn.text = "Correction"
         correctionBtn.layoutParams = navParams
 
+        historyBtn = Button(this)
+        historyBtn.text = "History"
+        historyBtn.layoutParams = navParams
+
         pageContainer = LinearLayout(this)
         pageContainer.orientation = LinearLayout.VERTICAL
         pageContainer.layoutParams = LinearLayout.LayoutParams(
@@ -63,6 +69,7 @@ class MainActivity : Activity() {
         navBar.addView(plannerBtn)
         navBar.addView(roastBtn)
         navBar.addView(correctionBtn)
+        navBar.addView(historyBtn)
 
         root.addView(navBar)
         root.addView(pageContainer)
@@ -89,31 +96,31 @@ class MainActivity : Activity() {
             CorrectionPage.show(this, pageContainer)
         }
 
+        historyBtn.setOnClickListener {
+            setSelected(historyBtn)
+            HistoryPage.show(this, pageContainer)
+        }
+
         setSelected(dashboardBtn)
         DashboardPage.show(this, pageContainer)
     }
 
     private fun setSelected(btn: Button) {
-
         val buttons = listOf(
             dashboardBtn,
             plannerBtn,
             roastBtn,
-            correctionBtn
+            correctionBtn,
+            historyBtn
         )
 
         buttons.forEach {
-
             if (it == btn) {
-
                 it.setBackgroundColor(Color.parseColor("#222222"))
                 it.setTextColor(Color.WHITE)
-
             } else {
-
                 it.setBackgroundColor(Color.parseColor("#DDDDDD"))
                 it.setTextColor(Color.BLACK)
-
             }
         }
     }
