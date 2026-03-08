@@ -43,6 +43,13 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
+    private val currentTimePaint = Paint().apply {
+        color = Color.parseColor("#000000")
+        strokeWidth = 4f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
     private val textPaint = Paint().apply {
         color = Color.BLACK
         textSize = 28f
@@ -139,6 +146,13 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
+    private val currentPhaseHighlightPaint = Paint().apply {
+        color = Color.parseColor("#FFF59D")
+        style = Paint.Style.FILL
+        alpha = 95
+        isAntiAlias = true
+    }
+
     fun setCurve(curveResult: RoastCurveResult) {
         curve = curveResult
         invalidate()
@@ -179,6 +193,7 @@ class RoastCurveView(context: Context) : View(context) {
         drawPhaseBackgrounds(
             canvas = canvas,
             anchors = data.anchors,
+            currentPhase = data.currentPhase,
             left = left,
             top = top,
             bottom = bottom,
@@ -245,6 +260,17 @@ class RoastCurveView(context: Context) : View(context) {
             maxBt = maxBt
         )
 
+        drawCurrentTimeLine(
+            canvas = canvas,
+            currentTimeSec = data.currentTimeSec,
+            currentPhase = data.currentPhase,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime
+        )
+
         drawLabels(
             canvas = canvas,
             left = left,
@@ -272,6 +298,7 @@ class RoastCurveView(context: Context) : View(context) {
     private fun drawPhaseBackgrounds(
         canvas: Canvas,
         anchors: List<CurveAnchor>,
+        currentPhase: String,
         left: Float,
         top: Float,
         bottom: Float,
@@ -292,7 +319,7 @@ class RoastCurveView(context: Context) : View(context) {
             bottom = bottom,
             plotWidth = plotWidth,
             maxTime = maxTime,
-            paint = prePhasePaint,
+            paint = if (currentPhase == "Pre-Turning") currentPhaseHighlightPaint else prePhasePaint,
             label = "PRE"
         )
 
@@ -305,7 +332,7 @@ class RoastCurveView(context: Context) : View(context) {
             bottom = bottom,
             plotWidth = plotWidth,
             maxTime = maxTime,
-            paint = dryPhasePaint,
+            paint = if (currentPhase == "Drying") currentPhaseHighlightPaint else dryPhasePaint,
             label = "DRY"
         )
 
@@ -318,7 +345,7 @@ class RoastCurveView(context: Context) : View(context) {
             bottom = bottom,
             plotWidth = plotWidth,
             maxTime = maxTime,
-            paint = mailPhasePaint,
+            paint = if (currentPhase == "Maillard / Pre-FC") currentPhaseHighlightPaint else mailPhasePaint,
             label = "MAIL"
         )
 
@@ -331,7 +358,7 @@ class RoastCurveView(context: Context) : View(context) {
             bottom = bottom,
             plotWidth = plotWidth,
             maxTime = maxTime,
-            paint = devPhasePaint,
+            paint = if (currentPhase == "Development" || currentPhase == "Finished") currentPhaseHighlightPaint else devPhasePaint,
             label = "DEV"
         )
     }
@@ -541,6 +568,22 @@ class RoastCurveView(context: Context) : View(context) {
         }
     }
 
+    private fun drawCurrentTimeLine(
+        canvas: Canvas,
+        currentTimeSec: Int,
+        currentPhase: String,
+        left: Float,
+        top: Float,
+        bottom: Float,
+        plotWidth: Float,
+        maxTime: Int
+    ) {
+        val x = left + (currentTimeSec.toFloat() / maxTime) * plotWidth
+        canvas.drawLine(x, top, x, bottom, currentTimePaint)
+        canvas.drawText("NOW", x + 6f, bottom - 40f, smallTextPaint)
+        canvas.drawText(currentPhase, x + 6f, bottom - 14f, smallTextPaint)
+    }
+
     private fun drawLabels(
         canvas: Canvas,
         left: Float,
@@ -575,6 +618,10 @@ class RoastCurveView(context: Context) : View(context) {
         val secondX = left + 170f
         canvas.drawLine(secondX, legendY, secondX + 40f, legendY, actualBtPaint)
         canvas.drawText("Actual BT", secondX + 48f, legendY + 8f, smallTextPaint)
+
+        val thirdX = left + 370f
+        canvas.drawLine(thirdX, legendY, thirdX + 40f, legendY, currentTimePaint)
+        canvas.drawText("Now", thirdX + 48f, legendY + 8f, smallTextPaint)
     }
 
     private fun drawDeviationSummary(
