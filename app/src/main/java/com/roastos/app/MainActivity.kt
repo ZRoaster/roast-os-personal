@@ -1,74 +1,68 @@
 package com.roastos.app
 
-import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
+import androidx.activity.ComponentActivity
+import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
+import com.roastos.app.ui.PlannerPage
 import com.roastos.app.ui.RoastPage
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var container: LinearLayout
+    private lateinit var pageContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = LinearLayout(this@MainActivity)
+        val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
 
-        container = LinearLayout(this@MainActivity)
-        container.orientation = LinearLayout.VERTICAL
+        val navBar = LinearLayout(this)
+        navBar.orientation = LinearLayout.HORIZONTAL
 
-        val nav = LinearLayout(this@MainActivity)
-        nav.orientation = LinearLayout.HORIZONTAL
+        val dashboardBtn = Button(this)
+        dashboardBtn.text = "Dashboard"
 
-        val dashBtn = Button(this@MainActivity)
-        dashBtn.text = "DASHBOARD"
+        val plannerBtn = Button(this)
+        plannerBtn.text = "Planner"
 
-        val roastBtn = Button(this@MainActivity)
-        roastBtn.text = "ROAST"
+        val roastBtn = Button(this)
+        roastBtn.text = "Roast"
 
-        val beansBtn = Button(this@MainActivity)
-        beansBtn.text = "BEANS"
+        val correctionBtn = Button(this)
+        correctionBtn.text = "Correction"
 
-        val brewBtn = Button(this@MainActivity)
-        brewBtn.text = "BREW"
+        pageContainer = LinearLayout(this)
+        pageContainer.orientation = LinearLayout.VERTICAL
 
-        val aiBtn = Button(this@MainActivity)
-        aiBtn.text = "AI"
+        navBar.addView(dashboardBtn)
+        navBar.addView(plannerBtn)
+        navBar.addView(roastBtn)
+        navBar.addView(correctionBtn)
 
-        nav.addView(dashBtn)
-        nav.addView(roastBtn)
-        nav.addView(beansBtn)
-        nav.addView(brewBtn)
-        nav.addView(aiBtn)
-
-        root.addView(container)
-        root.addView(nav)
+        root.addView(navBar)
+        root.addView(pageContainer)
 
         setContentView(root)
 
-        dashBtn.setOnClickListener {
-            DashboardPage.show(this@MainActivity, container)
+        dashboardBtn.setOnClickListener {
+            DashboardPage.show(this, pageContainer)
+        }
+
+        plannerBtn.setOnClickListener {
+            PlannerPage.show(this, pageContainer)
         }
 
         roastBtn.setOnClickListener {
-            RoastPage.show(this@MainActivity, container)
+            RoastPage.show(this, pageContainer)
         }
 
-        beansBtn.setOnClickListener {
-            container.removeAllViews()
+        correctionBtn.setOnClickListener {
+            CorrectionPage.show(this, pageContainer)
         }
 
-        brewBtn.setOnClickListener {
-            container.removeAllViews()
-        }
-
-        aiBtn.setOnClickListener {
-            container.removeAllViews()
-        }
-
-        DashboardPage.show(this@MainActivity, container)
+        DashboardPage.show(this, pageContainer)
     }
 }
