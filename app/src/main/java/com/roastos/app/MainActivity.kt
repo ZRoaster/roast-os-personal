@@ -9,6 +9,7 @@ import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
 import com.roastos.app.ui.HistoryPage
 import com.roastos.app.ui.PlannerPage
+import com.roastos.app.ui.ProfilePage
 import com.roastos.app.ui.RoastPage
 
 class MainActivity : Activity() {
@@ -20,6 +21,7 @@ class MainActivity : Activity() {
     private lateinit var roastBtn: Button
     private lateinit var correctionBtn: Button
     private lateinit var historyBtn: Button
+    private lateinit var profileBtn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,10 @@ class MainActivity : Activity() {
         historyBtn.text = "History"
         historyBtn.layoutParams = navParams
 
+        profileBtn = Button(this)
+        profileBtn.text = "Profile"
+        profileBtn.layoutParams = navParams
+
         pageContainer = LinearLayout(this)
         pageContainer.orientation = LinearLayout.VERTICAL
         pageContainer.layoutParams = LinearLayout.LayoutParams(
@@ -70,6 +76,7 @@ class MainActivity : Activity() {
         navBar.addView(roastBtn)
         navBar.addView(correctionBtn)
         navBar.addView(historyBtn)
+        navBar.addView(profileBtn)
 
         root.addView(navBar)
         root.addView(pageContainer)
@@ -101,6 +108,11 @@ class MainActivity : Activity() {
             HistoryPage.show(this, pageContainer)
         }
 
+        profileBtn.setOnClickListener {
+            setSelected(profileBtn)
+            ProfilePage.show(this, pageContainer)
+        }
+
         setSelected(dashboardBtn)
         DashboardPage.show(this, pageContainer)
     }
@@ -111,7 +123,8 @@ class MainActivity : Activity() {
             plannerBtn,
             roastBtn,
             correctionBtn,
-            historyBtn
+            historyBtn,
+            profileBtn
         )
 
         buttons.forEach {
