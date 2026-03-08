@@ -8,6 +8,7 @@ import com.roastos.app.RoastCorrectionBridgeV2
 import com.roastos.app.RoastFlavorBridge
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
+import com.roastos.app.RoastProfileEngine
 
 object BatchDetailPage {
 
@@ -24,7 +25,12 @@ object BatchDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "BATCH DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, unified correction, report, and evaluation entry"))
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "Roast replay, diagnosis, correction, unified correction, report, evaluation, and profile save"
+            )
+        )
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -46,8 +52,12 @@ object BatchDetailPage {
             )
         }
 
+        val saveProfileBtn = Button(context)
+        saveProfileBtn.text = "Save as Profile"
+
         navCard.addView(backBtn)
         navCard.addView(evaluationBtn)
+        navCard.addView(saveProfileBtn)
         root.addView(navCard)
         root.addView(UiKit.spacer(context))
 
@@ -62,6 +72,18 @@ object BatchDetailPage {
             scroll.addView(root)
             container.addView(scroll)
             return
+        }
+
+        val statusCard = UiKit.card(context)
+        statusCard.addView(UiKit.cardTitle(context, "PROFILE STATUS"))
+        val statusBody = UiKit.bodyText(context, buildProfileStatus(entry))
+        statusCard.addView(statusBody)
+        root.addView(statusCard)
+        root.addView(UiKit.spacer(context))
+
+        saveProfileBtn.setOnClickListener {
+            RoastProfileEngine.saveFromBatch(entry.batchId)
+            statusBody.text = buildProfileStatus(entry)
         }
 
         val flavorBridge = RoastFlavorBridge.buildFromEntry(entry)
@@ -185,6 +207,46 @@ object BatchDetailPage {
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildProfileStatus(entry: RoastHistoryEntry): String {
+        val profile = RoastProfileEngine.findBySourceBatchId(entry.batchId)
+
+        if (profile == null) {
+            return """
+Status
+Not saved
+
+Next Step
+Tap "Save as Profile" to add this batch into Profile Library
+            """.trimIndent()
+        }
+
+        return """
+Status
+Saved
+
+Profile ID
+${profile.profileId}
+
+Profile Name
+${profile.name}
+
+Source Batch
+${profile.sourceBatchId}
+
+Replayability
+${profile.replayability}
+
+Risk
+${profile.risk}
+
+Evaluation
+${if (profile.evaluationSaved) "Saved" else "Not saved"}
+
+Note
+${profile.note.ifBlank { "-" }}
+        """.trimIndent()
     }
 
     private fun buildHeader(entry: RoastHistoryEntry): String {
