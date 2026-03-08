@@ -9,6 +9,7 @@ import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
 import com.roastos.app.ui.HistoryPage
 import com.roastos.app.ui.PlannerPage
+import com.roastos.app.ui.PreheatPage
 import com.roastos.app.ui.ProfilePage
 import com.roastos.app.ui.RoastPage
 
@@ -18,6 +19,7 @@ class MainActivity : Activity() {
 
     private lateinit var dashboardBtn: Button
     private lateinit var plannerBtn: Button
+    private lateinit var preheatBtn: Button
     private lateinit var roastBtn: Button
     private lateinit var correctionBtn: Button
     private lateinit var historyBtn: Button
@@ -48,6 +50,10 @@ class MainActivity : Activity() {
         plannerBtn.text = "Planner"
         plannerBtn.layoutParams = navParams
 
+        preheatBtn = Button(this)
+        preheatBtn.text = "Preheat"
+        preheatBtn.layoutParams = navParams
+
         roastBtn = Button(this)
         roastBtn.text = "Roast"
         roastBtn.layoutParams = navParams
@@ -73,6 +79,7 @@ class MainActivity : Activity() {
 
         navBar.addView(dashboardBtn)
         navBar.addView(plannerBtn)
+        navBar.addView(preheatBtn)
         navBar.addView(roastBtn)
         navBar.addView(correctionBtn)
         navBar.addView(historyBtn)
@@ -91,6 +98,11 @@ class MainActivity : Activity() {
         plannerBtn.setOnClickListener {
             setSelected(plannerBtn)
             PlannerPage.show(this, pageContainer)
+        }
+
+        preheatBtn.setOnClickListener {
+            setSelected(preheatBtn)
+            PreheatPage.show(this, pageContainer)
         }
 
         roastBtn.setOnClickListener {
@@ -121,6 +133,7 @@ class MainActivity : Activity() {
         val buttons = listOf(
             dashboardBtn,
             plannerBtn,
+            preheatBtn,
             roastBtn,
             correctionBtn,
             historyBtn,
