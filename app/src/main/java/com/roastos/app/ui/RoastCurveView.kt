@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.view.View
 import com.roastos.app.CurveAnchor
+import com.roastos.app.CurveDeviation
 import com.roastos.app.CurvePoint
 import com.roastos.app.RoastCurveResult
 import kotlin.math.max
@@ -37,7 +38,7 @@ class RoastCurveView(context: Context) : View(context) {
 
     private val actualBtPaint = Paint().apply {
         color = Color.parseColor("#2E7D32")
-        strokeWidth = 4f
+        strokeWidth = 5f
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
@@ -62,8 +63,8 @@ class RoastCurveView(context: Context) : View(context) {
     }
 
     private val actualAnchorPaint = Paint().apply {
-        color = Color.parseColor("#388E3C")
-        strokeWidth = 3f
+        color = Color.parseColor("#1B5E20")
+        strokeWidth = 4f
         style = Paint.Style.STROKE
         isAntiAlias = true
     }
@@ -96,13 +97,27 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
+    private val infoBoxPaint = Paint().apply {
+        color = Color.parseColor("#F5F5F5")
+        style = Paint.Style.FILL
+        alpha = 220
+        isAntiAlias = true
+    }
+
+    private val infoBorderPaint = Paint().apply {
+        color = Color.parseColor("#BDBDBD")
+        strokeWidth = 2f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
     fun setCurve(curveResult: RoastCurveResult) {
         curve = curveResult
         invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredHeight = 720
+        val desiredHeight = 780
         val resolvedWidth = MeasureSpec.getSize(widthMeasureSpec)
         setMeasuredDimension(resolvedWidth, desiredHeight)
     }
@@ -125,7 +140,7 @@ class RoastCurveView(context: Context) : View(context) {
         val left = 90f
         val top = 60f
         val right = width - 40f
-        val bottom = height - 90f
+        val bottom = height - 110f
 
         val plotWidth = right - left
         val plotHeight = bottom - top
@@ -203,6 +218,19 @@ class RoastCurveView(context: Context) : View(context) {
             maxBt = maxBt,
             maxTime = maxTime
         )
+
+        drawLegend(
+            canvas = canvas,
+            left = left,
+            top = top
+        )
+
+        drawDeviationSummary(
+            canvas = canvas,
+            deviations = data.deviations,
+            right = right,
+            top = top
+        )
     }
 
     private fun drawGrid(
@@ -241,7 +269,6 @@ class RoastCurveView(context: Context) : View(context) {
         val predFc = anchors.firstOrNull { it.label == "FC" && !it.isActual }?.timeSec ?: return
         val predDrop = anchors.firstOrNull { it.label == "Drop" && !it.isActual }?.timeSec ?: return
 
-        // 用图区域上半部分大致表达 ROR 目标带，不与 BT 轴严格绑定
         drawBandSegment(
             canvas = canvas,
             startSec = predTurning,
@@ -357,7 +384,8 @@ class RoastCurveView(context: Context) : View(context) {
             canvas.drawLine(x, top, x, bottom, paint)
 
             val label = if (anchor.isActual) "${anchor.label} A" else "${anchor.label} P"
-            canvas.drawText(label, x + 4f, top + 24f, smallTextPaint)
+            val labelY = if (anchor.isActual) top + 52f else top + 24f
+            canvas.drawText(label, x + 4f, labelY, smallTextPaint)
         }
     }
 
@@ -402,15 +430,57 @@ class RoastCurveView(context: Context) : View(context) {
         canvas.drawText("${maxBt.toInt()}°", 10f, 80f, textPaint)
         canvas.drawText("${minBt.toInt()}°", 10f, bottom, textPaint)
 
-        canvas.drawText("0:00", left, bottom + 40f, smallTextPaint)
+        canvas.drawText("0:00", left, bottom + 44f, smallTextPaint)
         canvas.drawText(
             "${maxTime / 60}:${(maxTime % 60).toString().padStart(2, '0')}",
             right - 90f,
-            bottom + 40f,
+            bottom + 44f,
             smallTextPaint
         )
+    }
 
-        canvas.drawText("Pred BT", left, 36f, smallTextPaint)
-        canvas.drawText("Actual BT", left + 140f, 36f, smallTextPaint)
+    private fun drawLegend(
+        canvas: Canvas,
+        left: Float,
+        top: Float
+    ) {
+        val legendY = top - 18f
+
+        canvas.drawLine(left, legendY, left + 40f, legendY, predictedBtPaint)
+        canvas.drawText("Pred BT", left + 48f, legendY + 8f, smallTextPaint)
+
+        val secondX = left + 170f
+        canvas.drawLine(secondX, legendY, secondX + 40f, legendY, actualBtPaint)
+        canvas.drawText("Actual BT", secondX + 48f, legendY + 8f, smallTextPaint)
+    }
+
+    private fun drawDeviationSummary(
+        canvas: Canvas,
+        deviations: List<CurveDeviation>,
+        right: Float,
+        top: Float
+    ) {
+        if (deviations.isEmpty()) return
+
+        val boxWidth = 250f
+        val lineHeight = 28f
+        val boxHeight = 40f + deviations.size * lineHeight + 16f
+        val left = right - boxWidth
+        val bottom = top + boxHeight
+
+        canvas.drawRect(left, top + 8f, right, bottom, infoBoxPaint)
+        canvas.drawRect(left, top + 8f, right, bottom, infoBorderPaint)
+
+        canvas.drawText("Deviation", left + 12f, top + 34f, smallTextPaint)
+
+        deviations.forEachIndexed { index, deviation ->
+            val y = top + 62f + index * lineHeight
+            val line = "${deviation.label} ${formatSigned(deviation.deltaSec)}s ${deviation.severity}"
+            canvas.drawText(line, left + 12f, y, smallTextPaint)
+        }
+    }
+
+    private fun formatSigned(value: Int): String {
+        return if (value > 0) "+$value" else value.toString()
     }
 }
