@@ -256,21 +256,10 @@ Phase tagging enabled
         val drop = max(dropSec, fcSec + 30).toDouble()
 
         return when {
-            timeSec <= turningSec -> {
-                lerp(t, 0.0, chargeBt, turning, turningBt)
-            }
-
-            timeSec <= yellowSec -> {
-                lerp(t, turning, turningBt, yellow, yellowBt)
-            }
-
-            timeSec <= fcSec -> {
-                lerp(t, yellow, yellowBt, fc, fcBt)
-            }
-
-            else -> {
-                lerp(t, fc, fcBt, drop, dropBt)
-            }
+            timeSec <= turningSec -> lerp(t, 0.0, chargeBt, turning, turningBt)
+            timeSec <= yellowSec -> lerp(t, turning, turningBt, yellow, yellowBt)
+            timeSec <= fcSec -> lerp(t, yellow, yellowBt, fc, fcBt)
+            else -> lerp(t, fc, fcBt, drop, dropBt)
         }
     }
 
@@ -320,12 +309,11 @@ Phase tagging enabled
         for (i in 1 until values.size) {
             val prev = out[i - 1]
             val current = values[i]
-            val limited = when {
+            out[i] = when {
                 current > prev + 2.5 -> prev + 2.5
                 current < prev - 2.5 -> prev - 2.5
                 else -> current
             }
-            out[i] = limited
         }
 
         return out
