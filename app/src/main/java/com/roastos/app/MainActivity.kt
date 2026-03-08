@@ -47,22 +47,10 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        dashboardBtn.setOnClickListener {
-            DashboardPage.show(this@MainActivity, pageContainer)
-        }
-
-        plannerBtn.setOnClickListener {
-            PlannerPage.show(this@MainActivity, pageContainer)
-        }
-
-        roastBtn.setOnClickListener {
-            RoastPage.show(this@MainActivity, pageContainer)
-        }
-
-        correctionBtn.setOnClickListener {
-            CorrectionPage.show(this@MainActivity, pageContainer)
-        }
-
-        DashboardPage.show(this@MainActivity, pageContainer)
+        DashboardPage.show(this.baseContext, pageContainer)
+PlannerPage.show(this.baseContext, pageContainer)
+RoastPage.show(this.baseContext, pageContainer)
+CorrectionPage.show(this.baseContext, pageContainer)
+DashboardPage.show(this.baseContext, pageContainer)
     }
 }
