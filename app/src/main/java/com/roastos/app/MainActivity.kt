@@ -1,7 +1,7 @@
 package com.roastos.app
 
 import android.app.Activity
-import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -14,18 +14,21 @@ class MainActivity : Activity() {
 
     private lateinit var pageContainer: LinearLayout
 
+    private lateinit var dashboardBtn: Button
+    private lateinit var plannerBtn: Button
+    private lateinit var roastBtn: Button
+    private lateinit var correctionBtn: Button
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val ctx: Context = this
-
-        val root = LinearLayout(ctx)
+        val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
-        root.setPadding(16, 16, 16, 16)
+        root.setPadding(16,16,16,16)
 
-        val navBar = LinearLayout(ctx)
+        val navBar = LinearLayout(this)
         navBar.orientation = LinearLayout.HORIZONTAL
-        navBar.setPadding(0, 0, 0, 16)
+        navBar.setPadding(0,0,0,16)
 
         val navParams = LinearLayout.LayoutParams(
             0,
@@ -33,23 +36,23 @@ class MainActivity : Activity() {
             1f
         )
 
-        val dashboardBtn = Button(ctx)
+        dashboardBtn = Button(this)
         dashboardBtn.text = "Dashboard"
         dashboardBtn.layoutParams = navParams
 
-        val plannerBtn = Button(ctx)
+        plannerBtn = Button(this)
         plannerBtn.text = "Planner"
         plannerBtn.layoutParams = navParams
 
-        val roastBtn = Button(ctx)
+        roastBtn = Button(this)
         roastBtn.text = "Roast"
         roastBtn.layoutParams = navParams
 
-        val correctionBtn = Button(ctx)
+        correctionBtn = Button(this)
         correctionBtn.text = "Correction"
         correctionBtn.layoutParams = navParams
 
-        pageContainer = LinearLayout(ctx)
+        pageContainer = LinearLayout(this)
         pageContainer.orientation = LinearLayout.VERTICAL
         pageContainer.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -67,21 +70,51 @@ class MainActivity : Activity() {
         setContentView(root)
 
         dashboardBtn.setOnClickListener {
-            DashboardPage.show(ctx, pageContainer)
+            setSelected(dashboardBtn)
+            DashboardPage.show(this, pageContainer)
         }
 
         plannerBtn.setOnClickListener {
-            PlannerPage.show(ctx, pageContainer)
+            setSelected(plannerBtn)
+            PlannerPage.show(this, pageContainer)
         }
 
         roastBtn.setOnClickListener {
-            RoastPage.show(ctx, pageContainer)
+            setSelected(roastBtn)
+            RoastPage.show(this, pageContainer)
         }
 
         correctionBtn.setOnClickListener {
-            CorrectionPage.show(ctx, pageContainer)
+            setSelected(correctionBtn)
+            CorrectionPage.show(this, pageContainer)
         }
 
-        DashboardPage.show(ctx, pageContainer)
+        setSelected(dashboardBtn)
+        DashboardPage.show(this, pageContainer)
+    }
+
+    private fun setSelected(btn: Button) {
+
+        val buttons = listOf(
+            dashboardBtn,
+            plannerBtn,
+            roastBtn,
+            correctionBtn
+        )
+
+        buttons.forEach {
+
+            if (it == btn) {
+
+                it.setBackgroundColor(Color.parseColor("#222222"))
+                it.setTextColor(Color.WHITE)
+
+            } else {
+
+                it.setBackgroundColor(Color.parseColor("#DDDDDD"))
+                it.setTextColor(Color.BLACK)
+
+            }
+        }
     }
 }
