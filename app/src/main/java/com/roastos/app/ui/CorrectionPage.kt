@@ -1,8 +1,10 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.graphics.Typeface
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.AdaptiveCalibrationEngine
 import com.roastos.app.AppState
@@ -37,57 +39,91 @@ object CorrectionPage {
         val predFc = planner.fcPredSec.toInt()
         val predDrop = planner.dropSec.toInt()
 
+        val scroll = ScrollView(context)
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
+        root.setPadding(24, 24, 24, 24)
 
         val title = TextView(context)
         title.text = "BATCH CORRECTION"
-        title.textSize = 22f
+        title.textSize = 24f
+        title.setTypeface(null, Typeface.BOLD)
 
-        val baselineCard = TextView(context)
-        baselineCard.text = """
-Planner Baseline
+        val subtitle = TextView(context)
+        subtitle.text = "Review actual roast, generate next-batch correction, and apply learning"
+        subtitle.textSize = 14f
 
-Charge ${planner.chargeBT}℃
-Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
-        """.trimIndent()
+        val baselineCard = buildCard(
+            context,
+            "PLANNER BASELINE",
+            """
+Charge     ${planner.chargeBT}℃
+Turning    ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow     ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC         ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop       ${RoastEngine.toMMSS(predDrop.toDouble())}
+            """.trimIndent()
+        )
 
-        val liveCard = TextView(context)
-        liveCard.text = """
-Actual Batch Data
-
-Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+        val liveCard = buildCard(
+            context,
+            "ACTUAL BATCH DATA",
+            """
+Turning    ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow     ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC         ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop       ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
-        """.trimIndent()
+            """.trimIndent()
+        )
 
-        val timelineCard = TextView(context)
-        timelineCard.text = """
-Timeline Summary
+        val timelineCard = buildCard(
+            context,
+            "TIMELINE SUMMARY",
+            RoastTimelineStore.current.summary()
+        )
 
-${RoastTimelineStore.current.summary()}
-        """.trimIndent()
+        val resultSection = LinearLayout(context)
+        resultSection.orientation = LinearLayout.VERTICAL
+        resultSection.setPadding(24, 24, 24, 24)
 
-        val resultCard = TextView(context)
-        val learningCard = TextView(context)
+        val resultTitle = TextView(context)
+        resultTitle.text = "CORRECTION RESULT"
+        resultTitle.textSize = 18f
+        resultTitle.setTypeface(null, Typeface.BOLD)
 
         val runBtn = Button(context)
         runBtn.text = "Generate Batch 2 Correction"
 
+        val resultCard = TextView(context)
+        resultCard.textSize = 15f
+        resultCard.setPadding(0, 16, 0, 0)
+
+        val learningTitle = TextView(context)
+        learningTitle.text = "ADAPTIVE LEARNING"
+        learningTitle.textSize = 18f
+        learningTitle.setTypeface(null, Typeface.BOLD)
+        learningTitle.setPadding(0, 24, 0, 0)
+
+        val learningCard = TextView(context)
+        learningCard.textSize = 15f
+        learningCard.setPadding(0, 16, 0, 0)
+
+        resultSection.addView(resultTitle)
+        resultSection.addView(runBtn)
+        resultSection.addView(resultCard)
+        resultSection.addView(learningTitle)
+        resultSection.addView(learningCard)
+
         root.addView(title)
+        root.addView(subtitle)
         root.addView(baselineCard)
         root.addView(liveCard)
         root.addView(timelineCard)
-        root.addView(runBtn)
-        root.addView(resultCard)
-        root.addView(learningCard)
+        root.addView(resultSection)
 
-        container.addView(root)
+        scroll.addView(root)
+        container.addView(scroll)
 
         runBtn.setOnClickListener {
             if (actualTurning == null ||
@@ -98,7 +134,11 @@ ${RoastTimelineStore.current.summary()}
             ) {
                 resultCard.text = """
 Correction Status
+
 Not ready
+
+Needed
+${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow == null) "• Yellow actual\n" else ""}${if (actualFc == null) "• FC actual\n" else ""}${if (actualDrop == null) "• Drop actual\n" else ""}${if (actualRor == null) "• Pre-FC ROR" else ""}
                 """.trimIndent()
                 learningCard.text = ""
                 return@setOnClickListener
@@ -122,11 +162,11 @@ Not ready
             resultCard.text = """
 Correction Diagnosis
 
-Turning Δ ${formatSigned(turningDelta)}s
-Yellow Δ ${formatSigned(yellowDelta)}s
-FC Δ ${formatSigned(fcDelta)}s
-Drop Δ ${formatSigned(dropDelta)}s
-Pre-FC ROR ${"%.1f".format(actualRor)}
+Turning Δ   ${formatSigned(turningDelta)}s
+Yellow Δ    ${formatSigned(yellowDelta)}s
+FC Δ        ${formatSigned(fcDelta)}s
+Drop Δ      ${formatSigned(dropDelta)}s
+Pre-FC ROR  ${"%.1f".format(actualRor)}
 
 Diagnosis
 $diagnosis
@@ -147,8 +187,8 @@ Development
 $devCorrection
 
 Batch 2 Predicted Targets
-FC ${RoastEngine.toMMSS(predictedBatch2Fc.toDouble())}
-Drop ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
+FC         ${RoastEngine.toMMSS(predictedBatch2Fc.toDouble())}
+Drop       ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
             """.trimIndent()
 
             val update = AdaptiveCalibrationEngine.update(
@@ -165,14 +205,46 @@ Drop ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
             BatchSessionEngine.markCorrected("Adaptive calibration applied")
 
             learningCard.text = """
-Adaptive Learning
-
 ${update.summary}
+
+RoastStateModel Calibration
+FC Bias         ${"%.1f".format(RoastStateModel.calibration.fcBias)}
+Drop Bias       ${"%.1f".format(RoastStateModel.calibration.dropBias)}
+ROR Bias        ${"%.1f".format(RoastStateModel.calibration.rorBias)}
+Heat Bias       ${"%.2f".format(RoastStateModel.calibration.heatBias)}
+Air Bias        ${"%.2f".format(RoastStateModel.calibration.airBias)}
+Bean Bias       ${"%.2f".format(RoastStateModel.calibration.beanBias)}
+Machine Resp    ${"%.2f".format(RoastStateModel.calibration.machineResponseFactor)}
+Learning Count  ${RoastStateModel.calibration.learningCount}
 
 Session
 ${BatchSessionEngine.summary()}
             """.trimIndent()
         }
+    }
+
+    private fun buildCard(
+        context: Context,
+        heading: String,
+        content: String
+    ): LinearLayout {
+        val card = LinearLayout(context)
+        card.orientation = LinearLayout.VERTICAL
+        card.setPadding(24, 24, 24, 24)
+
+        val title = TextView(context)
+        title.text = heading
+        title.textSize = 18f
+        title.setTypeface(null, Typeface.BOLD)
+
+        val body = TextView(context)
+        body.text = content
+        body.textSize = 15f
+        body.setPadding(0, 16, 0, 0)
+
+        card.addView(title)
+        card.addView(body)
+        return card
     }
 
     private fun chargeCorrection(turningDelta: Int): Int {
