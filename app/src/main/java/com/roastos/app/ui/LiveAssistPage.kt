@@ -11,6 +11,7 @@ import com.roastos.app.CurveEngine
 import com.roastos.app.LiveAssistEngine
 import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
+import com.roastos.app.TimelineEngine
 
 object LiveAssistPage {
 
@@ -47,6 +48,18 @@ Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         """.trimIndent()
+
+        val timelineTitle = TextView(context)
+        timelineTitle.text = "ROAST TIMELINE"
+        timelineTitle.textSize = 18f
+
+        val timelineCard = TextView(context)
+        timelineCard.text = buildTimelineCard(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
 
         val phaseTitle = TextView(context)
         phaseTitle.text = "AUTO PHASE ENGINE"
@@ -86,6 +99,8 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
 
         root.addView(title)
         root.addView(plannerSummary)
+        root.addView(timelineTitle)
+        root.addView(timelineCard)
         root.addView(phaseTitle)
         root.addView(phaseCard)
         root.addView(curveTitle)
@@ -227,6 +242,7 @@ Risk
 $risk
             """.trimIndent()
 
+            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
             phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
             curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
             currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
@@ -283,6 +299,7 @@ Risk
 $risk
             """.trimIndent()
 
+            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
             phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
             curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
             currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
@@ -347,10 +364,42 @@ Risk
 $risk
             """.trimIndent()
 
+            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
             phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
             curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
             currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
         }
+    }
+
+    private fun buildTimelineCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+
+        val rows = TimelineEngine.build(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            actualDrop = AppState.liveActualDropSec
+        )
+
+        return buildString {
+            appendLine("Timeline")
+            appendLine()
+            rows.forEach { row ->
+                appendLine("${row.label}")
+                appendLine("Pred ${RoastEngine.toMMSS(row.predictedSec.toDouble())}")
+                appendLine("Actual ${row.actualSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}")
+                appendLine("Status ${row.status}")
+                appendLine()
+            }
+        }.trim()
     }
 
     private fun buildPhaseCard(
