@@ -12,9 +12,14 @@ import com.roastos.app.DecisionEngine
 import com.roastos.app.LiveAssistEngine
 import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
+import com.roastos.app.RoastStateModel
 import com.roastos.app.TimelineEngine
 
 object LiveAssistPage {
+
+    private const val DEFAULT_POWER_W = 1320
+    private const val DEFAULT_AIRFLOW_PA = 16
+    private const val DEFAULT_DRUM_RPM = 7
 
     fun show(context: Context, container: LinearLayout) {
 
@@ -30,10 +35,21 @@ object LiveAssistPage {
             return
         }
 
+        RoastStateModel.syncPlannerInput(plannerInput)
+
         val predTurning = (predicted.h1Sec - 60.0).toInt().coerceAtLeast(50)
         val predYellow = predicted.h2Sec.toInt()
         val predFc = predicted.fcPredSec.toInt()
         val predDrop = predicted.dropSec.toInt()
+
+        syncLiveModel(
+            phase = currentPhase(),
+            ror = AppState.liveActualPreFcRor ?: defaultRorForCurrentState(),
+            turningSec = AppState.liveActualTurningSec,
+            yellowSec = AppState.liveActualYellowSec,
+            fcSec = AppState.liveActualFcSec,
+            dropSec = AppState.liveActualDropSec
+        )
 
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
@@ -125,7 +141,6 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         root.addView(currentCardTitle)
         root.addView(currentCard)
 
-        // Turning
         val turningTitle = TextView(context)
         turningTitle.text = "Turning Event"
 
@@ -146,7 +161,6 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         root.addView(turningBtn)
         root.addView(turningResult)
 
-        // Yellow
         val yellowTitle = TextView(context)
         yellowTitle.text = "Yellow Event"
 
@@ -161,9 +175,7 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         yellowRorInput.hint = "Current ROR"
         yellowRorInput.inputType =
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        yellowRorInput.setText(
-            AppState.liveActualPreFcRor?.toString() ?: "13.0"
-        )
+        yellowRorInput.setText(AppState.liveActualPreFcRor?.toString() ?: "13.0")
 
         val yellowBtn = Button(context)
         yellowBtn.text = "Run Yellow Assist"
@@ -176,7 +188,6 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         root.addView(yellowBtn)
         root.addView(yellowResult)
 
-        // FC + Drop
         val fcTitle = TextView(context)
         fcTitle.text = "First Crack / Development"
 
@@ -222,6 +233,15 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
                 actualTurningInput.text.toString().toIntOrNull() ?: predTurning
 
             AppState.liveActualTurningSec = actualTurning
+
+            syncLiveModel(
+                phase = "Drying",
+                ror = AppState.liveActualPreFcRor ?: 16.0,
+                turningSec = AppState.liveActualTurningSec,
+                yellowSec = AppState.liveActualYellowSec,
+                fcSec = AppState.liveActualFcSec,
+                dropSec = AppState.liveActualDropSec
+            )
 
             val advice = LiveAssistEngine.turningAssist(predTurning, actualTurning)
             val diff = actualTurning - predTurning
@@ -284,6 +304,15 @@ $risk
 
             AppState.liveActualYellowSec = actualYellow
             AppState.liveActualPreFcRor = ror
+
+            syncLiveModel(
+                phase = "Maillard / Pre-FC",
+                ror = ror,
+                turningSec = AppState.liveActualTurningSec,
+                yellowSec = AppState.liveActualYellowSec,
+                fcSec = AppState.liveActualFcSec,
+                dropSec = AppState.liveActualDropSec
+            )
 
             val advice = LiveAssistEngine.yellowAssist(predYellow, actualYellow, ror)
             val diff = actualYellow - predYellow
@@ -354,6 +383,15 @@ $risk
             AppState.liveActualPreFcRor = ror
             AppState.liveActualDropSec = actualDrop
 
+            syncLiveModel(
+                phase = if (actualDrop > actualFc) "Development" else "Finished",
+                ror = ror,
+                turningSec = AppState.liveActualTurningSec,
+                yellowSec = AppState.liveActualYellowSec,
+                fcSec = AppState.liveActualFcSec,
+                dropSec = AppState.liveActualDropSec
+            )
+
             val advice = LiveAssistEngine.fcAssist(predFc, actualFc, ror)
             val diff = actualFc - predFc
 
@@ -412,6 +450,46 @@ $risk
         }
     }
 
+    private fun syncLiveModel(
+        phase: String,
+        ror: Double,
+        turningSec: Int?,
+        yellowSec: Int?,
+        fcSec: Int?,
+        dropSec: Int?
+    ) {
+        RoastStateModel.syncLiveState(
+            phase = phase,
+            ror = ror,
+            turningSec = turningSec,
+            yellowSec = yellowSec,
+            fcSec = fcSec,
+            dropSec = dropSec,
+            powerW = DEFAULT_POWER_W,
+            airflowPa = DEFAULT_AIRFLOW_PA,
+            drumRpm = DEFAULT_DRUM_RPM
+        )
+    }
+
+    private fun currentPhase(): String {
+        return when {
+            AppState.liveActualDropSec != null -> "Finished"
+            AppState.liveActualFcSec != null -> "Development"
+            AppState.liveActualYellowSec != null -> "Maillard / Pre-FC"
+            AppState.liveActualTurningSec != null -> "Drying"
+            else -> "Idle"
+        }
+    }
+
+    private fun defaultRorForCurrentState(): Double {
+        return when (currentPhase()) {
+            "Drying" -> 16.0
+            "Maillard / Pre-FC" -> 12.0
+            "Development" -> 7.0
+            else -> 12.0
+        }
+    }
+
     private fun refreshCards(
         timelineCard: TextView,
         phaseCard: TextView,
@@ -436,7 +514,6 @@ $risk
         predFc: Int,
         predDrop: Int
     ): String {
-
         val rows = TimelineEngine.build(
             predTurning = predTurning,
             predYellow = predYellow,
@@ -467,7 +544,6 @@ $risk
         predFc: Int,
         predDrop: Int
     ): String {
-
         val phase = PhaseEngine.detect(
             predTurning = predTurning,
             predYellow = predYellow,
@@ -501,7 +577,6 @@ ${phase.riskHint}
         predFc: Int,
         predDrop: Int
     ): String {
-
         val prediction = CurveEngine.predict(
             predTurning = predTurning,
             predYellow = predYellow,
@@ -535,11 +610,7 @@ ${prediction.summary}
         predFc: Int,
         predDrop: Int
     ): String {
-
-        val plannerInput = AppState.lastPlannerInput
-        if (plannerInput == null) {
-            return "No planner input available."
-        }
+        val plannerInput = AppState.lastPlannerInput ?: return "No planner input available."
 
         val decision = DecisionEngine.decide(
             predTurning = predTurning,
@@ -553,13 +624,13 @@ ${prediction.summary}
             currentRor = AppState.liveActualPreFcRor,
             envTemp = plannerInput.envTemp,
             humidity = plannerInput.envRH,
-            pressureKpa = 101.3,
+            pressureKpa = 1013.0,
             density = plannerInput.density,
             moisture = plannerInput.moisture,
             aw = plannerInput.aw,
-            heatLevelW = 1320,
-            airflowPa = 16,
-            drumRpm = 7
+            heatLevelW = DEFAULT_POWER_W,
+            airflowPa = DEFAULT_AIRFLOW_PA,
+            drumRpm = DEFAULT_DRUM_RPM
         )
 
         return """
@@ -579,79 +650,4 @@ Target Window
 ${decision.targetWindow}
 
 Risk Level
-${decision.riskLevel}
-
-Reason
-${decision.reason}
-
-Physics
-${decision.physicsSummary}
-        """.trimIndent()
-    }
-
-    private fun buildControlCard(
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ): String {
-
-        val actualTurning = AppState.liveActualTurningSec
-        val actualYellow = AppState.liveActualYellowSec
-        val actualFc = AppState.liveActualFcSec
-        val actualDrop = AppState.liveActualDropSec
-        val actualRor = AppState.liveActualPreFcRor
-
-        val currentStage = when {
-            actualDrop != null -> "Finished"
-            actualFc != null -> "Development / Drop"
-            actualYellow != null -> "Maillard / Pre-FC"
-            actualTurning != null -> "Drying / To Yellow"
-            else -> "Pre-Turning"
-        }
-
-        val nextAction = when {
-            actualDrop != null -> "Review roast and move to Correction"
-            actualFc != null && actualRor != null && actualRor > 10.0 -> "Reduce heat, add air, protect development"
-            actualFc != null && actualRor != null && actualRor < 7.0 -> "Preserve heat, avoid collapse"
-            actualYellow != null -> "Control middle momentum toward FC"
-            actualTurning != null -> "Shape drying so Yellow stays on plan"
-            else -> "Watch first anchor point"
-        }
-
-        val biggestRisk = when {
-            actualDrop != null -> "Batch complete"
-            actualFc != null && actualRor != null && actualRor > 10.0 -> "Overshoot in development"
-            actualFc != null && actualRor != null && actualRor < 7.0 -> "Development crash"
-            actualYellow != null && actualYellow - predYellow > 15 -> "Late crack / flat cup"
-            actualYellow != null && actualYellow - predYellow < -15 -> "Pre-FC spike"
-            actualTurning != null && actualTurning - predTurning > 8 -> "Front-end energy short"
-            actualTurning != null && actualTurning - predTurning < -8 -> "Early push too strong"
-            else -> "No dominant risk yet"
-        }
-
-        return """
-Current Stage
-$currentStage
-
-Predicted Anchors
-Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
-
-Actual Anchors
-Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
-
-Next Action
-$nextAction
-
-Biggest Risk
-$biggestRisk
-        """.trimIndent()
-    }
-}
+${decis
