@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.CurveEngine
+import com.roastos.app.DecisionEngine
 import com.roastos.app.LiveAssistEngine
 import com.roastos.app.PhaseEngine
 import com.roastos.app.RoastEngine
@@ -85,6 +86,18 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
             predDrop = predDrop
         )
 
+        val decisionTitle = TextView(context)
+        decisionTitle.text = "DECISION NOW"
+        decisionTitle.textSize = 18f
+
+        val decisionCard = TextView(context)
+        decisionCard.text = buildDecisionCard(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
         val currentCardTitle = TextView(context)
         currentCardTitle.text = "CURRENT CONTROL CARD"
         currentCardTitle.textSize = 18f
@@ -105,6 +118,8 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         root.addView(phaseCard)
         root.addView(curveTitle)
         root.addView(curveCard)
+        root.addView(decisionTitle)
+        root.addView(decisionCard)
         root.addView(currentCardTitle)
         root.addView(currentCard)
 
@@ -242,10 +257,17 @@ Risk
 $risk
             """.trimIndent()
 
-            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
-            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
-            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
-            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
+            refreshCards(
+                timelineCard,
+                phaseCard,
+                curveCard,
+                decisionCard,
+                currentCard,
+                predTurning,
+                predYellow,
+                predFc,
+                predDrop
+            )
         }
 
         yellowBtn.setOnClickListener {
@@ -257,6 +279,7 @@ $risk
                 yellowRorInput.text.toString().toDoubleOrNull() ?: 13.0
 
             AppState.liveActualYellowSec = actualYellow
+            AppState.liveActualPreFcRor = ror
 
             val advice = LiveAssistEngine.yellowAssist(predYellow, actualYellow, ror)
             val diff = actualYellow - predYellow
@@ -299,10 +322,17 @@ Risk
 $risk
             """.trimIndent()
 
-            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
-            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
-            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
-            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
+            refreshCards(
+                timelineCard,
+                phaseCard,
+                curveCard,
+                decisionCard,
+                currentCard,
+                predTurning,
+                predYellow,
+                predFc,
+                predDrop
+            )
         }
 
         fcBtn.setOnClickListener {
@@ -364,11 +394,36 @@ Risk
 $risk
             """.trimIndent()
 
-            timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
-            phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
-            curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
-            currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
+            refreshCards(
+                timelineCard,
+                phaseCard,
+                curveCard,
+                decisionCard,
+                currentCard,
+                predTurning,
+                predYellow,
+                predFc,
+                predDrop
+            )
         }
+    }
+
+    private fun refreshCards(
+        timelineCard: TextView,
+        phaseCard: TextView,
+        curveCard: TextView,
+        decisionCard: TextView,
+        currentCard: TextView,
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ) {
+        timelineCard.text = buildTimelineCard(predTurning, predYellow, predFc, predDrop)
+        phaseCard.text = buildPhaseCard(predTurning, predYellow, predFc, predDrop)
+        curveCard.text = buildCurvePredictionCard(predTurning, predYellow, predFc, predDrop)
+        decisionCard.text = buildDecisionCard(predTurning, predYellow, predFc, predDrop)
+        currentCard.text = buildControlCard(predTurning, predYellow, predFc, predDrop)
     }
 
     private fun buildTimelineCard(
@@ -393,7 +448,7 @@ $risk
             appendLine("Timeline")
             appendLine()
             rows.forEach { row ->
-                appendLine("${row.label}")
+                appendLine(row.label)
                 appendLine("Pred ${RoastEngine.toMMSS(row.predictedSec.toDouble())}")
                 appendLine("Actual ${row.actualSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}")
                 appendLine("Status ${row.status}")
@@ -467,6 +522,49 @@ ${prediction.confidence}
 
 Logic
 ${prediction.summary}
+        """.trimIndent()
+    }
+
+    private fun buildDecisionCard(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): String {
+
+        val decision = DecisionEngine.decide(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            actualDrop = AppState.liveActualDropSec,
+            currentRor = AppState.liveActualPreFcRor
+        )
+
+        return """
+Current Phase
+${decision.currentPhase}
+
+Action Now
+${decision.actionNow}
+
+Heat Command
+${decision.heatCommand}
+
+Air Command
+${decision.airCommand}
+
+Target Window
+${decision.targetWindow}
+
+Risk Level
+${decision.riskLevel}
+
+Reason
+${decision.reason}
         """.trimIndent()
     }
 
