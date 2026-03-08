@@ -1,5 +1,17 @@
 package com.roastos.app
 
+data class RoastEvaluation(
+    val beanColor: Double?,
+    val groundColor: Double?,
+    val roastedAw: Double?,
+    val sweetness: Int?,
+    val acidity: Int?,
+    val body: Int?,
+    val flavorClarity: Int?,
+    val balance: Int?,
+    val notes: String
+)
+
 data class RoastHistoryEntry(
     val batchId: String,
     val createdAtMillis: Long,
@@ -27,7 +39,8 @@ data class RoastHistoryEntry(
     val batchStatus: String,
     val reportText: String,
     val diagnosisText: String,
-    val correctionText: String
+    val correctionText: String,
+    val evaluation: RoastEvaluation? = null
 )
 
 data class RoastHistorySaveResult(
@@ -81,6 +94,8 @@ object RoastHistoryEngine {
         val batchId = session?.batchId ?: "NO-BATCH-${System.currentTimeMillis()}"
         val createdAtMillis = System.currentTimeMillis()
 
+        val existing = findByBatchId(batchId)
+
         val entry = RoastHistoryEntry(
             batchId = batchId,
             createdAtMillis = createdAtMillis,
@@ -108,7 +123,8 @@ object RoastHistoryEngine {
             batchStatus = session?.status ?: "Idle",
             reportText = report.summary,
             diagnosisText = diagnosis.summary,
-            correctionText = correction.summary
+            correctionText = correction.summary,
+            evaluation = existing?.evaluation
         )
 
         val existingIndex = entries.indexOfFirst { it.batchId == batchId }
@@ -131,6 +147,55 @@ object RoastHistoryEngine {
             } else {
                 "History saved for $batchId"
             }
+        )
+    }
+
+    fun saveEvaluation(
+        batchId: String,
+        evaluation: RoastEvaluation
+    ): RoastHistorySaveResult {
+        val index = entries.indexOfFirst { it.batchId == batchId }
+
+        if (index < 0) {
+            return RoastHistorySaveResult(
+                saved = false,
+                replacedExisting = false,
+                totalCount = entries.size,
+                message = "No history found for $batchId"
+            )
+        }
+
+        val updated = entries[index].copy(evaluation = evaluation)
+        entries[index] = updated
+
+        return RoastHistorySaveResult(
+            saved = true,
+            replacedExisting = true,
+            totalCount = entries.size,
+            message = "Evaluation saved for $batchId"
+        )
+    }
+
+    fun clearEvaluation(batchId: String): RoastHistorySaveResult {
+        val index = entries.indexOfFirst { it.batchId == batchId }
+
+        if (index < 0) {
+            return RoastHistorySaveResult(
+                saved = false,
+                replacedExisting = false,
+                totalCount = entries.size,
+                message = "No history found for $batchId"
+            )
+        }
+
+        val updated = entries[index].copy(evaluation = null)
+        entries[index] = updated
+
+        return RoastHistorySaveResult(
+            saved = true,
+            replacedExisting = true,
+            totalCount = entries.size,
+            message = "Evaluation cleared for $batchId"
         )
     }
 
@@ -189,6 +254,9 @@ ${latest?.process ?: "-"}
 
 Latest Status
 ${latest?.batchStatus ?: "-"}
+
+Latest Evaluation
+${if (latest?.evaluation != null) "Saved" else "Not saved"}
         """.trimIndent()
     }
 
