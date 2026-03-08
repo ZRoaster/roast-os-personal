@@ -4,14 +4,14 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
-import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
 import com.roastos.app.ui.PlannerPage
 import com.roastos.app.ui.RoastPage
+import com.roastos.app.ui.CorrectionPage
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var pageContainer: LinearLayout
+    lateinit var container: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,51 +19,51 @@ class MainActivity : ComponentActivity() {
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
 
-        val navBar = LinearLayout(this)
-        navBar.orientation = LinearLayout.HORIZONTAL
+        val nav = LinearLayout(this)
+        nav.orientation = LinearLayout.HORIZONTAL
 
-        val dashboardBtn = Button(this)
-        dashboardBtn.text = "Dashboard"
+        val btnDashboard = Button(this)
+        btnDashboard.text = "Dashboard"
 
-        val plannerBtn = Button(this)
-        plannerBtn.text = "Planner"
+        val btnPlanner = Button(this)
+        btnPlanner.text = "Planner"
 
-        val roastBtn = Button(this)
-        roastBtn.text = "Roast"
+        val btnRoast = Button(this)
+        btnRoast.text = "Roast"
 
-        val correctionBtn = Button(this)
-        correctionBtn.text = "Correction"
+        val btnCorrection = Button(this)
+        btnCorrection.text = "Correction"
 
-        pageContainer = LinearLayout(this)
-        pageContainer.orientation = LinearLayout.VERTICAL
+        container = LinearLayout(this)
+        container.orientation = LinearLayout.VERTICAL
 
-        navBar.addView(dashboardBtn)
-        navBar.addView(plannerBtn)
-        navBar.addView(roastBtn)
-        navBar.addView(correctionBtn)
+        nav.addView(btnDashboard)
+        nav.addView(btnPlanner)
+        nav.addView(btnRoast)
+        nav.addView(btnCorrection)
 
-        root.addView(navBar)
-        root.addView(pageContainer)
+        root.addView(nav)
+        root.addView(container)
 
         setContentView(root)
 
-        dashboardBtn.setOnClickListener {
-            DashboardPage.show(this@MainActivity, pageContainer)
+        btnDashboard.setOnClickListener {
+            DashboardPage.show(this@MainActivity, container)
         }
 
-        plannerBtn.setOnClickListener {
-            PlannerPage.show(this@MainActivity, pageContainer)
+        btnPlanner.setOnClickListener {
+            PlannerPage.show(this@MainActivity, container)
         }
 
-        roastBtn.setOnClickListener {
-            RoastPage.show(this@MainActivity, pageContainer)
+        btnRoast.setOnClickListener {
+            RoastPage.show(this@MainActivity, container)
         }
 
-        correctionBtn.setOnClickListener {
-            CorrectionPage.show(this@MainActivity, pageContainer)
+        btnCorrection.setOnClickListener {
+            CorrectionPage.show(this@MainActivity, container)
         }
 
         // 默认页面
-        DashboardPage.show(this@MainActivity, pageContainer)
+        DashboardPage.show(this@MainActivity, container)
     }
 }
