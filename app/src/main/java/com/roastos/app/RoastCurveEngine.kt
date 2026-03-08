@@ -146,13 +146,16 @@ object RoastCurveEngine {
             actualDrop = actualDrop
         )
 
-        val currentTimeSec = detectCurrentTimeSec(
-            actualTurning = actualTurning,
-            actualYellow = actualYellow,
-            actualFc = actualFc,
-            actualDrop = actualDrop,
-            predTurning = predTurning
-        )
+        val currentTimeSec = BatchSessionEngine.currentElapsedSec()
+            ?: detectFallbackCurrentTimeSec(
+                actualTurning = actualTurning,
+                actualYellow = actualYellow,
+                actualFc = actualFc,
+                actualDrop = actualDrop,
+                predTurning = predTurning
+            )
+
+        val clampedCurrentTimeSec = currentTimeSec.coerceIn(0, finalSec)
 
         val currentPhase = detectCurrentPhase(
             actualTurning = actualTurning,
@@ -163,11 +166,11 @@ object RoastCurveEngine {
             predYellow = predYellow,
             predFc = predFc,
             predDrop = predDrop,
-            currentTimeSec = currentTimeSec
+            currentTimeSec = clampedCurrentTimeSec
         )
 
         val summary = """
-Curve Engine v1.4
+Curve Engine v1.5
 
 Predicted Points ${predictedPoints.size}
 Actual Points ${actualPoints.size}
@@ -185,7 +188,7 @@ FC ${actualFc?.toString() ?: "-"}
 Drop ${actualDrop?.toString() ?: "-"}
 
 Current Time
-${currentTimeSec}s
+${clampedCurrentTimeSec}s
 
 Current Phase
 $currentPhase
@@ -193,12 +196,16 @@ $currentPhase
 Deviation Summary
 ${buildDeviationSummaryText(deviations)}
 
+Timing Source
+${if (BatchSessionEngine.currentElapsedSec() != null) "BatchSession clock" else "Anchor fallback"}
+
 Control Precision
 ROR smoothed with weighted moving average
 Predicted / Actual curve separation enabled
 Phase tagging enabled
 Deviation severity enabled
 Current phase highlight enabled
+Real session clock enabled
         """.trimIndent()
 
         return RoastCurveResult(
@@ -206,7 +213,7 @@ Current phase highlight enabled
             actualPoints = actualPoints,
             anchors = anchors,
             deviations = deviations,
-            currentTimeSec = currentTimeSec,
+            currentTimeSec = clampedCurrentTimeSec,
             currentPhase = currentPhase,
             summary = summary
         )
@@ -450,7 +457,7 @@ Current phase highlight enabled
         }
     }
 
-    private fun detectCurrentTimeSec(
+    private fun detectFallbackCurrentTimeSec(
         actualTurning: Int?,
         actualYellow: Int?,
         actualFc: Int?,
@@ -476,10 +483,10 @@ Current phase highlight enabled
         currentTimeSec: Int
     ): String {
         return when {
-            actualDrop != null -> "Finished"
-            actualFc != null -> "Development"
-            actualYellow != null -> "Maillard / Pre-FC"
-            actualTurning != null -> "Drying"
+            actualDrop != null && currentTimeSec >= actualDrop -> "Finished"
+            actualFc != null && currentTimeSec >= actualFc -> "Development"
+            actualYellow != null && currentTimeSec >= actualYellow -> "Maillard / Pre-FC"
+            actualTurning != null && currentTimeSec >= actualTurning -> "Drying"
             else -> detectPhaseAtTime(
                 timeSec = currentTimeSec,
                 turningSec = predTurning,
