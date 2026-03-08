@@ -16,25 +16,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = LinearLayout(this)
+        val ctx = this as android.content.Context
+
+        val root = LinearLayout(ctx)
         root.orientation = LinearLayout.VERTICAL
 
-        val navBar = LinearLayout(this)
+        val navBar = LinearLayout(ctx)
         navBar.orientation = LinearLayout.HORIZONTAL
 
-        val dashboardBtn = Button(this)
+        val dashboardBtn = Button(ctx)
         dashboardBtn.text = "Dashboard"
 
-        val plannerBtn = Button(this)
+        val plannerBtn = Button(ctx)
         plannerBtn.text = "Planner"
 
-        val roastBtn = Button(this)
+        val roastBtn = Button(ctx)
         roastBtn.text = "Roast"
 
-        val correctionBtn = Button(this)
+        val correctionBtn = Button(ctx)
         correctionBtn.text = "Correction"
 
-        pageContainer = LinearLayout(this)
+        pageContainer = LinearLayout(ctx)
         pageContainer.orientation = LinearLayout.VERTICAL
 
         navBar.addView(dashboardBtn)
@@ -48,21 +50,21 @@ class MainActivity : ComponentActivity() {
         setContentView(root)
 
         dashboardBtn.setOnClickListener {
-            DashboardPage.show(this, pageContainer)
+            DashboardPage.show(ctx, pageContainer)
         }
 
         plannerBtn.setOnClickListener {
-            PlannerPage.show(this, pageContainer)
+            PlannerPage.show(ctx, pageContainer)
         }
 
         roastBtn.setOnClickListener {
-            RoastPage.show(this, pageContainer)
+            RoastPage.show(ctx, pageContainer)
         }
 
         correctionBtn.setOnClickListener {
-            CorrectionPage.show(this, pageContainer)
+            CorrectionPage.show(ctx, pageContainer)
         }
 
-        DashboardPage.show(this, pageContainer)
+        DashboardPage.show(ctx, pageContainer)
     }
 }
