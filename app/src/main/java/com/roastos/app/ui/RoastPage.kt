@@ -1,6 +1,7 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.RoastCurveEngine
@@ -10,8 +11,6 @@ object RoastPage {
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
-        val curve = RoastCurveEngine.buildFromCurrentState()
-
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
@@ -19,26 +18,48 @@ object RoastPage {
         root.addView(UiKit.pageSubtitle(context, "Live assist, timeline tracking, and roast curve preview"))
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "CURVE ENGINE SUMMARY", curve.summary))
+        val actionCard = UiKit.card(context)
+        actionCard.addView(UiKit.cardTitle(context, "ACTIONS"))
+
+        val refreshBtn = Button(context)
+        refreshBtn.text = "Refresh Curve"
+
+        actionCard.addView(refreshBtn)
+        root.addView(actionCard)
+        root.addView(UiKit.spacer(context))
+
+        val summaryCard = UiKit.card(context)
+        summaryCard.addView(UiKit.cardTitle(context, "CURVE ENGINE SUMMARY"))
+        val summaryBody = UiKit.bodyText(context, "")
+        summaryCard.addView(summaryBody)
+        root.addView(summaryCard)
         root.addView(UiKit.spacer(context))
 
         val curveCard = UiKit.card(context)
         curveCard.addView(UiKit.cardTitle(context, "ROAST CURVE"))
-
         val curveView = RoastCurveView(context)
-        curveView.setCurve(curve)
         curveCard.addView(curveView)
-
         root.addView(curveCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            UiKit.buildCard(
-                context,
-                "LIVE ASSIST",
-                LiveAssistPage.buildLiveAssist()
-            )
-        )
+        val liveAssistCard = UiKit.card(context)
+        liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
+        val liveAssistBody = UiKit.bodyText(context, "")
+        liveAssistCard.addView(liveAssistBody)
+        root.addView(liveAssistCard)
+
+        fun refreshAll() {
+            val curve = RoastCurveEngine.buildFromCurrentState()
+            summaryBody.text = curve.summary
+            curveView.setCurve(curve)
+            liveAssistBody.text = LiveAssistPage.buildLiveAssist()
+        }
+
+        refreshBtn.setOnClickListener {
+            refreshAll()
+        }
+
+        refreshAll()
 
         scroll.addView(root)
         container.addView(scroll)
