@@ -7,6 +7,7 @@ import android.widget.TextView
 import com.roastos.app.AdaptiveCalibrationEngine
 import com.roastos.app.AppState
 import com.roastos.app.RoastEngine
+import com.roastos.app.RoastStateModel
 
 object CorrectionPage {
 
@@ -156,11 +157,22 @@ Drop ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
             )
 
             AppState.calibrationState = update.newState
+            RoastStateModel.syncCalibration(AppState.calibrationState)
 
             learningCard.text = """
 Adaptive Learning
 
 ${update.summary}
+
+RoastStateModel Calibration
+FC Bias ${"%.1f".format(RoastStateModel.calibration.fcBias)}
+Drop Bias ${"%.1f".format(RoastStateModel.calibration.dropBias)}
+ROR Bias ${"%.1f".format(RoastStateModel.calibration.rorBias)}
+Heat Bias ${"%.2f".format(RoastStateModel.calibration.heatBias)}
+Air Bias ${"%.2f".format(RoastStateModel.calibration.airBias)}
+Bean Bias ${"%.2f".format(RoastStateModel.calibration.beanBias)}
+Machine Response ${"%.2f".format(RoastStateModel.calibration.machineResponseFactor)}
+Learning Count ${RoastStateModel.calibration.learningCount}
             """.trimIndent()
         }
     }
