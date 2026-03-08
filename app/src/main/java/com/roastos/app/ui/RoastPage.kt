@@ -8,6 +8,7 @@ import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastCurveEngine
+import com.roastos.app.RoastDeviationEngine
 import com.roastos.app.RoastStateModel
 import com.roastos.app.RoastTimelineStore
 
@@ -23,7 +24,7 @@ object RoastPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
-        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, timeline tracking, roast curve, and actual input"))
+        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, deviation diagnosis, timeline tracking, roast curve, and actual input"))
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -74,6 +75,13 @@ object RoastPage {
         root.addView(sessionCard)
         root.addView(UiKit.spacer(context))
 
+        val diagnosisCard = UiKit.card(context)
+        diagnosisCard.addView(UiKit.cardTitle(context, "DEVIATION DIAGNOSIS"))
+        val diagnosisBody = UiKit.bodyText(context, "")
+        diagnosisCard.addView(diagnosisBody)
+        root.addView(diagnosisCard)
+        root.addView(UiKit.spacer(context))
+
         val summaryCard = UiKit.card(context)
         summaryCard.addView(UiKit.cardTitle(context, "CURVE ENGINE SUMMARY"))
         val summaryBody = UiKit.bodyText(context, "")
@@ -91,10 +99,13 @@ object RoastPage {
 
         fun refreshAll() {
             val curve = RoastCurveEngine.buildFromCurrentState()
+            val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
+
             summaryBody.text = curve.summary
             sessionBody.text = BatchSessionEngine.summary()
             statusBody.text = buildTopStatus()
             workflowBody.text = RoastWorkflowGuide.buildText()
+            diagnosisBody.text = diagnosis.summary
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
