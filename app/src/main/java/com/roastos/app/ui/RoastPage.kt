@@ -36,41 +36,42 @@ object RoastPage {
         root.addView(actionCard)
         root.addView(UiKit.spacer(context))
 
-        LiveAssistPage.attachLiveInputPanel(
-            context = context,
-            parent = root,
-            onDataChanged = {
-                refreshAll(root)
-            }
-        )
-        root.addView(UiKit.spacer(context))
-
         val summaryCard = UiKit.card(context)
         summaryCard.addView(UiKit.cardTitle(context, "CURVE ENGINE SUMMARY"))
         val summaryBody = UiKit.bodyText(context, "")
         summaryCard.addView(summaryBody)
-        root.addView(summaryCard)
-        root.addView(UiKit.spacer(context))
 
         val curveCard = UiKit.card(context)
         curveCard.addView(UiKit.cardTitle(context, "ROAST CURVE"))
         val curveView = RoastCurveView(context)
         curveCard.addView(curveView)
-        root.addView(curveCard)
-        root.addView(UiKit.spacer(context))
 
         val liveAssistCard = UiKit.card(context)
         liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
         val liveAssistBody = UiKit.bodyText(context, "")
         liveAssistCard.addView(liveAssistBody)
-        root.addView(liveAssistCard)
 
-        fun refreshAllInternal() {
+        fun refreshAll() {
             val curve = RoastCurveEngine.buildFromCurrentState()
             summaryBody.text = curve.summary
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
+
+        LiveAssistPage.attachLiveInputPanel(
+            context = context,
+            parent = root,
+            onDataChanged = {
+                refreshAll()
+            }
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(summaryCard)
+        root.addView(UiKit.spacer(context))
+        root.addView(curveCard)
+        root.addView(UiKit.spacer(context))
+        root.addView(liveAssistCard)
 
         fun stopAutoRefresh() {
             autoRefreshRunnable?.let { root.removeCallbacks(it) }
@@ -87,7 +88,7 @@ object RoastPage {
             val runnable = object : Runnable {
                 override fun run() {
                     if (!autoRefreshEnabled) return
-                    refreshAllInternal()
+                    refreshAll()
                     root.postDelayed(this, 2000)
                 }
             }
@@ -97,7 +98,7 @@ object RoastPage {
         }
 
         refreshBtn.setOnClickListener {
-            refreshAllInternal()
+            refreshAll()
         }
 
         autoRefreshBtn.setOnClickListener {
@@ -108,13 +109,9 @@ object RoastPage {
             }
         }
 
-        refreshAllInternal()
+        refreshAll()
 
         scroll.addView(root)
         container.addView(scroll)
-    }
-
-    private fun refreshAll(root: LinearLayout) {
-        root.removeAllViews()
     }
 }
