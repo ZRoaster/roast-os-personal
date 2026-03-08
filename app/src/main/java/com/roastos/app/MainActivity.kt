@@ -21,24 +21,40 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(ctx)
         root.orientation = LinearLayout.VERTICAL
+        root.setPadding(16, 16, 16, 16)
 
         val navBar = LinearLayout(ctx)
         navBar.orientation = LinearLayout.HORIZONTAL
+        navBar.setPadding(0, 0, 0, 16)
+
+        val navParams = LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1f
+        )
 
         val dashboardBtn = Button(ctx)
         dashboardBtn.text = "Dashboard"
+        dashboardBtn.layoutParams = navParams
 
         val plannerBtn = Button(ctx)
         plannerBtn.text = "Planner"
+        plannerBtn.layoutParams = navParams
 
         val roastBtn = Button(ctx)
         roastBtn.text = "Roast"
+        roastBtn.layoutParams = navParams
 
         val correctionBtn = Button(ctx)
         correctionBtn.text = "Correction"
+        correctionBtn.layoutParams = navParams
 
         pageContainer = LinearLayout(ctx)
         pageContainer.orientation = LinearLayout.VERTICAL
+        pageContainer.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
 
         navBar.addView(dashboardBtn)
         navBar.addView(plannerBtn)
