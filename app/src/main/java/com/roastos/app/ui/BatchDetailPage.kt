@@ -22,21 +22,20 @@ object BatchDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "BATCH DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Single roast detail, diagnosis, correction, and report"))
+        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, and full report"))
         root.addView(UiKit.spacer(context))
 
-        val backCard = UiKit.card(context)
-        backCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        val navCard = UiKit.card(context)
+        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
 
         val backBtn = Button(context)
         backBtn.text = "Back to History"
-
         backBtn.setOnClickListener {
             HistoryPage.show(context, container)
         }
 
-        backCard.addView(backBtn)
-        root.addView(backCard)
+        navCard.addView(backBtn)
+        root.addView(navCard)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
@@ -55,8 +54,26 @@ object BatchDetailPage {
         root.addView(
             UiKit.buildCard(
                 context,
-                "BATCH OVERVIEW",
-                buildOverview(entry)
+                "HEADER",
+                buildHeader(entry)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "RESULT SUMMARY",
+                buildResultSummary(entry)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "KEY METRICS",
+                buildKeyMetrics(entry)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -109,7 +126,7 @@ object BatchDetailPage {
         root.addView(
             UiKit.buildCard(
                 context,
-                "CORRECTION BRIDGE",
+                "NEXT-BATCH CORRECTION",
                 entry.correctionText.ifBlank { "No correction bridge saved" }
             )
         )
@@ -118,7 +135,7 @@ object BatchDetailPage {
         root.addView(
             UiKit.buildCard(
                 context,
-                "ROAST REPORT",
+                "FULL ROAST REPORT",
                 entry.reportText.ifBlank { "No roast report saved" }
             )
         )
@@ -127,7 +144,7 @@ object BatchDetailPage {
         container.addView(scroll)
     }
 
-    private fun buildOverview(entry: RoastHistoryEntry): String {
+    private fun buildHeader(entry: RoastHistoryEntry): String {
         return """
 Batch ID
 ${entry.batchId}
@@ -138,8 +155,60 @@ ${entry.createdAtMillis}
 Status
 ${entry.batchStatus}
 
-Title
-${entry.title}
+Bean
+${entry.process.ifBlank { "-" }}
+        """.trimIndent()
+    }
+
+    private fun buildResultSummary(entry: RoastHistoryEntry): String {
+        val headline = buildHeadline(entry)
+        val replayability = buildReplayability(entry)
+        val risk = buildRisk(entry)
+
+        return """
+Headline
+$headline
+
+Replayability
+$replayability
+
+Risk
+$risk
+        """.trimIndent()
+    }
+
+    private fun buildKeyMetrics(entry: RoastHistoryEntry): String {
+        val devSec =
+            if (entry.actualFcSec != null && entry.actualDropSec != null && entry.actualDropSec > entry.actualFcSec) {
+                (entry.actualDropSec - entry.actualFcSec).toString() + "s"
+            } else {
+                "-"
+            }
+
+        val dtr =
+            if (entry.actualFcSec != null && entry.actualDropSec != null && entry.actualDropSec > entry.actualFcSec && entry.actualDropSec > 0) {
+                "%.1f".format(
+                    ((entry.actualDropSec - entry.actualFcSec).toDouble() / entry.actualDropSec.toDouble()) * 100.0
+                ) + "%"
+            } else {
+                "-"
+            }
+
+        return """
+FC
+${entry.actualFcSec?.toString() ?: entry.predictedFcSec?.toString() ?: "-"}
+
+Drop
+${entry.actualDropSec?.toString() ?: entry.predictedDropSec?.toString() ?: "-"}
+
+Development
+$devSec
+
+DTR
+$dtr
+
+Pre-FC ROR
+${entry.actualPreFcRor?.let { "%.1f".format(it) } ?: "-"}
         """.trimIndent()
     }
 
@@ -160,20 +229,23 @@ RH         ${"%.1f".format(entry.envRh)}%
     private fun buildPredicted(entry: RoastHistoryEntry): String {
         return """
 Predicted Anchors
-Turning   ${entry.predictedTurningSec?.toString() ?: "-"}
-Yellow    ${entry.predictedYellowSec?.toString() ?: "-"}
-FC        ${entry.predictedFcSec?.toString() ?: "-"}
-Drop      ${entry.predictedDropSec?.toString() ?: "-"}
+Turning   ${secOrDash(entry.predictedTurningSec)}
+Yellow    ${secOrDash(entry.predictedYellowSec)}
+FC        ${secOrDash(entry.predictedFcSec)}
+Drop      ${secOrDash(entry.predictedDropSec)}
         """.trimIndent()
     }
 
     private fun buildActual(entry: RoastHistoryEntry): String {
         return """
 Actual Anchors
-Turning   ${entry.actualTurningSec?.toString() ?: "-"}
-Yellow    ${entry.actualYellowSec?.toString() ?: "-"}
-FC        ${entry.actualFcSec?.toString() ?: "-"}
-Drop      ${entry.actualDropSec?.toString() ?: "-"}
+Turning   ${secOrDash(entry.actualTurningSec)}
+Yellow    ${secOrDash(entry.actualYellowSec)}
+FC        ${secOrDash(entry.actualFcSec)}
+Drop      ${secOrDash(entry.actualDropSec)}
+
+Current
+Status    ${entry.batchStatus}
 Pre-FC ROR ${entry.actualPreFcRor?.let { "%.1f".format(it) } ?: "-"}
         """.trimIndent()
     }
@@ -188,6 +260,96 @@ ROR       ${entry.actualPreFcRor?.let { "%.1f".format(it) } ?: "-"}
         """.trimIndent()
     }
 
+    private fun buildHeadline(entry: RoastHistoryEntry): String {
+        val fcDelta = delta(entry.predictedFcSec, entry.actualFcSec)
+        val turningDelta = delta(entry.predictedTurningSec, entry.actualTurningSec)
+        val ror = entry.actualPreFcRor
+
+        return when {
+            ror != null && ror >= 10.8 -> "Late-stage acceleration too strong"
+            ror != null && ror <= 7.0 -> "Energy may be collapsing before crack"
+            fcDelta != null && fcDelta >= 20 -> "FC landed too late"
+            fcDelta != null && fcDelta <= -20 -> "FC landed too early"
+            turningDelta != null && turningDelta >= 12 -> "Front-end energy looked weak"
+            turningDelta != null && turningDelta <= -12 -> "Front-end push looked too strong"
+            else -> "Batch stayed relatively close to plan"
+        }
+    }
+
+    private fun buildReplayability(entry: RoastHistoryEntry): String {
+        val score = replayabilityScore(entry)
+        return when {
+            score >= 85 -> "High"
+            score >= 65 -> "Medium"
+            else -> "Low"
+        }
+    }
+
+    private fun buildRisk(entry: RoastHistoryEntry): String {
+        val score = riskScore(entry)
+        return when {
+            score >= 8 -> "High"
+            score >= 4 -> "Medium"
+            score >= 1 -> "Low"
+            else -> "Minor"
+        }
+    }
+
+    private fun replayabilityScore(entry: RoastHistoryEntry): Int {
+        var score = 100
+
+        val turningDelta = absDelta(entry.predictedTurningSec, entry.actualTurningSec)
+        val yellowDelta = absDelta(entry.predictedYellowSec, entry.actualYellowSec)
+        val fcDelta = absDelta(entry.predictedFcSec, entry.actualFcSec)
+        val dropDelta = absDelta(entry.predictedDropSec, entry.actualDropSec)
+        val ror = entry.actualPreFcRor
+
+        score -= penalty(turningDelta, 2, 6, 12)
+        score -= penalty(yellowDelta, 2, 8, 15)
+        score -= penalty(fcDelta, 2, 10, 20)
+        score -= penalty(dropDelta, 1, 10, 20)
+
+        if (ror != null) {
+            if (ror >= 10.8) score -= 18
+            else if (ror >= 9.5) score -= 10
+            else if (ror <= 7.0) score -= 18
+            else if (ror <= 8.0) score -= 10
+        }
+
+        return score.coerceIn(0, 100)
+    }
+
+    private fun riskScore(entry: RoastHistoryEntry): Int {
+        var score = 0
+
+        val turningDelta = absDelta(entry.predictedTurningSec, entry.actualTurningSec)
+        val yellowDelta = absDelta(entry.predictedYellowSec, entry.actualYellowSec)
+        val fcDelta = absDelta(entry.predictedFcSec, entry.actualFcSec)
+        val dropDelta = absDelta(entry.predictedDropSec, entry.actualDropSec)
+        val ror = entry.actualPreFcRor
+
+        if (turningDelta >= 12) score += 2 else if (turningDelta >= 6) score += 1
+        if (yellowDelta >= 15) score += 2 else if (yellowDelta >= 8) score += 1
+        if (fcDelta >= 20) score += 3 else if (fcDelta >= 10) score += 1
+        if (dropDelta >= 20) score += 1 else if (dropDelta >= 10) score += 1
+
+        if (ror != null) {
+            if (ror >= 10.8 || ror <= 7.0) score += 3
+            else if (ror >= 9.5 || ror <= 8.0) score += 1
+        }
+
+        return score
+    }
+
+    private fun penalty(absDelta: Int, mild: Int, mid: Int, high: Int): Int {
+        return when {
+            absDelta >= high -> 20
+            absDelta >= mid -> 12
+            absDelta >= mild -> 5
+            else -> 0
+        }
+    }
+
     private fun deviationLine(predicted: Int?, actual: Int?): String {
         return when {
             predicted == null && actual == null -> "Pred - / Actual - / Δ -"
@@ -199,5 +361,17 @@ ROR       ${entry.actualPreFcRor?.let { "%.1f".format(it) } ?: "-"}
                 "Pred $predicted / Actual $actual / Δ ${deltaText}s"
             }
         }
+    }
+
+    private fun absDelta(predicted: Int?, actual: Int?): Int {
+        return if (predicted == null || actual == null) 0 else kotlin.math.abs(actual - predicted)
+    }
+
+    private fun delta(predicted: Int?, actual: Int?): Int? {
+        return if (predicted == null || actual == null) null else actual - predicted
+    }
+
+    private fun secOrDash(value: Int?): String {
+        return value?.toString() ?: "-"
     }
 }
