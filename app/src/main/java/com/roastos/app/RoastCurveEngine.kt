@@ -1,5 +1,6 @@
 package com.roastos.app
 
+import kotlin.math.abs
 import kotlin.math.max
 
 data class CurvePoint(
@@ -18,7 +19,8 @@ data class CurveAnchor(
 
 data class CurveDeviation(
     val label: String,
-    val deltaSec: Int
+    val deltaSec: Int,
+    val severity: String
 )
 
 data class RoastCurveResult(
@@ -143,7 +145,7 @@ object RoastCurveEngine {
         )
 
         val summary = """
-Curve Engine v1.2
+Curve Engine v1.3
 
 Predicted Points ${predictedPoints.size}
 Actual Points ${actualPoints.size}
@@ -160,13 +162,14 @@ Yellow ${actualYellow?.toString() ?: "-"}
 FC ${actualFc?.toString() ?: "-"}
 Drop ${actualDrop?.toString() ?: "-"}
 
-Deviation
-${deviations.joinToString("\n") { "${it.label} ${formatSigned(it.deltaSec)}s" }.ifBlank { "No actual deviations yet" }}
+Deviation Summary
+${buildDeviationSummaryText(deviations)}
 
 Control Precision
 ROR smoothed with weighted moving average
 Predicted / Actual curve separation enabled
 Phase tagging enabled
+Deviation severity enabled
         """.trimIndent()
 
         return RoastCurveResult(
@@ -356,12 +359,64 @@ Phase tagging enabled
     ): List<CurveDeviation> {
         val result = mutableListOf<CurveDeviation>()
 
-        if (actualTurning != null) result.add(CurveDeviation("Turning", actualTurning - predTurning))
-        if (actualYellow != null) result.add(CurveDeviation("Yellow", actualYellow - predYellow))
-        if (actualFc != null) result.add(CurveDeviation("FC", actualFc - predFc))
-        if (actualDrop != null) result.add(CurveDeviation("Drop", actualDrop - predDrop))
+        if (actualTurning != null) {
+            result.add(
+                CurveDeviation(
+                    label = "Turning",
+                    deltaSec = actualTurning - predTurning,
+                    severity = deviationSeverity(actualTurning - predTurning)
+                )
+            )
+        }
+
+        if (actualYellow != null) {
+            result.add(
+                CurveDeviation(
+                    label = "Yellow",
+                    deltaSec = actualYellow - predYellow,
+                    severity = deviationSeverity(actualYellow - predYellow)
+                )
+            )
+        }
+
+        if (actualFc != null) {
+            result.add(
+                CurveDeviation(
+                    label = "FC",
+                    deltaSec = actualFc - predFc,
+                    severity = deviationSeverity(actualFc - predFc)
+                )
+            )
+        }
+
+        if (actualDrop != null) {
+            result.add(
+                CurveDeviation(
+                    label = "Drop",
+                    deltaSec = actualDrop - predDrop,
+                    severity = deviationSeverity(actualDrop - predDrop)
+                )
+            )
+        }
 
         return result
+    }
+
+    private fun deviationSeverity(deltaSec: Int): String {
+        val absDelta = abs(deltaSec)
+        return when {
+            absDelta >= 20 -> "High"
+            absDelta >= 10 -> "Medium"
+            absDelta >= 4 -> "Low"
+            else -> "Minor"
+        }
+    }
+
+    private fun buildDeviationSummaryText(deviations: List<CurveDeviation>): String {
+        if (deviations.isEmpty()) return "No actual deviations yet"
+        return deviations.joinToString("\n") {
+            "${it.label} ${formatSigned(it.deltaSec)}s  (${it.severity})"
+        }
     }
 
     private fun detectPhaseAtTime(
