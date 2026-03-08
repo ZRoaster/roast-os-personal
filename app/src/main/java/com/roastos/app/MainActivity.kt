@@ -1,5 +1,6 @@
 package com.roastos.app
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -16,25 +17,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = LinearLayout(this)
+        val context: Context = this
+
+        val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
 
-        val navBar = LinearLayout(this)
+        val navBar = LinearLayout(context)
         navBar.orientation = LinearLayout.HORIZONTAL
 
-        val dashboardBtn = Button(this)
+        val dashboardBtn = Button(context)
         dashboardBtn.text = "Dashboard"
 
-        val plannerBtn = Button(this)
+        val plannerBtn = Button(context)
         plannerBtn.text = "Planner"
 
-        val roastBtn = Button(this)
+        val roastBtn = Button(context)
         roastBtn.text = "Roast"
 
-        val correctionBtn = Button(this)
+        val correctionBtn = Button(context)
         correctionBtn.text = "Correction"
 
-        container = LinearLayout(this)
+        container = LinearLayout(context)
         container.orientation = LinearLayout.VERTICAL
 
         navBar.addView(dashboardBtn)
@@ -48,21 +51,21 @@ class MainActivity : ComponentActivity() {
         setContentView(root)
 
         dashboardBtn.setOnClickListener {
-            DashboardPage.show(applicationContext, container)
+            DashboardPage.show(context, container)
         }
 
         plannerBtn.setOnClickListener {
-            PlannerPage.show(applicationContext, container)
+            PlannerPage.show(context, container)
         }
 
         roastBtn.setOnClickListener {
-            RoastPage.show(applicationContext, container)
+            RoastPage.show(context, container)
         }
 
         correctionBtn.setOnClickListener {
-            CorrectionPage.show(applicationContext, container)
+            CorrectionPage.show(context, container)
         }
 
-        DashboardPage.show(applicationContext, container)
+        DashboardPage.show(context, container)
     }
 }
