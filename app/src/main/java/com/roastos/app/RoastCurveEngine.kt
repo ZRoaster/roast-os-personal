@@ -28,6 +28,8 @@ data class RoastCurveResult(
     val actualPoints: List<CurvePoint>,
     val anchors: List<CurveAnchor>,
     val deviations: List<CurveDeviation>,
+    val currentTimeSec: Int,
+    val currentPhase: String,
     val summary: String
 )
 
@@ -144,8 +146,28 @@ object RoastCurveEngine {
             actualDrop = actualDrop
         )
 
+        val currentTimeSec = detectCurrentTimeSec(
+            actualTurning = actualTurning,
+            actualYellow = actualYellow,
+            actualFc = actualFc,
+            actualDrop = actualDrop,
+            predTurning = predTurning
+        )
+
+        val currentPhase = detectCurrentPhase(
+            actualTurning = actualTurning,
+            actualYellow = actualYellow,
+            actualFc = actualFc,
+            actualDrop = actualDrop,
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            currentTimeSec = currentTimeSec
+        )
+
         val summary = """
-Curve Engine v1.3
+Curve Engine v1.4
 
 Predicted Points ${predictedPoints.size}
 Actual Points ${actualPoints.size}
@@ -162,6 +184,12 @@ Yellow ${actualYellow?.toString() ?: "-"}
 FC ${actualFc?.toString() ?: "-"}
 Drop ${actualDrop?.toString() ?: "-"}
 
+Current Time
+${currentTimeSec}s
+
+Current Phase
+$currentPhase
+
 Deviation Summary
 ${buildDeviationSummaryText(deviations)}
 
@@ -170,6 +198,7 @@ ROR smoothed with weighted moving average
 Predicted / Actual curve separation enabled
 Phase tagging enabled
 Deviation severity enabled
+Current phase highlight enabled
         """.trimIndent()
 
         return RoastCurveResult(
@@ -177,6 +206,8 @@ Deviation severity enabled
             actualPoints = actualPoints,
             anchors = anchors,
             deviations = deviations,
+            currentTimeSec = currentTimeSec,
+            currentPhase = currentPhase,
             summary = summary
         )
     }
@@ -416,6 +447,46 @@ Deviation severity enabled
         if (deviations.isEmpty()) return "No actual deviations yet"
         return deviations.joinToString("\n") {
             "${it.label} ${formatSigned(it.deltaSec)}s  (${it.severity})"
+        }
+    }
+
+    private fun detectCurrentTimeSec(
+        actualTurning: Int?,
+        actualYellow: Int?,
+        actualFc: Int?,
+        actualDrop: Int?,
+        predTurning: Int
+    ): Int {
+        return actualDrop
+            ?: actualFc
+            ?: actualYellow
+            ?: actualTurning
+            ?: predTurning.coerceAtLeast(30)
+    }
+
+    private fun detectCurrentPhase(
+        actualTurning: Int?,
+        actualYellow: Int?,
+        actualFc: Int?,
+        actualDrop: Int?,
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int,
+        currentTimeSec: Int
+    ): String {
+        return when {
+            actualDrop != null -> "Finished"
+            actualFc != null -> "Development"
+            actualYellow != null -> "Maillard / Pre-FC"
+            actualTurning != null -> "Drying"
+            else -> detectPhaseAtTime(
+                timeSec = currentTimeSec,
+                turningSec = predTurning,
+                yellowSec = predYellow,
+                fcSec = predFc,
+                dropSec = predDrop
+            )
         }
     }
 
