@@ -9,6 +9,7 @@ data class EnergyState(
     val machineEffect: Double,
     val controlEffect: Double,
     val phaseEffect: Double,
+    val calibrationEffect: Double,
     val summary: String
 )
 
@@ -33,7 +34,8 @@ object EnergyEngine {
         val beanLoad = calculateBeanLoad(
             density = bean.density,
             moisture = bean.moisture,
-            aw = bean.aw
+            aw = bean.aw,
+            beanBias = calibration.beanBias
         )
 
         val envLoad = calculateEnvironmentLoad(
@@ -55,10 +57,18 @@ object EnergyEngine {
             drumRpm = control.drumRpm,
             maxPowerW = machine.maxPowerW,
             maxAirPa = machine.maxAirPa,
-            maxRpm = machine.maxRpm
+            maxRpm = machine.maxRpm,
+            heatBias = calibration.heatBias,
+            airBias = calibration.airBias
         )
 
         val phaseEffect = calculatePhaseEffect(roast.phase)
+
+        val calibrationEffect =
+            calibration.rorBias +
+            calibration.heatBias * 0.35 -
+            calibration.airBias * 0.20 -
+            calibration.beanBias * 0.25
 
         val targetRor =
             baseTargetRor +
@@ -74,7 +84,7 @@ object EnergyEngine {
             beanLoad -
             envLoad -
             phaseEffect +
-            calibration.rorBias
+            calibrationEffect
 
         val boundedTargetRor = targetRor.coerceIn(4.0, 22.0)
         val boundedPredictedRor = predictedRor.coerceIn(0.0, 25.0)
@@ -83,11 +93,11 @@ object EnergyEngine {
 
         val summary = when {
             energyError > 2.0 ->
-                "Energy below target. System likely needs more support."
+                "Energy below target. Learned model indicates more support is needed."
             energyError < -2.0 ->
-                "Energy above target. System likely needs trimming."
+                "Energy above target. Learned model indicates trimming is needed."
             else ->
-                "Energy near target window."
+                "Energy near target window after calibration."
         }
 
         return EnergyState(
@@ -99,6 +109,7 @@ object EnergyEngine {
             machineEffect = machineEffect,
             controlEffect = controlEffect,
             phaseEffect = phaseEffect,
+            calibrationEffect = calibrationEffect,
             summary = summary
         )
     }
@@ -106,14 +117,16 @@ object EnergyEngine {
     private fun calculateBeanLoad(
         density: Double,
         moisture: Double,
-        aw: Double
+        aw: Double,
+        beanBias: Double
     ): Double {
 
         val densityTerm = ((density - 800.0) / 100.0) * 0.8
         val moistureTerm = (moisture - 10.5) * 0.7
         val awTerm = (aw - 0.55) * 5.0
 
-        return densityTerm + moistureTerm + awTerm
+        val baseLoad = densityTerm + moistureTerm + awTerm
+        return baseLoad + beanBias
     }
 
     private fun calculateEnvironmentLoad(
@@ -150,7 +163,9 @@ object EnergyEngine {
         drumRpm: Int,
         maxPowerW: Int,
         maxAirPa: Int,
-        maxRpm: Int
+        maxRpm: Int,
+        heatBias: Double,
+        airBias: Double
     ): Double {
 
         val powerRatio =
@@ -166,7 +181,7 @@ object EnergyEngine {
         val airTerm = airRatio * 3.5
         val rpmTerm = rpmRatio * 1.2
 
-        return powerTerm - airTerm + rpmTerm
+        return powerTerm - airTerm + rpmTerm + heatBias - airBias
     }
 
     private fun calculatePhaseEffect(phase: String): Double {
