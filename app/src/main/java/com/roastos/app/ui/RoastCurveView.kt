@@ -17,11 +17,15 @@ class RoastCurveView(context: Context) : View(context) {
     private val axisPaint = Paint().apply {
         color = Color.DKGRAY
         strokeWidth = 3f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
     }
 
     private val gridPaint = Paint().apply {
         color = Color.LTGRAY
         strokeWidth = 1f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
     }
 
     private val predictedBtPaint = Paint().apply {
@@ -53,11 +57,29 @@ class RoastCurveView(context: Context) : View(context) {
     private val predictedAnchorPaint = Paint().apply {
         color = Color.parseColor("#9E9E9E")
         strokeWidth = 2f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
     }
 
     private val actualAnchorPaint = Paint().apply {
         color = Color.parseColor("#388E3C")
         strokeWidth = 3f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
+    private val predictedDevPaint = Paint().apply {
+        color = Color.parseColor("#FFE0B2")
+        style = Paint.Style.FILL
+        alpha = 110
+        isAntiAlias = true
+    }
+
+    private val actualDevPaint = Paint().apply {
+        color = Color.parseColor("#C8E6C9")
+        style = Paint.Style.FILL
+        alpha = 120
+        isAntiAlias = true
     }
 
     fun setCurve(curveResult: RoastCurveResult) {
@@ -100,6 +122,16 @@ class RoastCurveView(context: Context) : View(context) {
         val maxTime = max(1, allPoints.maxOf { it.timeSec })
         val minBt = allPoints.minOf { it.bt }
         val maxBt = allPoints.maxOf { it.bt }
+
+        drawDevelopmentWindow(
+            canvas = canvas,
+            anchors = data.anchors,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime
+        )
 
         drawAnchors(
             canvas = canvas,
@@ -166,6 +198,37 @@ class RoastCurveView(context: Context) : View(context) {
         for (i in 1 until vLines) {
             val x = left + (right - left) * i / vLines
             canvas.drawLine(x, top, x, bottom, gridPaint)
+        }
+    }
+
+    private fun drawDevelopmentWindow(
+        canvas: Canvas,
+        anchors: List<CurveAnchor>,
+        left: Float,
+        top: Float,
+        bottom: Float,
+        plotWidth: Float,
+        maxTime: Int
+    ) {
+        val actualFc = anchors.firstOrNull { it.label == "FC" && it.isActual }?.timeSec
+        val actualDrop = anchors.firstOrNull { it.label == "Drop" && it.isActual }?.timeSec
+
+        if (actualFc != null && actualDrop != null && actualDrop > actualFc) {
+            val x0 = left + (actualFc.toFloat() / maxTime) * plotWidth
+            val x1 = left + (actualDrop.toFloat() / maxTime) * plotWidth
+            canvas.drawRect(x0, top, x1, bottom, actualDevPaint)
+            canvas.drawText("DEV A", x0 + 8f, top + 52f, smallTextPaint)
+            return
+        }
+
+        val predFc = anchors.firstOrNull { it.label == "FC" && !it.isActual }?.timeSec
+        val predDrop = anchors.firstOrNull { it.label == "Drop" && !it.isActual }?.timeSec
+
+        if (predFc != null && predDrop != null && predDrop > predFc) {
+            val x0 = left + (predFc.toFloat() / maxTime) * plotWidth
+            val x1 = left + (predDrop.toFloat() / maxTime) * plotWidth
+            canvas.drawRect(x0, top, x1, bottom, predictedDevPaint)
+            canvas.drawText("DEV P", x0 + 8f, top + 52f, smallTextPaint)
         }
     }
 
