@@ -1,14 +1,12 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.graphics.Typeface
 import android.text.InputType
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
 import com.roastos.app.PlannerInput
@@ -22,21 +20,11 @@ object PlannerPage {
         container.removeAllViews()
 
         val scroll = ScrollView(context)
-        val root = LinearLayout(context)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(24, 24, 24, 24)
+        val root = UiKit.pageRoot(context)
 
-        val title = TextView(context)
-        title.text = "ROAST PLANNER"
-        title.textSize = 24f
-        title.setTypeface(null, Typeface.BOLD)
-
-        val subtitle = TextView(context)
-        subtitle.text = "Build baseline timeline, heat plan, and batch session"
-        subtitle.textSize = 14f
-
-        root.addView(title)
-        root.addView(subtitle)
+        root.addView(UiKit.pageTitle(context, "ROAST PLANNER"))
+        root.addView(UiKit.pageSubtitle(context, "Build baseline timeline, heat plan, and batch session"))
+        root.addView(UiKit.spacer(context))
 
         val processInput = makeTextInput(
             context = context,
@@ -63,12 +51,13 @@ object PlannerPage {
         )
 
         root.addView(
-            buildSection(
+            buildInputCard(
                 context,
                 "BEAN",
                 listOf(processInput, densityInput, moistureInput, awInput)
             )
         )
+        root.addView(UiKit.spacer(context))
 
         val envTempInput = makeDecimalInput(
             context = context,
@@ -83,12 +72,13 @@ object PlannerPage {
         )
 
         root.addView(
-            buildSection(
+            buildInputCard(
                 context,
                 "ENVIRONMENT",
                 listOf(envTempInput, humidityInput)
             )
         )
+        root.addView(UiKit.spacer(context))
 
         val roastLevelInput = makeTextInput(
             context = context,
@@ -109,12 +99,13 @@ object PlannerPage {
         )
 
         root.addView(
-            buildSection(
+            buildInputCard(
                 context,
                 "ROAST INTENT",
                 listOf(roastLevelInput, orientationInput, batchInput)
             )
         )
+        root.addView(UiKit.spacer(context))
 
         val advancedToggle = Button(context)
         advancedToggle.text = "Show Advanced Parameters"
@@ -122,7 +113,7 @@ object PlannerPage {
         val advancedBlock = LinearLayout(context)
         advancedBlock.orientation = LinearLayout.VERTICAL
         advancedBlock.visibility = View.GONE
-        advancedBlock.setPadding(0, 12, 0, 0)
+        advancedBlock.setPadding(0, 16, 0, 0)
 
         val ttInput = makeNumberInput(
             context = context,
@@ -139,37 +130,29 @@ object PlannerPage {
         advancedBlock.addView(ttInput)
         advancedBlock.addView(tyInput)
 
-        val advancedSection = LinearLayout(context)
-        advancedSection.orientation = LinearLayout.VERTICAL
-        advancedSection.setPadding(24, 24, 24, 24)
+        val advancedCard = UiKit.card(context)
+        advancedCard.addView(UiKit.cardTitle(context, "ADVANCED"))
+        advancedCard.addView(advancedToggle)
+        advancedCard.addView(advancedBlock)
 
-        val advancedTitle = TextView(context)
-        advancedTitle.text = "ADVANCED"
-        advancedTitle.textSize = 18f
-        advancedTitle.setTypeface(null, Typeface.BOLD)
+        root.addView(advancedCard)
+        root.addView(UiKit.spacer(context))
 
-        advancedSection.addView(advancedTitle)
-        advancedSection.addView(advancedToggle)
-        advancedSection.addView(advancedBlock)
-
-        root.addView(advancedSection)
-
+        val actionCard = UiKit.card(context)
         val calculateBtn = Button(context)
         calculateBtn.text = "Generate Roast Card"
+        actionCard.addView(UiKit.cardTitle(context, "ACTIONS"))
+        actionCard.addView(calculateBtn)
 
-        val resultTitle = TextView(context)
-        resultTitle.text = "RESULT"
-        resultTitle.textSize = 18f
-        resultTitle.setTypeface(null, Typeface.BOLD)
-        resultTitle.setPadding(0, 24, 0, 0)
+        root.addView(actionCard)
+        root.addView(UiKit.spacer(context))
 
-        val resultView = TextView(context)
-        resultView.textSize = 15f
-        resultView.setPadding(0, 16, 0, 24)
+        val resultCard = UiKit.card(context)
+        val resultBody = UiKit.bodyText(context, "No roast card generated yet.")
+        resultCard.addView(UiKit.cardTitle(context, "RESULT"))
+        resultCard.addView(resultBody)
 
-        root.addView(calculateBtn)
-        root.addView(resultTitle)
-        root.addView(resultView)
+        root.addView(resultCard)
 
         scroll.addView(root)
         container.addView(scroll)
@@ -250,7 +233,7 @@ object PlannerPage {
                 else -> "Balanced execution"
             }
 
-            resultView.text = """
+            resultBody.text = """
 ROAST OS EXECUTION CARD
 
 Bean
@@ -315,24 +298,15 @@ Predicted anchors written to RoastTimelineStore
         }
     }
 
-    private fun buildSection(
+    private fun buildInputCard(
         context: Context,
         titleText: String,
         views: List<View>
     ): LinearLayout {
-        val section = LinearLayout(context)
-        section.orientation = LinearLayout.VERTICAL
-        section.setPadding(24, 24, 24, 24)
-
-        val title = TextView(context)
-        title.text = titleText
-        title.textSize = 18f
-        title.setTypeface(null, Typeface.BOLD)
-
-        section.addView(title)
-        views.forEach { section.addView(it) }
-
-        return section
+        val card = UiKit.card(context)
+        card.addView(UiKit.cardTitle(context, titleText))
+        views.forEach { card.addView(it) }
+        return card
     }
 
     private fun makeTextInput(
