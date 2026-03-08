@@ -600,57 +600,80 @@ ${prediction.summary}
         """.trimIndent()
     }
 
-    private fun buildDecisionCard(
+    private fun buildControlCard(
         predTurning: Int,
         predYellow: Int,
         predFc: Int,
         predDrop: Int
     ): String {
-        val plannerInput = AppState.lastPlannerInput ?: return "No planner input available."
+        val actualTurning = AppState.liveActualTurningSec
+        val actualYellow = AppState.liveActualYellowSec
+        val actualFc = AppState.liveActualFcSec
+        val actualDrop = AppState.liveActualDropSec
+        val actualRor = AppState.liveActualPreFcRor
 
-        val decision = DecisionEngine.decide(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop,
-            actualTurning = AppState.liveActualTurningSec,
-            actualYellow = AppState.liveActualYellowSec,
-            actualFc = AppState.liveActualFcSec,
-            actualDrop = AppState.liveActualDropSec,
-            currentRor = AppState.liveActualPreFcRor,
-            envTemp = plannerInput.envTemp,
-            humidity = plannerInput.envRH,
-            pressureKpa = 1013.0,
-            density = plannerInput.density,
-            moisture = plannerInput.moisture,
-            aw = plannerInput.aw,
-            heatLevelW = DEFAULT_POWER_W,
-            airflowPa = DEFAULT_AIRFLOW_PA,
-            drumRpm = DEFAULT_DRUM_RPM
-        )
+        val currentStage = when {
+            actualDrop != null -> "Finished"
+            actualFc != null -> "Development / Drop"
+            actualYellow != null -> "Maillard / Pre-FC"
+            actualTurning != null -> "Drying / To Yellow"
+            else -> "Pre-Turning"
+        }
+
+        val nextAction = when {
+            actualDrop != null -> "Review roast and move to Correction"
+            actualFc != null && actualRor != null && actualRor > 10.0 ->
+                "Reduce heat, add air, protect development"
+            actualFc != null && actualRor != null && actualRor < 7.0 ->
+                "Preserve heat, avoid collapse"
+            actualYellow != null ->
+                "Control middle momentum toward FC"
+            actualTurning != null ->
+                "Shape drying so Yellow stays on plan"
+            else ->
+                "Watch first anchor point"
+        }
+
+        val biggestRisk = when {
+            actualDrop != null -> "Batch complete"
+            actualFc != null && actualRor != null && actualRor > 10.0 ->
+                "Overshoot in development"
+            actualFc != null && actualRor != null && actualRor < 7.0 ->
+                "Development crash"
+            actualYellow != null && actualYellow - predYellow > 15 ->
+                "Late crack / flat cup"
+            actualYellow != null && actualYellow - predYellow < -15 ->
+                "Pre-FC spike"
+            actualTurning != null && actualTurning - predTurning > 8 ->
+                "Front-end energy short"
+            actualTurning != null && actualTurning - predTurning < -8 ->
+                "Early push too strong"
+            else ->
+                "No dominant risk yet"
+        }
 
         return """
-Current Phase
-${decision.currentPhase}
+Current Stage
+$currentStage
 
-Action Now
-${decision.actionNow}
+Predicted Anchors
+Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
+Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
+FC ${RoastEngine.toMMSS(predFc.toDouble())}
+Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
 
-Heat Command
-${decision.heatCommand}
+Actual Anchors
+Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
 
-Air Command
-${decision.airCommand}
+Next Action
+$nextAction
 
-Target Window
-${decision.targetWindow}
-
-Risk Level
-${decision.riskLevel}
-
-Reason
-${decision.reason}
-
-Physics
-${decision.physicsSummary}
-""".trimIndent()
+Biggest Risk
+$biggestRisk
+        """.trimIndent()
+    }
+}
