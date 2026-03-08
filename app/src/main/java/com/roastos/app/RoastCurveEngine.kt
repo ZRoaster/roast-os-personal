@@ -1,11 +1,14 @@
 package com.roastos.app
 
 import kotlin.math.max
+import kotlin.math.min
 
 data class CurvePoint(
     val timeSec: Int,
     val bt: Double,
-    val ror: Double
+    val ror: Double,
+    val phase: String,
+    val isActual: Boolean = false
 )
 
 data class CurveAnchor(
@@ -14,9 +17,16 @@ data class CurveAnchor(
     val isActual: Boolean
 )
 
+data class CurveDeviation(
+    val label: String,
+    val deltaSec: Int
+)
+
 data class RoastCurveResult(
-    val points: List<CurvePoint>,
+    val predictedPoints: List<CurvePoint>,
+    val actualPoints: List<CurvePoint>,
     val anchors: List<CurveAnchor>,
+    val deviations: List<CurveDeviation>,
     val summary: String
 )
 
@@ -42,46 +52,73 @@ object RoastCurveEngine {
             ?: planner?.dropSec?.toInt()
             ?: 570
 
-        val finalSec = max(
-            predDrop,
-            max(
-                timeline.actual.dropSec ?: 0,
-                max(
-                    timeline.actual.fcSec ?: 0,
-                    max(
-                        timeline.actual.yellowSec ?: 0,
-                        timeline.actual.turningSec ?: 0
-                    )
-                )
-            )
-        ).coerceAtLeast(300)
+        val actualTurning = timeline.actual.turningSec
+        val actualYellow = timeline.actual.yellowSec
+        val actualFc = timeline.actual.fcSec
+        val actualDrop = timeline.actual.dropSec
 
-        val btSeries = mutableListOf<Double>()
-        var t = 0
-        while (t <= finalSec) {
-            btSeries.add(
-                estimateBt(
-                    timeSec = t,
-                    predTurning = predTurning,
-                    predYellow = predYellow,
-                    predFc = predFc,
-                    predDrop = predDrop
+        val predictedFinalSec = max(predDrop, 300)
+        val actualFinalSec = max(
+            actualDrop ?: 0,
+            max(
+                actualFc ?: 0,
+                max(
+                    actualYellow ?: 0,
+                    actualTurning ?: 0
                 )
             )
-            t += 1
+        )
+
+        val finalSec = max(predictedFinalSec, actualFinalSec).coerceAtLeast(300)
+
+        val predictedBtSeries = buildPredictedBtSeries(
+            finalSec = finalSec,
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
+        val predictedRorSeries = buildControlledRor(predictedBtSeries)
+
+        val predictedPoints = predictedBtSeries.indices.map { i ->
+            CurvePoint(
+                timeSec = i,
+                bt = predictedBtSeries[i],
+                ror = predictedRorSeries.getOrElse(i) { 0.0 },
+                phase = detectPhaseAtTime(i, predTurning, predYellow, predFc, predDrop),
+                isActual = false
+            )
         }
 
-        val smoothedRor = buildSmoothedRor(btSeries)
+        val actualPoints = if (actualTurning != null || actualYellow != null || actualFc != null || actualDrop != null) {
+            val aTurning = actualTurning ?: predTurning
+            val aYellow = actualYellow ?: predYellow
+            val aFc = actualFc ?: predFc
+            val aDrop = actualDrop ?: predDrop
 
-        val points = mutableListOf<CurvePoint>()
-        for (i in btSeries.indices) {
-            points.add(
+            val actualBtSeries = buildActualBtSeries(
+                finalSec = finalSec,
+                actualTurning = aTurning,
+                actualYellow = aYellow,
+                actualFc = aFc,
+                actualDrop = aDrop,
+                planner = planner
+            )
+
+            val actualRorSeries = buildControlledRor(actualBtSeries)
+
+            actualBtSeries.indices.map { i ->
                 CurvePoint(
                     timeSec = i,
-                    bt = btSeries[i],
-                    ror = smoothedRor.getOrElse(i) { 0.0 }
+                    bt = actualBtSeries[i],
+                    ror = actualRorSeries.getOrElse(i) { 0.0 },
+                    phase = detectPhaseAtTime(i, aTurning, aYellow, aFc, aDrop),
+                    isActual = true
                 )
-            )
+            }
+        } else {
+            emptyList()
         }
 
         val anchors = buildAnchors(
@@ -89,35 +126,215 @@ object RoastCurveEngine {
             predYellow = predYellow,
             predFc = predFc,
             predDrop = predDrop,
-            actualTurning = timeline.actual.turningSec,
-            actualYellow = timeline.actual.yellowSec,
-            actualFc = timeline.actual.fcSec,
-            actualDrop = timeline.actual.dropSec
+            actualTurning = actualTurning,
+            actualYellow = actualYellow,
+            actualFc = actualFc,
+            actualDrop = actualDrop
+        )
+
+        val deviations = buildDeviations(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = actualTurning,
+            actualYellow = actualYellow,
+            actualFc = actualFc,
+            actualDrop = actualDrop
         )
 
         val summary = """
-Curve Engine v1.1
+Curve Engine v1.2
 
-Points ${points.size}
-Pred Turning ${predTurning}s
-Pred Yellow ${predYellow}s
-Pred FC ${predFc}s
-Pred Drop ${predDrop}s
+Predicted Points ${predictedPoints.size}
+Actual Points ${actualPoints.size}
 
-Actual Turning ${timeline.actual.turningSec?.toString() ?: "-"}
-Actual Yellow ${timeline.actual.yellowSec?.toString() ?: "-"}
-Actual FC ${timeline.actual.fcSec?.toString() ?: "-"}
-Actual Drop ${timeline.actual.dropSec?.toString() ?: "-"}
+Predicted Anchors
+Turning ${predTurning}s
+Yellow ${predYellow}s
+FC ${predFc}s
+Drop ${predDrop}s
 
-Resolution 1s
-ROR Smoothed Basic
+Actual Anchors
+Turning ${actualTurning?.toString() ?: "-"}
+Yellow ${actualYellow?.toString() ?: "-"}
+FC ${actualFc?.toString() ?: "-"}
+Drop ${actualDrop?.toString() ?: "-"}
+
+Deviation
+${deviations.joinToString("\n") { "${it.label} ${formatSigned(it.deltaSec)}s" }.ifBlank { "No actual deviations yet" }}
+
+Control Precision
+ROR smoothed with weighted moving average
+Predicted / Actual curve separation enabled
+Phase tagging enabled
         """.trimIndent()
 
         return RoastCurveResult(
-            points = points,
+            predictedPoints = predictedPoints,
+            actualPoints = actualPoints,
             anchors = anchors,
+            deviations = deviations,
             summary = summary
         )
+    }
+
+    private fun buildPredictedBtSeries(
+        finalSec: Int,
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ): List<Double> {
+        val result = mutableListOf<Double>()
+
+        for (t in 0..finalSec) {
+            result.add(
+                estimateBt(
+                    timeSec = t,
+                    turningSec = predTurning,
+                    yellowSec = predYellow,
+                    fcSec = predFc,
+                    dropSec = predDrop,
+                    chargeBt = 200.0,
+                    turningBt = 92.0,
+                    yellowBt = 150.0,
+                    fcBt = 196.0,
+                    dropBt = 206.0
+                )
+            )
+        }
+
+        return result
+    }
+
+    private fun buildActualBtSeries(
+        finalSec: Int,
+        actualTurning: Int,
+        actualYellow: Int,
+        actualFc: Int,
+        actualDrop: Int,
+        planner: Any?
+    ): List<Double> {
+        val dropBt = when (planner) {
+            is RoastCard -> planner.chargeBT.toDouble().coerceAtLeast(205.0)
+            else -> 206.0
+        }
+
+        val result = mutableListOf<Double>()
+
+        for (t in 0..finalSec) {
+            result.add(
+                estimateBt(
+                    timeSec = t,
+                    turningSec = actualTurning,
+                    yellowSec = actualYellow,
+                    fcSec = actualFc,
+                    dropSec = actualDrop,
+                    chargeBt = 200.0,
+                    turningBt = 92.0,
+                    yellowBt = 150.0,
+                    fcBt = 196.0,
+                    dropBt = min(dropBt + 2.0, 210.0)
+                )
+            )
+        }
+
+        return result
+    }
+
+    private fun estimateBt(
+        timeSec: Int,
+        turningSec: Int,
+        yellowSec: Int,
+        fcSec: Int,
+        dropSec: Int,
+        chargeBt: Double,
+        turningBt: Double,
+        yellowBt: Double,
+        fcBt: Double,
+        dropBt: Double
+    ): Double {
+        val t = timeSec.toDouble()
+        val turning = turningSec.toDouble()
+        val yellow = yellowSec.toDouble()
+        val fc = fcSec.toDouble()
+        val drop = max(dropSec, fcSec + 30).toDouble()
+
+        return when {
+            timeSec <= turningSec -> {
+                lerp(t, 0.0, chargeBt, turning, turningBt)
+            }
+
+            timeSec <= yellowSec -> {
+                lerp(t, turning, turningBt, yellow, yellowBt)
+            }
+
+            timeSec <= fcSec -> {
+                lerp(t, yellow, yellowBt, fc, fcBt)
+            }
+
+            else -> {
+                lerp(t, fc, fcBt, drop, dropBt)
+            }
+        }
+    }
+
+    private fun buildControlledRor(btSeries: List<Double>): List<Double> {
+        if (btSeries.isEmpty()) return emptyList()
+
+        val raw = MutableList(btSeries.size) { 0.0 }
+
+        for (i in 1 until btSeries.size) {
+            val delta = btSeries[i] - btSeries[i - 1]
+            raw[i] = delta * 60.0
+        }
+
+        val smoothed = MutableList(btSeries.size) { 0.0 }
+
+        for (i in raw.indices) {
+            smoothed[i] = weightedAverage(raw, i)
+        }
+
+        return enforceReasonableRor(smoothed)
+    }
+
+    private fun weightedAverage(values: List<Double>, center: Int): Double {
+        val offsets = listOf(-3, -2, -1, 0, 1, 2, 3)
+        val weights = listOf(1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0)
+
+        var sum = 0.0
+        var weightSum = 0.0
+
+        for (i in offsets.indices) {
+            val idx = center + offsets[i]
+            if (idx in values.indices) {
+                sum += values[idx] * weights[i]
+                weightSum += weights[i]
+            }
+        }
+
+        return if (weightSum > 0.0) sum / weightSum else values[center]
+    }
+
+    private fun enforceReasonableRor(values: List<Double>): List<Double> {
+        if (values.isEmpty()) return emptyList()
+
+        val out = MutableList(values.size) { 0.0 }
+        out[0] = values[0]
+
+        for (i in 1 until values.size) {
+            val prev = out[i - 1]
+            val current = values[i]
+            val limited = when {
+                current > prev + 2.5 -> prev + 2.5
+                current < prev - 2.5 -> prev - 2.5
+                else -> current
+            }
+            out[i] = limited
+        }
+
+        return out
     }
 
     private fun buildAnchors(
@@ -145,90 +362,40 @@ ROR Smoothed Basic
         return anchors.sortedBy { it.timeSec }
     }
 
-    private fun estimateBt(
-        timeSec: Int,
+    private fun buildDeviations(
         predTurning: Int,
         predYellow: Int,
         predFc: Int,
-        predDrop: Int
-    ): Double {
-        val t = timeSec.toDouble()
-        val turning = predTurning.toDouble()
-        val yellow = predYellow.toDouble()
-        val fc = predFc.toDouble()
-        val drop = max(predDrop, predFc + 30).toDouble()
+        predDrop: Int,
+        actualTurning: Int?,
+        actualYellow: Int?,
+        actualFc: Int?,
+        actualDrop: Int?
+    ): List<CurveDeviation> {
+        val result = mutableListOf<CurveDeviation>()
 
-        return when {
-            timeSec <= predTurning -> {
-                lerp(
-                    x = t,
-                    x0 = 0.0,
-                    y0 = 200.0,
-                    x1 = turning,
-                    y1 = 92.0
-                )
-            }
+        if (actualTurning != null) result.add(CurveDeviation("Turning", actualTurning - predTurning))
+        if (actualYellow != null) result.add(CurveDeviation("Yellow", actualYellow - predYellow))
+        if (actualFc != null) result.add(CurveDeviation("FC", actualFc - predFc))
+        if (actualDrop != null) result.add(CurveDeviation("Drop", actualDrop - predDrop))
 
-            timeSec <= predYellow -> {
-                lerp(
-                    x = t,
-                    x0 = turning,
-                    y0 = 92.0,
-                    x1 = yellow,
-                    y1 = 150.0
-                )
-            }
-
-            timeSec <= predFc -> {
-                lerp(
-                    x = t,
-                    x0 = yellow,
-                    y0 = 150.0,
-                    x1 = fc,
-                    y1 = 196.0
-                )
-            }
-
-            else -> {
-                lerp(
-                    x = t,
-                    x0 = fc,
-                    y0 = 196.0,
-                    x1 = drop,
-                    y1 = 206.0
-                )
-            }
-        }
+        return result
     }
 
-    private fun buildSmoothedRor(btSeries: List<Double>): List<Double> {
-        if (btSeries.isEmpty()) return emptyList()
-
-        val raw = MutableList(btSeries.size) { 0.0 }
-
-        for (i in 1 until btSeries.size) {
-            val delta = btSeries[i] - btSeries[i - 1]
-            raw[i] = delta * 60.0
+    private fun detectPhaseAtTime(
+        timeSec: Int,
+        turningSec: Int,
+        yellowSec: Int,
+        fcSec: Int,
+        dropSec: Int
+    ): String {
+        return when {
+            timeSec >= dropSec -> "Finished"
+            timeSec >= fcSec -> "Development"
+            timeSec >= yellowSec -> "Maillard / Pre-FC"
+            timeSec >= turningSec -> "Drying"
+            else -> "Pre-Turning"
         }
-
-        val smooth = MutableList(btSeries.size) { 0.0 }
-
-        for (i in raw.indices) {
-            val start = max(0, i - 3)
-            val end = minOf(raw.lastIndex, i + 3)
-
-            var sum = 0.0
-            var count = 0
-
-            for (j in start..end) {
-                sum += raw[j]
-                count += 1
-            }
-
-            smooth[i] = if (count > 0) sum / count.toDouble() else raw[i]
-        }
-
-        return smooth
     }
 
     private fun lerp(
@@ -241,5 +408,9 @@ ROR Smoothed Basic
         if (x1 == x0) return y1
         val ratio = ((x - x0) / (x1 - x0)).coerceIn(0.0, 1.0)
         return y0 + (y1 - y0) * ratio
+    }
+
+    private fun formatSigned(value: Int): String {
+        return if (value > 0) "+$value" else value.toString()
     }
 }
