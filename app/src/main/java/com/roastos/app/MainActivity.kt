@@ -48,21 +48,21 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
 
         dashboardBtn.setOnClickListener {
-            DashboardPage.show(this, pageContainer)
+            DashboardPage.show(this@MainActivity, pageContainer)
         }
 
         plannerBtn.setOnClickListener {
-            PlannerPage.show(this, pageContainer)
+            PlannerPage.show(this@MainActivity, pageContainer)
         }
 
         roastBtn.setOnClickListener {
-            RoastPage.show(this, pageContainer)
+            RoastPage.show(this@MainActivity, pageContainer)
         }
 
         correctionBtn.setOnClickListener {
-            CorrectionPage.show(this, pageContainer)
+            CorrectionPage.show(this@MainActivity, pageContainer)
         }
 
-        DashboardPage.show(this, pageContainer)
+        DashboardPage.show(this@MainActivity, pageContainer)
     }
 }
