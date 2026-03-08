@@ -18,7 +18,7 @@ object RoastPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
-        root.addView(UiKit.pageSubtitle(context, "Live assist, timeline tracking, and roast curve preview"))
+        root.addView(UiKit.pageSubtitle(context, "Live assist, timeline tracking, roast curve, and actual input"))
         root.addView(UiKit.spacer(context))
 
         val actionCard = UiKit.card(context)
@@ -34,6 +34,15 @@ object RoastPage {
         actionCard.addView(autoRefreshBtn)
 
         root.addView(actionCard)
+        root.addView(UiKit.spacer(context))
+
+        LiveAssistPage.attachLiveInputPanel(
+            context = context,
+            parent = root,
+            onDataChanged = {
+                refreshAll(root)
+            }
+        )
         root.addView(UiKit.spacer(context))
 
         val summaryCard = UiKit.card(context)
@@ -56,7 +65,7 @@ object RoastPage {
         liveAssistCard.addView(liveAssistBody)
         root.addView(liveAssistCard)
 
-        fun refreshAll() {
+        fun refreshAllInternal() {
             val curve = RoastCurveEngine.buildFromCurrentState()
             summaryBody.text = curve.summary
             curveView.setCurve(curve)
@@ -78,7 +87,7 @@ object RoastPage {
             val runnable = object : Runnable {
                 override fun run() {
                     if (!autoRefreshEnabled) return
-                    refreshAll()
+                    refreshAllInternal()
                     root.postDelayed(this, 2000)
                 }
             }
@@ -88,7 +97,7 @@ object RoastPage {
         }
 
         refreshBtn.setOnClickListener {
-            refreshAll()
+            refreshAllInternal()
         }
 
         autoRefreshBtn.setOnClickListener {
@@ -99,9 +108,13 @@ object RoastPage {
             }
         }
 
-        refreshAll()
+        refreshAllInternal()
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun refreshAll(root: LinearLayout) {
+        root.removeAllViews()
     }
 }
