@@ -55,6 +55,26 @@ object BatchSessionEngine {
         return currentSession?.isRunning() == true
     }
 
+    fun currentElapsedMillis(): Long? {
+        val session = currentSession ?: return null
+
+        return when {
+            session.isRunning() -> {
+                val now = System.currentTimeMillis()
+                (now - session.startTimeMillis).coerceAtLeast(0L)
+            }
+            session.endTimeMillis != null -> {
+                (session.endTimeMillis!! - session.startTimeMillis).coerceAtLeast(0L)
+            }
+            else -> null
+        }
+    }
+
+    fun currentElapsedSec(): Int? {
+        val millis = currentElapsedMillis() ?: return null
+        return (millis / 1000L).toInt().coerceAtLeast(0)
+    }
+
     fun startFromPlanner(): BatchSession {
         val planner = AppState.lastPlannerResult
         val plannerInput = AppState.lastPlannerInput
@@ -233,6 +253,8 @@ Batch Session
 No active session
         """.trimIndent()
 
+        val elapsedSec = currentElapsedSec()
+
         return """
 Batch Session
 
@@ -247,6 +269,9 @@ ${session.startTimeMillis}
 
 Ended
 ${session.endTimeMillis?.toString() ?: "-"}
+
+Elapsed
+${elapsedSec?.toString() ?: "-"}s
 
 Bean
 Process ${session.beanSnapshot.process}
