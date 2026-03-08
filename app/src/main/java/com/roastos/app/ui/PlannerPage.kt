@@ -10,6 +10,7 @@ import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.PlannerInput
 import com.roastos.app.RoastEngine
+import com.roastos.app.RoastStateModel
 
 object PlannerPage {
 
@@ -160,8 +161,12 @@ object PlannerPage {
 
             val plan = RoastEngine.calcCard(input)
 
+            // Legacy / page cache
             AppState.lastPlannerInput = input
             AppState.lastPlannerResult = plan
+
+            // Main system state
+            RoastStateModel.syncPlannerInput(input)
 
             val turningSec = (plan.h1Sec - 60.0).toInt().coerceAtLeast(50)
             val yellowSec = plan.h2Sec.toInt()
@@ -244,8 +249,9 @@ $executionFocus
 Risk Focus
 $processRisk
 
-State
-Planner saved for Live / Correction
+State Sync
+Planner saved to AppState
+Planner synced to RoastStateModel
             """.trimIndent()
         }
     }
