@@ -1,86 +1,30 @@
 package com.roastos.app.ui
 
-import android.app.Activity
-import android.widget.Button
+import android.content.Context
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 object RoastPage {
 
-    fun show(activity: Activity, container: LinearLayout) {
-
+    fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
-        val root = LinearLayout(activity)
-        root.orientation = LinearLayout.VERTICAL
+        val scroll = ScrollView(context)
+        val inner = LinearLayout(context)
+        inner.orientation = LinearLayout.VERTICAL
 
-        val title = TextView(activity)
-        title.text = "ROAST CONTROL"
+        val title = TextView(context)
+        title.text = "ROAST"
         title.textSize = 22f
 
-        val subtitle = TextView(activity)
-        subtitle.text = "Planner → Live Assist → Correction"
+        val content = TextView(context)
+        content.text = LiveAssistPage.buildLiveAssist()
 
-        val plannerCard = TextView(activity)
-        plannerCard.text = """
-Planner
+        inner.addView(title)
+        inner.addView(content)
 
-Generate roast baseline
-Calculate charge / FC / drop prediction
-Build heat and airflow plan
-        """.trimIndent()
-
-        val plannerBtn = Button(activity)
-        plannerBtn.text = "Open Planner"
-
-        plannerBtn.setOnClickListener {
-            PlannerPage.show(activity, container)
-        }
-
-        val liveCard = TextView(activity)
-        liveCard.text = """
-Live Assist
-
-Record Turning / Yellow / FC
-Get real-time heat and airflow advice
-Phase detection + curve prediction
-        """.trimIndent()
-
-        val liveBtn = Button(activity)
-        liveBtn.text = "Open Live Assist"
-
-        liveBtn.setOnClickListener {
-            LiveAssistPage.show(activity, container)
-        }
-
-        val correctionCard = TextView(activity)
-        correctionCard.text = """
-Batch Correction
-
-Compare predicted vs actual anchors
-Diagnose roast deviation
-Generate Batch-2 execution card
-        """.trimIndent()
-
-        val correctionBtn = Button(activity)
-        correctionBtn.text = "Open Correction"
-
-        correctionBtn.setOnClickListener {
-            CorrectionPage.show(activity, container)
-        }
-
-        root.addView(title)
-        root.addView(subtitle)
-
-        root.addView(plannerCard)
-        root.addView(plannerBtn)
-
-        root.addView(liveCard)
-        root.addView(liveBtn)
-
-        root.addView(correctionCard)
-        root.addView(correctionBtn)
-
-        container.addView(root)
+        scroll.addView(inner)
+        container.addView(scroll)
     }
 }
