@@ -8,14 +8,15 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AppState
+import com.roastos.app.BatchSessionEngine
 import com.roastos.app.PlannerInput
 import com.roastos.app.RoastEngine
 import com.roastos.app.RoastStateModel
+import com.roastos.app.RoastTimelineStore
 
 object PlannerPage {
 
     fun show(context: Context, container: LinearLayout) {
-
         container.removeAllViews()
 
         val root = LinearLayout(context)
@@ -28,7 +29,6 @@ object PlannerPage {
         val subtitle = TextView(context)
         subtitle.text = "Quick Inputs + Advanced Parameters"
 
-        // Quick inputs
         val processInput = EditText(context)
         processInput.hint = "Process: washed / honey_washed / natural / anaerobic"
         processInput.setText("washed")
@@ -63,7 +63,6 @@ object PlannerPage {
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         humidityInput.setText("40")
 
-        // Advanced block
         val advancedToggle = Button(context)
         advancedToggle.text = "Show Advanced Parameters"
 
@@ -107,17 +106,14 @@ object PlannerPage {
 
         root.addView(title)
         root.addView(subtitle)
-
         root.addView(processInput)
         root.addView(densityInput)
         root.addView(moistureInput)
         root.addView(awInput)
         root.addView(envTempInput)
         root.addView(humidityInput)
-
         root.addView(advancedToggle)
         root.addView(advancedBlock)
-
         root.addView(calculateBtn)
         root.addView(resultView)
 
@@ -134,7 +130,6 @@ object PlannerPage {
         }
 
         calculateBtn.setOnClickListener {
-
             val input = PlannerInput(
                 process = processInput.text.toString().ifBlank { "washed" },
                 density = densityInput.text.toString().toDoubleOrNull() ?: 840.0,
@@ -142,7 +137,6 @@ object PlannerPage {
                 aw = awInput.text.toString().toDoubleOrNull() ?: 0.55,
                 envTemp = envTempInput.text.toString().toDoubleOrNull() ?: 22.0,
                 envRH = humidityInput.text.toString().toDoubleOrNull() ?: 40.0,
-
                 roastLevel = roastLevelInput.text.toString().ifBlank { "light_medium" },
                 orientation = orientationInput.text.toString().ifBlank { "clean" },
                 purpose = "pourover",
@@ -150,28 +144,35 @@ object PlannerPage {
                 beanSize = "normal",
                 freshness = "fresh",
                 mode = "M2",
-
                 learnM = 5.5,
                 learnK = 26.0,
                 learnW = 0.65,
-
                 ttSec = ttInput.text.toString().toIntOrNull() ?: 80,
                 tySec = tyInput.text.toString().toIntOrNull() ?: 250
             )
 
             val plan = RoastEngine.calcCard(input)
 
-            // Legacy / page cache
             AppState.lastPlannerInput = input
             AppState.lastPlannerResult = plan
 
-            // Main system state
             RoastStateModel.syncPlannerInput(input)
 
             val turningSec = (plan.h1Sec - 60.0).toInt().coerceAtLeast(50)
             val yellowSec = plan.h2Sec.toInt()
             val fcSec = plan.fcPredSec.toInt()
             val dropSec = plan.dropSec.toInt()
+
+            RoastTimelineStore.reset()
+            RoastTimelineStore.syncPredicted(
+                turningSec = turningSec,
+                yellowSec = yellowSec,
+                fcSec = fcSec,
+                dropSec = dropSec
+            )
+
+            BatchSessionEngine.resetCurrentSession()
+            val session = BatchSessionEngine.startFromPlanner()
 
             val heatDemand = when {
                 plan.chargeBT >= 206 -> "Very High"
@@ -249,9 +250,12 @@ $executionFocus
 Risk Focus
 $processRisk
 
-State Sync
-Planner saved to AppState
-Planner synced to RoastStateModel
+Batch Session
+${session.batchId}
+Status ${session.status}
+
+Timeline Sync
+Predicted anchors written to RoastTimelineStore
             """.trimIndent()
         }
     }
