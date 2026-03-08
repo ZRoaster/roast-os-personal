@@ -6,6 +6,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
+import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastCurveEngine
 import com.roastos.app.RoastStateModel
 import com.roastos.app.RoastTimelineStore
@@ -23,6 +24,13 @@ object RoastPage {
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
         root.addView(UiKit.pageSubtitle(context, "Live assist, timeline tracking, roast curve, and actual input"))
+        root.addView(UiKit.spacer(context))
+
+        val statusCard = UiKit.card(context)
+        statusCard.addView(UiKit.cardTitle(context, "STATUS BAR"))
+        val statusBody = UiKit.bodyText(context, "")
+        statusCard.addView(statusBody)
+        root.addView(statusCard)
         root.addView(UiKit.spacer(context))
 
         val actionCard = UiKit.card(context)
@@ -72,13 +80,13 @@ object RoastPage {
         val liveAssistCard = UiKit.card(context)
         liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
         val liveAssistBody = UiKit.bodyText(context, "")
-
         liveAssistCard.addView(liveAssistBody)
 
         fun refreshAll() {
             val curve = RoastCurveEngine.buildFromCurrentState()
             summaryBody.text = curve.summary
             sessionBody.text = BatchSessionEngine.summary()
+            statusBody.text = buildTopStatus()
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
@@ -183,5 +191,72 @@ object RoastPage {
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildTopStatus(): String {
+        val session = BatchSessionEngine.current()
+        val batchStatus = session?.status ?: "Idle"
+
+        val elapsedSec = BatchSessionEngine.currentElapsedSec()
+        val elapsedText = if (elapsedSec != null) {
+            "${elapsedSec / 60}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+        } else {
+            "-"
+        }
+
+        val planner = AppState.lastPlannerResult
+        val plannerInput = AppState.lastPlannerInput
+
+        val currentPhase = when {
+            AppState.liveActualDropSec != null -> "Finished"
+            AppState.liveActualFcSec != null -> "Development"
+            AppState.liveActualYellowSec != null -> "Maillard / Pre-FC"
+            AppState.liveActualTurningSec != null -> "Drying"
+            else -> "Idle"
+        }
+
+        if (planner == null || plannerInput == null) {
+            return """
+Batch Status   $batchStatus
+Current Phase  $currentPhase
+Elapsed        $elapsedText
+Risk           -
+Action         Run Planner first
+            """.trimIndent()
+        }
+
+        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
+        val predYellow = planner.h2Sec.toInt()
+        val predFc = planner.fcPredSec.toInt()
+        val predDrop = planner.dropSec.toInt()
+
+        val decision = DecisionEngine.decide(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            actualDrop = AppState.liveActualDropSec,
+            currentRor = AppState.liveActualPreFcRor,
+            envTemp = plannerInput.envTemp,
+            humidity = plannerInput.envRH,
+            pressureKpa = 1013.0,
+            density = plannerInput.density,
+            moisture = plannerInput.moisture,
+            aw = plannerInput.aw,
+            heatLevelW = if (RoastStateModel.control.powerW > 0) RoastStateModel.control.powerW else 540,
+            airflowPa = if (RoastStateModel.control.airflowPa > 0) RoastStateModel.control.airflowPa else 10,
+            drumRpm = if (RoastStateModel.control.drumRpm > 0) RoastStateModel.control.drumRpm else 60
+        )
+
+        return """
+Batch Status   $batchStatus
+Current Phase  ${decision.currentPhase}
+Elapsed        $elapsedText
+Risk           ${decision.riskLevel}
+Action         ${decision.actionNow}
+        """.trimIndent()
     }
 }
