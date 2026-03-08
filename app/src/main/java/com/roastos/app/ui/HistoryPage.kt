@@ -18,7 +18,7 @@ object HistoryPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST HISTORY"))
-        root.addView(UiKit.pageSubtitle(context, "View roast history, delete single entries, or clear all history"))
+        root.addView(UiKit.pageSubtitle(context, "View roast history, open batch detail, delete single entries, or clear all history"))
         root.addView(UiKit.spacer(context))
 
         val actionCard = UiKit.card(context)
@@ -61,7 +61,7 @@ object HistoryPage {
             }
 
             items.forEachIndexed { index, entry ->
-                listHost.addView(buildEntryCard(context, entry, ::renderList))
+                listHost.addView(buildEntryCard(context, container, entry, ::renderList))
                 if (index != items.lastIndex) {
                     listHost.addView(UiKit.spacer(context))
                 }
@@ -85,6 +85,7 @@ object HistoryPage {
 
     private fun buildEntryCard(
         context: Context,
+        container: LinearLayout,
         entry: RoastHistoryEntry,
         onChanged: () -> Unit
     ): LinearLayout {
@@ -100,28 +101,18 @@ object HistoryPage {
         body.text = buildEntryBody(entry)
         body.setPadding(0, UiKit.INNER_GAP, 0, 0)
 
-        val reportBtn = Button(context)
-        reportBtn.text = "Show Report"
+        val openDetailBtn = Button(context)
+        openDetailBtn.text = "Open Detail"
 
         val deleteBtn = Button(context)
         deleteBtn.text = "Delete This Record"
 
-        val reportText = TextView(context)
-        reportText.textSize = 14f
-        reportText.setPadding(0, UiKit.INNER_GAP, 0, 0)
-        reportText.text = ""
-        reportText.visibility = TextView.GONE
-
-        reportBtn.setOnClickListener {
-            if (reportText.visibility == TextView.GONE) {
-                reportText.visibility = TextView.VISIBLE
-                reportText.text = entry.reportText
-                reportBtn.text = "Hide Report"
-            } else {
-                reportText.visibility = TextView.GONE
-                reportText.text = ""
-                reportBtn.text = "Show Report"
-            }
+        openDetailBtn.setOnClickListener {
+            BatchDetailPage.show(
+                context = context,
+                container = container,
+                batchId = entry.batchId
+            )
         }
 
         deleteBtn.setOnClickListener {
@@ -131,9 +122,8 @@ object HistoryPage {
 
         card.addView(title)
         card.addView(body)
-        card.addView(reportBtn)
+        card.addView(openDetailBtn)
         card.addView(deleteBtn)
-        card.addView(reportText)
 
         return card
     }
