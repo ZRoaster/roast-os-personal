@@ -1,11 +1,13 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.graphics.Typeface
 import android.text.InputType
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
@@ -19,49 +21,100 @@ object PlannerPage {
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
+        val scroll = ScrollView(context)
         val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
+        root.setPadding(24, 24, 24, 24)
 
         val title = TextView(context)
         title.text = "ROAST PLANNER"
-        title.textSize = 22f
+        title.textSize = 24f
+        title.setTypeface(null, Typeface.BOLD)
 
         val subtitle = TextView(context)
-        subtitle.text = "Quick Inputs + Advanced Parameters"
+        subtitle.text = "Build baseline timeline, heat plan, and batch session"
+        subtitle.textSize = 14f
 
-        val processInput = EditText(context)
-        processInput.hint = "Process: washed / honey_washed / natural / anaerobic"
-        processInput.setText("washed")
+        root.addView(title)
+        root.addView(subtitle)
 
-        val densityInput = EditText(context)
-        densityInput.hint = "Density (g/L)"
-        densityInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        densityInput.setText("840")
+        val processInput = makeTextInput(
+            context = context,
+            hint = "Process: washed / honey_washed / natural / anaerobic",
+            value = "washed"
+        )
 
-        val moistureInput = EditText(context)
-        moistureInput.hint = "Moisture %"
-        moistureInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        moistureInput.setText("10.5")
+        val densityInput = makeNumberInput(
+            context = context,
+            hint = "Density (g/L)",
+            value = "840"
+        )
 
-        val awInput = EditText(context)
-        awInput.hint = "Water Activity (aw)"
-        awInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        awInput.setText("0.55")
+        val moistureInput = makeDecimalInput(
+            context = context,
+            hint = "Moisture %",
+            value = "10.5"
+        )
 
-        val envTempInput = EditText(context)
-        envTempInput.hint = "Environment Temp °C"
-        envTempInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        envTempInput.setText("22")
+        val awInput = makeDecimalInput(
+            context = context,
+            hint = "Water Activity (aw)",
+            value = "0.55"
+        )
 
-        val humidityInput = EditText(context)
-        humidityInput.hint = "Humidity %"
-        humidityInput.inputType =
-            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        humidityInput.setText("40")
+        root.addView(
+            buildSection(
+                context,
+                "BEAN",
+                listOf(processInput, densityInput, moistureInput, awInput)
+            )
+        )
+
+        val envTempInput = makeDecimalInput(
+            context = context,
+            hint = "Environment Temp °C",
+            value = "22"
+        )
+
+        val humidityInput = makeDecimalInput(
+            context = context,
+            hint = "Humidity %",
+            value = "40"
+        )
+
+        root.addView(
+            buildSection(
+                context,
+                "ENVIRONMENT",
+                listOf(envTempInput, humidityInput)
+            )
+        )
+
+        val roastLevelInput = makeTextInput(
+            context = context,
+            hint = "Roast Level",
+            value = "light_medium"
+        )
+
+        val orientationInput = makeTextInput(
+            context = context,
+            hint = "Orientation",
+            value = "clean"
+        )
+
+        val batchInput = makeNumberInput(
+            context = context,
+            hint = "Batch Number",
+            value = "1"
+        )
+
+        root.addView(
+            buildSection(
+                context,
+                "ROAST INTENT",
+                listOf(roastLevelInput, orientationInput, batchInput)
+            )
+        )
 
         val advancedToggle = Button(context)
         advancedToggle.text = "Show Advanced Parameters"
@@ -69,55 +122,57 @@ object PlannerPage {
         val advancedBlock = LinearLayout(context)
         advancedBlock.orientation = LinearLayout.VERTICAL
         advancedBlock.visibility = View.GONE
+        advancedBlock.setPadding(0, 12, 0, 0)
 
-        val roastLevelInput = EditText(context)
-        roastLevelInput.hint = "Roast Level"
-        roastLevelInput.setText("light_medium")
+        val ttInput = makeNumberInput(
+            context = context,
+            hint = "Turning Time sec",
+            value = "80"
+        )
 
-        val orientationInput = EditText(context)
-        orientationInput.hint = "Orientation"
-        orientationInput.setText("clean")
+        val tyInput = makeNumberInput(
+            context = context,
+            hint = "Yellow Time sec",
+            value = "250"
+        )
 
-        val batchInput = EditText(context)
-        batchInput.hint = "Batch Number"
-        batchInput.inputType = InputType.TYPE_CLASS_NUMBER
-        batchInput.setText("1")
-
-        val ttInput = EditText(context)
-        ttInput.hint = "Turning Time sec"
-        ttInput.inputType = InputType.TYPE_CLASS_NUMBER
-        ttInput.setText("80")
-
-        val tyInput = EditText(context)
-        tyInput.hint = "Yellow Time sec"
-        tyInput.inputType = InputType.TYPE_CLASS_NUMBER
-        tyInput.setText("250")
-
-        advancedBlock.addView(roastLevelInput)
-        advancedBlock.addView(orientationInput)
-        advancedBlock.addView(batchInput)
         advancedBlock.addView(ttInput)
         advancedBlock.addView(tyInput)
+
+        val advancedSection = LinearLayout(context)
+        advancedSection.orientation = LinearLayout.VERTICAL
+        advancedSection.setPadding(24, 24, 24, 24)
+
+        val advancedTitle = TextView(context)
+        advancedTitle.text = "ADVANCED"
+        advancedTitle.textSize = 18f
+        advancedTitle.setTypeface(null, Typeface.BOLD)
+
+        advancedSection.addView(advancedTitle)
+        advancedSection.addView(advancedToggle)
+        advancedSection.addView(advancedBlock)
+
+        root.addView(advancedSection)
 
         val calculateBtn = Button(context)
         calculateBtn.text = "Generate Roast Card"
 
-        val resultView = TextView(context)
+        val resultTitle = TextView(context)
+        resultTitle.text = "RESULT"
+        resultTitle.textSize = 18f
+        resultTitle.setTypeface(null, Typeface.BOLD)
+        resultTitle.setPadding(0, 24, 0, 0)
 
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(processInput)
-        root.addView(densityInput)
-        root.addView(moistureInput)
-        root.addView(awInput)
-        root.addView(envTempInput)
-        root.addView(humidityInput)
-        root.addView(advancedToggle)
-        root.addView(advancedBlock)
+        val resultView = TextView(context)
+        resultView.textSize = 15f
+        resultView.setPadding(0, 16, 0, 24)
+
         root.addView(calculateBtn)
+        root.addView(resultTitle)
         root.addView(resultView)
 
-        container.addView(root)
+        scroll.addView(root)
+        container.addView(scroll)
 
         advancedToggle.setOnClickListener {
             if (advancedBlock.visibility == View.GONE) {
@@ -199,47 +254,47 @@ object PlannerPage {
 ROAST OS EXECUTION CARD
 
 Bean
-Process ${plan.ptLabel}
-Density ${"%.1f".format(input.density)}
-Moisture ${"%.1f".format(input.moisture)}
-aw ${"%.2f".format(input.aw)}
+Process    ${plan.ptLabel}
+Density    ${"%.1f".format(input.density)}
+Moisture   ${"%.1f".format(input.moisture)}
+aw         ${"%.2f".format(input.aw)}
 
 Environment
-Temp ${"%.1f".format(input.envTemp)}℃
-RH ${"%.1f".format(input.envRH)}%
+Temp       ${"%.1f".format(input.envTemp)}℃
+RH         ${"%.1f".format(input.envRH)}%
 
 Core Setup
-Charge ${plan.chargeBT}℃
-RPM ${plan.rpm}
-Mode ${input.mode}
-Batch ${input.batchNum}
+Charge     ${plan.chargeBT}℃
+RPM        ${plan.rpm}
+Mode       ${input.mode}
+Batch      ${input.batchNum}
 
 Heat Demand
 $heatDemand
 
 Predicted Timeline
-Turning ${RoastEngine.toMMSS(turningSec.toDouble())}
-Yellow ${RoastEngine.toMMSS(yellowSec.toDouble())}
-FC ${RoastEngine.toMMSS(fcSec.toDouble())}
-Drop ${RoastEngine.toMMSS(dropSec.toDouble())}
+Turning    ${RoastEngine.toMMSS(turningSec.toDouble())}
+Yellow     ${RoastEngine.toMMSS(yellowSec.toDouble())}
+FC         ${RoastEngine.toMMSS(fcSec.toDouble())}
+Drop       ${RoastEngine.toMMSS(dropSec.toDouble())}
 
 Development
-Dev ${plan.devTime}s
-DTR ${"%.1f".format(plan.dtrPercent)}%
+Dev        ${plan.devTime}s
+DTR        ${"%.1f".format(plan.dtrPercent)}%
 
 Heat Plan
-H1 ${plan.h1W}W @ ${RoastEngine.toMMSS(plan.h1Sec)}
-H2 ${plan.h2W}W @ ${RoastEngine.toMMSS(plan.h2Sec)}
-H3 ${plan.h3W}W @ ${RoastEngine.toMMSS(plan.h3Sec)}
-H4 ${plan.h4W}W @ ${RoastEngine.toMMSS(plan.h4Sec)}
-H5 ${plan.h5W}W @ ${RoastEngine.toMMSS(plan.h5Sec)}
+H1         ${plan.h1W}W @ ${RoastEngine.toMMSS(plan.h1Sec)}
+H2         ${plan.h2W}W @ ${RoastEngine.toMMSS(plan.h2Sec)}
+H3         ${plan.h3W}W @ ${RoastEngine.toMMSS(plan.h3Sec)}
+H4         ${plan.h4W}W @ ${RoastEngine.toMMSS(plan.h4Sec)}
+H5         ${plan.h5W}W @ ${RoastEngine.toMMSS(plan.h5Sec)}
 
 Air Plan
-Preheat ${plan.preheatPa}Pa
-Wind1 ${plan.wind1Pa}Pa @ ${RoastEngine.toMMSS(plan.wind1Sec)}
-Wind2 ${plan.wind2Pa}Pa @ ${RoastEngine.toMMSS(plan.wind2Sec)}
-Dev ${plan.devPa}Pa
-Protect @ ${RoastEngine.toMMSS(plan.protectSec)}
+Preheat    ${plan.preheatPa}Pa
+Wind1      ${plan.wind1Pa}Pa @ ${RoastEngine.toMMSS(plan.wind1Sec)}
+Wind2      ${plan.wind2Pa}Pa @ ${RoastEngine.toMMSS(plan.wind2Sec)}
+Dev        ${plan.devPa}Pa
+Protect    @ ${RoastEngine.toMMSS(plan.protectSec)}
 
 ROR Targets
 ${plan.rorTargets.joinToString(" / ") { "%.1f".format(it) }}
@@ -258,5 +313,61 @@ Timeline Sync
 Predicted anchors written to RoastTimelineStore
             """.trimIndent()
         }
+    }
+
+    private fun buildSection(
+        context: Context,
+        titleText: String,
+        views: List<View>
+    ): LinearLayout {
+        val section = LinearLayout(context)
+        section.orientation = LinearLayout.VERTICAL
+        section.setPadding(24, 24, 24, 24)
+
+        val title = TextView(context)
+        title.text = titleText
+        title.textSize = 18f
+        title.setTypeface(null, Typeface.BOLD)
+
+        section.addView(title)
+        views.forEach { section.addView(it) }
+
+        return section
+    }
+
+    private fun makeTextInput(
+        context: Context,
+        hint: String,
+        value: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.setText(value)
+        return input
+    }
+
+    private fun makeNumberInput(
+        context: Context,
+        hint: String,
+        value: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        input.setText(value)
+        return input
+    }
+
+    private fun makeDecimalInput(
+        context: Context,
+        hint: String,
+        value: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        input.setText(value)
+        return input
     }
 }
