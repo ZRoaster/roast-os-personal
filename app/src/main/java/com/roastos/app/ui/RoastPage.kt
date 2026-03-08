@@ -4,7 +4,11 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.AppState
+import com.roastos.app.BatchSessionEngine
 import com.roastos.app.RoastCurveEngine
+import com.roastos.app.RoastStateModel
+import com.roastos.app.RoastTimelineStore
 
 object RoastPage {
 
@@ -24,16 +28,35 @@ object RoastPage {
         val actionCard = UiKit.card(context)
         actionCard.addView(UiKit.cardTitle(context, "ACTIONS"))
 
+        val startBtn = Button(context)
+        startBtn.text = "Start Batch"
+
+        val finishBtn = Button(context)
+        finishBtn.text = "Finish Batch"
+
+        val resetBtn = Button(context)
+        resetBtn.text = "Reset Batch"
+
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh Curve"
 
         val autoRefreshBtn = Button(context)
         autoRefreshBtn.text = "Auto Refresh OFF"
 
+        actionCard.addView(startBtn)
+        actionCard.addView(finishBtn)
+        actionCard.addView(resetBtn)
         actionCard.addView(refreshBtn)
         actionCard.addView(autoRefreshBtn)
 
         root.addView(actionCard)
+        root.addView(UiKit.spacer(context))
+
+        val sessionCard = UiKit.card(context)
+        sessionCard.addView(UiKit.cardTitle(context, "BATCH SESSION"))
+        val sessionBody = UiKit.bodyText(context, "")
+        sessionCard.addView(sessionBody)
+        root.addView(sessionCard)
         root.addView(UiKit.spacer(context))
 
         val summaryCard = UiKit.card(context)
@@ -49,11 +72,13 @@ object RoastPage {
         val liveAssistCard = UiKit.card(context)
         liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
         val liveAssistBody = UiKit.bodyText(context, "")
+
         liveAssistCard.addView(liveAssistBody)
 
         fun refreshAll() {
             val curve = RoastCurveEngine.buildFromCurrentState()
             summaryBody.text = curve.summary
+            sessionBody.text = BatchSessionEngine.summary()
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
@@ -95,6 +120,51 @@ object RoastPage {
 
             autoRefreshRunnable = runnable
             root.post(runnable)
+        }
+
+        startBtn.setOnClickListener {
+            BatchSessionEngine.resetCurrentSession()
+            BatchSessionEngine.startFromPlanner()
+            refreshAll()
+        }
+
+        finishBtn.setOnClickListener {
+            BatchSessionEngine.finish("Finished from RoastPage")
+            refreshAll()
+        }
+
+        resetBtn.setOnClickListener {
+            stopAutoRefresh()
+
+            AppState.liveActualTurningSec = null
+            AppState.liveActualYellowSec = null
+            AppState.liveActualFcSec = null
+            AppState.liveActualDropSec = null
+            AppState.liveActualPreFcRor = null
+
+            RoastTimelineStore.syncActual(
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                ror = null
+            )
+
+            BatchSessionEngine.resetCurrentSession()
+
+            RoastStateModel.syncLiveState(
+                phase = "Idle",
+                ror = 12.0,
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                powerW = 540,
+                airflowPa = 10,
+                drumRpm = 60
+            )
+
+            refreshAll()
         }
 
         refreshBtn.setOnClickListener {
