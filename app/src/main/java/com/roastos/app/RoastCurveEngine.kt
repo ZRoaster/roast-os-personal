@@ -56,35 +56,32 @@ object RoastCurveEngine {
             )
         ).coerceAtLeast(300)
 
-        val points = mutableListOf<CurvePoint>()
-
+        val btSeries = mutableListOf<Double>()
         var t = 0
         while (t <= finalSec) {
-            val bt = estimateBt(
-                timeSec = t,
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
-
-            val ror = estimateRor(
-                timeSec = t,
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop
-            )
-
-            points.add(
-                CurvePoint(
+            btSeries.add(
+                estimateBt(
                     timeSec = t,
-                    bt = bt,
-                    ror = ror
+                    predTurning = predTurning,
+                    predYellow = predYellow,
+                    predFc = predFc,
+                    predDrop = predDrop
                 )
             )
+            t += 1
+        }
 
-            t += 5
+        val smoothedRor = buildSmoothedRor(btSeries)
+
+        val points = mutableListOf<CurvePoint>()
+        for (i in btSeries.indices) {
+            points.add(
+                CurvePoint(
+                    timeSec = i,
+                    bt = btSeries[i],
+                    ror = smoothedRor.getOrElse(i) { 0.0 }
+                )
+            )
         }
 
         val anchors = buildAnchors(
@@ -99,7 +96,7 @@ object RoastCurveEngine {
         )
 
         val summary = """
-Curve Engine
+Curve Engine v1.1
 
 Points ${points.size}
 Pred Turning ${predTurning}s
@@ -111,6 +108,9 @@ Actual Turning ${timeline.actual.turningSec?.toString() ?: "-"}
 Actual Yellow ${timeline.actual.yellowSec?.toString() ?: "-"}
 Actual FC ${timeline.actual.fcSec?.toString() ?: "-"}
 Actual Drop ${timeline.actual.dropSec?.toString() ?: "-"}
+
+Resolution 1s
+ROR Smoothed Basic
         """.trimIndent()
 
         return RoastCurveResult(
@@ -152,97 +152,83 @@ Actual Drop ${timeline.actual.dropSec?.toString() ?: "-"}
         predFc: Int,
         predDrop: Int
     ): Double {
+        val t = timeSec.toDouble()
+        val turning = predTurning.toDouble()
+        val yellow = predYellow.toDouble()
+        val fc = predFc.toDouble()
+        val drop = max(predDrop, predFc + 30).toDouble()
+
         return when {
             timeSec <= predTurning -> {
                 lerp(
-                    x = timeSec.toDouble(),
+                    x = t,
                     x0 = 0.0,
                     y0 = 200.0,
-                    x1 = predTurning.toDouble(),
+                    x1 = turning,
                     y1 = 92.0
                 )
             }
 
             timeSec <= predYellow -> {
                 lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predTurning.toDouble(),
+                    x = t,
+                    x0 = turning,
                     y0 = 92.0,
-                    x1 = predYellow.toDouble(),
+                    x1 = yellow,
                     y1 = 150.0
                 )
             }
 
             timeSec <= predFc -> {
                 lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predYellow.toDouble(),
+                    x = t,
+                    x0 = yellow,
                     y0 = 150.0,
-                    x1 = predFc.toDouble(),
+                    x1 = fc,
                     y1 = 196.0
                 )
             }
 
             else -> {
                 lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predFc.toDouble(),
+                    x = t,
+                    x0 = fc,
                     y0 = 196.0,
-                    x1 = predDrop.toDouble().coerceAtLeast(predFc + 30).toDouble(),
+                    x1 = drop,
                     y1 = 206.0
                 )
             }
         }
     }
 
-    private fun estimateRor(
-        timeSec: Int,
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ): Double {
-        return when {
-            timeSec <= predTurning -> {
-                lerp(
-                    x = timeSec.toDouble(),
-                    x0 = 0.0,
-                    y0 = -8.0,
-                    x1 = predTurning.toDouble(),
-                    y1 = 16.0
-                )
-            }
+    private fun buildSmoothedRor(btSeries: List<Double>): List<Double> {
+        if (btSeries.isEmpty()) return emptyList()
 
-            timeSec <= predYellow -> {
-                lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predTurning.toDouble(),
-                    y0 = 16.0,
-                    x1 = predYellow.toDouble(),
-                    y1 = 12.5
-                )
-            }
+        val raw = MutableList(btSeries.size) { 0.0 }
 
-            timeSec <= predFc -> {
-                lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predYellow.toDouble(),
-                    y0 = 12.5,
-                    x1 = predFc.toDouble(),
-                    y1 = 8.5
-                )
-            }
-
-            else -> {
-                lerp(
-                    x = timeSec.toDouble(),
-                    x0 = predFc.toDouble(),
-                    y0 = 8.5,
-                    x1 = predDrop.toDouble().coerceAtLeast(predFc + 30).toDouble(),
-                    y1 = 5.5
-                )
-            }
+        for (i in 1 until btSeries.size) {
+            val delta = btSeries[i] - btSeries[i - 1]
+            raw[i] = delta * 60.0
         }
+
+        val smooth = MutableList(btSeries.size) { 0.0 }
+
+        for (i in raw.indices) {
+            val start = max(0, i - 3)
+            val end = minOf(raw.lastIndex, i + 3)
+
+            var sum = 0.0
+            var count = 0
+
+            for (j in start..end) {
+                sum += raw[j]
+                count += 1
+            }
+
+            smooth[i] = if (count > 0) sum / count.toDouble() else raw[i]
+        }
+
+        return smooth
     }
 
     private fun lerp(
