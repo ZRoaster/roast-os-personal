@@ -21,7 +21,9 @@ object LiveAssistPage {
         container.removeAllViews()
 
         val predicted = AppState.lastPlannerResult
-        if (predicted == null) {
+        val plannerInput = AppState.lastPlannerInput
+
+        if (predicted == null || plannerInput == null) {
             val t = TextView(context)
             t.text = "Run Planner first."
             container.addView(t)
@@ -159,7 +161,9 @@ Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
         yellowRorInput.hint = "Current ROR"
         yellowRorInput.inputType =
             InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        yellowRorInput.setText("13.0")
+        yellowRorInput.setText(
+            AppState.liveActualPreFcRor?.toString() ?: "13.0"
+        )
 
         val yellowBtn = Button(context)
         yellowBtn.text = "Run Yellow Assist"
@@ -532,6 +536,11 @@ ${prediction.summary}
         predDrop: Int
     ): String {
 
+        val plannerInput = AppState.lastPlannerInput
+        if (plannerInput == null) {
+            return "No planner input available."
+        }
+
         val decision = DecisionEngine.decide(
             predTurning = predTurning,
             predYellow = predYellow,
@@ -541,7 +550,16 @@ ${prediction.summary}
             actualYellow = AppState.liveActualYellowSec,
             actualFc = AppState.liveActualFcSec,
             actualDrop = AppState.liveActualDropSec,
-            currentRor = AppState.liveActualPreFcRor
+            currentRor = AppState.liveActualPreFcRor,
+            envTemp = plannerInput.envTemp,
+            humidity = plannerInput.envRH,
+            pressureKpa = 101.3,
+            density = plannerInput.density,
+            moisture = plannerInput.moisture,
+            aw = plannerInput.aw,
+            heatLevelW = 1320,
+            airflowPa = 16,
+            drumRpm = 7
         )
 
         return """
@@ -565,6 +583,9 @@ ${decision.riskLevel}
 
 Reason
 ${decision.reason}
+
+Physics
+${decision.physicsSummary}
         """.trimIndent()
     }
 
