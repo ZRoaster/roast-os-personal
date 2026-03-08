@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.RoastFlavorBridge
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
 
@@ -61,6 +62,8 @@ object BatchDetailPage {
             container.addView(scroll)
             return
         }
+
+        val flavorBridge = RoastFlavorBridge.buildFromEntry(entry)
 
         root.addView(
             UiKit.buildCard(
@@ -130,6 +133,15 @@ object BatchDetailPage {
                 context,
                 "EVALUATION STATUS",
                 buildEvaluationStatus(entry)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "FLAVOR BRIDGE",
+                flavorBridge.summary
             )
         )
         root.addView(UiKit.spacer(context))
