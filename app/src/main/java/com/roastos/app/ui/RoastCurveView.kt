@@ -111,6 +111,34 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
+    private val prePhasePaint = Paint().apply {
+        color = Color.parseColor("#F3E5F5")
+        style = Paint.Style.FILL
+        alpha = 70
+        isAntiAlias = true
+    }
+
+    private val dryPhasePaint = Paint().apply {
+        color = Color.parseColor("#FFF8E1")
+        style = Paint.Style.FILL
+        alpha = 70
+        isAntiAlias = true
+    }
+
+    private val mailPhasePaint = Paint().apply {
+        color = Color.parseColor("#E8F5E9")
+        style = Paint.Style.FILL
+        alpha = 70
+        isAntiAlias = true
+    }
+
+    private val devPhasePaint = Paint().apply {
+        color = Color.parseColor("#E3F2FD")
+        style = Paint.Style.FILL
+        alpha = 70
+        isAntiAlias = true
+    }
+
     fun setCurve(curveResult: RoastCurveResult) {
         curve = curveResult
         invalidate()
@@ -131,7 +159,6 @@ class RoastCurveView(context: Context) : View(context) {
         }
 
         val allPoints = data.predictedPoints + data.actualPoints
-
         if (allPoints.isEmpty()) {
             canvas.drawText("No curve points", 40f, 80f, textPaint)
             return
@@ -145,19 +172,28 @@ class RoastCurveView(context: Context) : View(context) {
         val plotWidth = right - left
         val plotHeight = bottom - top
 
-        canvas.drawRect(left, top, right, bottom, axisPaint)
-        drawGrid(canvas, left, top, right, bottom)
-
         val maxTime = max(1, allPoints.maxOf { it.timeSec })
         val minBt = allPoints.minOf { it.bt }
         val maxBt = allPoints.maxOf { it.bt }
+
+        drawPhaseBackgrounds(
+            canvas = canvas,
+            anchors = data.anchors,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime
+        )
+
+        canvas.drawRect(left, top, right, bottom, axisPaint)
+        drawGrid(canvas, left, top, right, bottom)
 
         drawRorTargetBand(
             canvas = canvas,
             anchors = data.anchors,
             left = left,
             top = top,
-            bottom = bottom,
             plotWidth = plotWidth,
             plotHeight = plotHeight,
             maxTime = maxTime
@@ -233,6 +269,94 @@ class RoastCurveView(context: Context) : View(context) {
         )
     }
 
+    private fun drawPhaseBackgrounds(
+        canvas: Canvas,
+        anchors: List<CurveAnchor>,
+        left: Float,
+        top: Float,
+        bottom: Float,
+        plotWidth: Float,
+        maxTime: Int
+    ) {
+        val predTurning = anchors.firstOrNull { it.label == "Turning" && !it.isActual }?.timeSec ?: return
+        val predYellow = anchors.firstOrNull { it.label == "Yellow" && !it.isActual }?.timeSec ?: return
+        val predFc = anchors.firstOrNull { it.label == "FC" && !it.isActual }?.timeSec ?: return
+        val predDrop = anchors.firstOrNull { it.label == "Drop" && !it.isActual }?.timeSec ?: return
+
+        drawPhaseSegment(
+            canvas = canvas,
+            startSec = 0,
+            endSec = predTurning,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime,
+            paint = prePhasePaint,
+            label = "PRE"
+        )
+
+        drawPhaseSegment(
+            canvas = canvas,
+            startSec = predTurning,
+            endSec = predYellow,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime,
+            paint = dryPhasePaint,
+            label = "DRY"
+        )
+
+        drawPhaseSegment(
+            canvas = canvas,
+            startSec = predYellow,
+            endSec = predFc,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime,
+            paint = mailPhasePaint,
+            label = "MAIL"
+        )
+
+        drawPhaseSegment(
+            canvas = canvas,
+            startSec = predFc,
+            endSec = predDrop,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime,
+            paint = devPhasePaint,
+            label = "DEV"
+        )
+    }
+
+    private fun drawPhaseSegment(
+        canvas: Canvas,
+        startSec: Int,
+        endSec: Int,
+        left: Float,
+        top: Float,
+        bottom: Float,
+        plotWidth: Float,
+        maxTime: Int,
+        paint: Paint,
+        label: String
+    ) {
+        if (endSec <= startSec) return
+
+        val x0 = left + (startSec.toFloat() / maxTime) * plotWidth
+        val x1 = left + (endSec.toFloat() / maxTime) * plotWidth
+
+        canvas.drawRect(x0, top, x1, bottom, paint)
+        canvas.drawText(label, x0 + 8f, bottom - 12f, smallTextPaint)
+    }
+
     private fun drawGrid(
         canvas: Canvas,
         left: Float,
@@ -259,7 +383,6 @@ class RoastCurveView(context: Context) : View(context) {
         anchors: List<CurveAnchor>,
         left: Float,
         top: Float,
-        bottom: Float,
         plotWidth: Float,
         plotHeight: Float,
         maxTime: Int
