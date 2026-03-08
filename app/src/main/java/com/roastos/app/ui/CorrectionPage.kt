@@ -6,13 +6,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.roastos.app.AdaptiveCalibrationEngine
 import com.roastos.app.AppState
+import com.roastos.app.BatchSessionEngine
 import com.roastos.app.RoastEngine
 import com.roastos.app.RoastStateModel
+import com.roastos.app.RoastTimelineStore
 
 object CorrectionPage {
 
     fun show(context: Context, container: LinearLayout) {
-
         container.removeAllViews()
 
         val planner = AppState.lastPlannerResult
@@ -65,6 +66,13 @@ Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
         """.trimIndent()
 
+        val timelineCard = TextView(context)
+        timelineCard.text = """
+Timeline Summary
+
+${RoastTimelineStore.current.summary()}
+        """.trimIndent()
+
         val resultCard = TextView(context)
         val learningCard = TextView(context)
 
@@ -74,6 +82,7 @@ Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
         root.addView(title)
         root.addView(baselineCard)
         root.addView(liveCard)
+        root.addView(timelineCard)
         root.addView(runBtn)
         root.addView(resultCard)
         root.addView(learningCard)
@@ -81,7 +90,6 @@ Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
         container.addView(root)
 
         runBtn.setOnClickListener {
-
             if (actualTurning == null ||
                 actualYellow == null ||
                 actualFc == null ||
@@ -91,11 +99,7 @@ Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
                 resultCard.text = """
 Correction Status
 Not ready
-
-Needed
-${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow == null) "• Yellow actual\n" else ""}${if (actualFc == null) "• FC actual\n" else ""}${if (actualDrop == null) "• Drop actual\n" else ""}${if (actualRor == null) "• Pre-FC ROR" else ""}
                 """.trimIndent()
-
                 learningCard.text = ""
                 return@setOnClickListener
             }
@@ -158,21 +162,15 @@ Drop ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
 
             AppState.calibrationState = update.newState
             RoastStateModel.syncCalibration(AppState.calibrationState)
+            BatchSessionEngine.markCorrected("Adaptive calibration applied")
 
             learningCard.text = """
 Adaptive Learning
 
 ${update.summary}
 
-RoastStateModel Calibration
-FC Bias ${"%.1f".format(RoastStateModel.calibration.fcBias)}
-Drop Bias ${"%.1f".format(RoastStateModel.calibration.dropBias)}
-ROR Bias ${"%.1f".format(RoastStateModel.calibration.rorBias)}
-Heat Bias ${"%.2f".format(RoastStateModel.calibration.heatBias)}
-Air Bias ${"%.2f".format(RoastStateModel.calibration.airBias)}
-Bean Bias ${"%.2f".format(RoastStateModel.calibration.beanBias)}
-Machine Response ${"%.2f".format(RoastStateModel.calibration.machineResponseFactor)}
-Learning Count ${RoastStateModel.calibration.learningCount}
+Session
+${BatchSessionEngine.summary()}
             """.trimIndent()
         }
     }
