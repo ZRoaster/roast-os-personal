@@ -11,7 +11,7 @@ import com.roastos.app.ui.CorrectionPage
 
 class MainActivity : ComponentActivity() {
 
-    lateinit var container: LinearLayout
+    private lateinit var container: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,51 +19,50 @@ class MainActivity : ComponentActivity() {
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
 
-        val nav = LinearLayout(this)
-        nav.orientation = LinearLayout.HORIZONTAL
+        val navBar = LinearLayout(this)
+        navBar.orientation = LinearLayout.HORIZONTAL
 
-        val btnDashboard = Button(this)
-        btnDashboard.text = "Dashboard"
+        val dashboardBtn = Button(this)
+        dashboardBtn.text = "Dashboard"
 
-        val btnPlanner = Button(this)
-        btnPlanner.text = "Planner"
+        val plannerBtn = Button(this)
+        plannerBtn.text = "Planner"
 
-        val btnRoast = Button(this)
-        btnRoast.text = "Roast"
+        val roastBtn = Button(this)
+        roastBtn.text = "Roast"
 
-        val btnCorrection = Button(this)
-        btnCorrection.text = "Correction"
+        val correctionBtn = Button(this)
+        correctionBtn.text = "Correction"
 
         container = LinearLayout(this)
         container.orientation = LinearLayout.VERTICAL
 
-        nav.addView(btnDashboard)
-        nav.addView(btnPlanner)
-        nav.addView(btnRoast)
-        nav.addView(btnCorrection)
+        navBar.addView(dashboardBtn)
+        navBar.addView(plannerBtn)
+        navBar.addView(roastBtn)
+        navBar.addView(correctionBtn)
 
-        root.addView(nav)
+        root.addView(navBar)
         root.addView(container)
 
         setContentView(root)
 
-        btnDashboard.setOnClickListener {
-            DashboardPage.show(this@MainActivity, container)
+        dashboardBtn.setOnClickListener {
+            DashboardPage.show(applicationContext, container)
         }
 
-        btnPlanner.setOnClickListener {
-            PlannerPage.show(this@MainActivity, container)
+        plannerBtn.setOnClickListener {
+            PlannerPage.show(applicationContext, container)
         }
 
-        btnRoast.setOnClickListener {
-            RoastPage.show(this@MainActivity, container)
+        roastBtn.setOnClickListener {
+            RoastPage.show(applicationContext, container)
         }
 
-        btnCorrection.setOnClickListener {
-            CorrectionPage.show(this@MainActivity, container)
+        correctionBtn.setOnClickListener {
+            CorrectionPage.show(applicationContext, container)
         }
 
-        // 默认页面
-        DashboardPage.show(this@MainActivity, container)
+        DashboardPage.show(applicationContext, container)
     }
 }
