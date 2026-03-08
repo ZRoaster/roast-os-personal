@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.RoastCorrectionBridgeV2
 import com.roastos.app.RoastFlavorBridge
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
@@ -23,7 +24,7 @@ object BatchDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "BATCH DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, report, and evaluation entry"))
+        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, unified correction, report, and evaluation entry"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -64,6 +65,7 @@ object BatchDetailPage {
         }
 
         val flavorBridge = RoastFlavorBridge.buildFromEntry(entry)
+        val unifiedCorrection = RoastCorrectionBridgeV2.buildFromBatch(entry.batchId)
 
         root.addView(
             UiKit.buildCard(
@@ -160,6 +162,15 @@ object BatchDetailPage {
                 context,
                 "NEXT-BATCH CORRECTION",
                 entry.correctionText.ifBlank { "No correction bridge saved" }
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "UNIFIED CORRECTION",
+                unifiedCorrection.summary
             )
         )
         root.addView(UiKit.spacer(context))
