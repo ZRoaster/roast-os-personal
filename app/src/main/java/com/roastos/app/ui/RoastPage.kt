@@ -1,6 +1,7 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.graphics.Typeface
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -11,20 +12,29 @@ object RoastPage {
         container.removeAllViews()
 
         val scroll = ScrollView(context)
-        val inner = LinearLayout(context)
-        inner.orientation = LinearLayout.VERTICAL
+        val root = LinearLayout(context)
+        root.orientation = LinearLayout.VERTICAL
+        root.setPadding(24, 24, 24, 24)
 
         val title = TextView(context)
-        title.text = "ROAST"
-        title.textSize = 22f
+        title.text = "ROAST CENTER"
+        title.textSize = 24f
+        title.setTypeface(null, Typeface.BOLD)
+
+        val subtitle = TextView(context)
+        subtitle.text = "Live assist, timeline tracking, and roast control analysis"
+        subtitle.textSize = 14f
 
         val content = TextView(context)
         content.text = LiveAssistPage.buildLiveAssist()
+        content.textSize = 15f
+        content.setPadding(0, 24, 0, 24)
 
-        inner.addView(title)
-        inner.addView(content)
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(content)
 
-        scroll.addView(inner)
+        scroll.addView(root)
         container.addView(scroll)
     }
 }
