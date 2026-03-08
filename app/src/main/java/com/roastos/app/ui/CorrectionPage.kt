@@ -111,7 +111,6 @@ ${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow =
             val diagnosis = diagnosis(turningDelta, yellowDelta, fcDelta, actualRor)
 
             val batch2Charge = planner.chargeBT + chargeCorrection
-
             val predictedBatch2Fc = predFc - (fcDelta * 0.45).toInt()
             val predictedBatch2Drop = predDrop - (dropDelta * 0.45).toInt()
 
@@ -133,7 +132,7 @@ Charge
 ${planner.chargeBT}℃ → ${batch2Charge}℃
 
 Front-End
-$chargeCorrectionHint(chargeCorrection)
+${chargeCorrectionHint(chargeCorrection)}
 
 Middle Phase
 $heatCorrection
