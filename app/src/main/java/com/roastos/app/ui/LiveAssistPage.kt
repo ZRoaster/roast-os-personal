@@ -1,5 +1,11 @@
 package com.roastos.app.ui
 
+import android.content.Context
+import android.text.InputType
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
@@ -33,10 +39,177 @@ Go to Planner first.
         val predFc = planner.fcPredSec.toInt()
         val predDrop = planner.dropSec.toInt()
 
+        syncStateAndTimeline(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop
+        )
+
+        return """
+LIVE EXECUTION OVERVIEW
+
+${buildPlannerBaselineCard(predTurning, predYellow, predFc, predDrop)}
+
+${buildTimelineCard()}
+
+${buildDecisionCard(predTurning, predYellow, predFc, predDrop)}
+
+${buildControlCard(predTurning, predYellow, predFc, predDrop)}
+
+${buildSessionCard()}
+        """.trimIndent()
+    }
+
+    fun attachLiveInputPanel(
+        context: Context,
+        parent: LinearLayout,
+        onDataChanged: () -> Unit
+    ) {
+        val card = UiKit.card(context)
+        card.addView(UiKit.cardTitle(context, "LIVE INPUT"))
+
+        val turningInput = makeIntInput(
+            context = context,
+            hint = "Actual Turning sec",
+            value = AppState.liveActualTurningSec?.toString() ?: ""
+        )
+
+        val yellowInput = makeIntInput(
+            context = context,
+            hint = "Actual Yellow sec",
+            value = AppState.liveActualYellowSec?.toString() ?: ""
+        )
+
+        val fcInput = makeIntInput(
+            context = context,
+            hint = "Actual FC sec",
+            value = AppState.liveActualFcSec?.toString() ?: ""
+        )
+
+        val dropInput = makeIntInput(
+            context = context,
+            hint = "Actual Drop sec",
+            value = AppState.liveActualDropSec?.toString() ?: ""
+        )
+
+        val rorInput = makeDecimalInput(
+            context = context,
+            hint = "Pre-FC ROR",
+            value = AppState.liveActualPreFcRor?.toString() ?: ""
+        )
+
+        val saveBtn = Button(context)
+        saveBtn.text = "Save Actual Input"
+
+        val clearBtn = Button(context)
+        clearBtn.text = "Clear Actual Input"
+
+        val helpText = UiKit.bodyText(
+            context,
+            """
+Fill any anchor you already know.
+Leave unknown fields blank.
+Save will update timeline, session, decision, and curve.
+            """.trimIndent()
+        )
+
+        card.addView(turningInput)
+        card.addView(yellowInput)
+        card.addView(fcInput)
+        card.addView(dropInput)
+        card.addView(rorInput)
+        card.addView(saveBtn)
+        card.addView(clearBtn)
+        card.addView(helpText)
+
+        saveBtn.setOnClickListener {
+            AppState.liveActualTurningSec = turningInput.text.toString().toIntOrNull()
+            AppState.liveActualYellowSec = yellowInput.text.toString().toIntOrNull()
+            AppState.liveActualFcSec = fcInput.text.toString().toIntOrNull()
+            AppState.liveActualDropSec = dropInput.text.toString().toIntOrNull()
+            AppState.liveActualPreFcRor = rorInput.text.toString().toDoubleOrNull()
+
+            val planner = AppState.lastPlannerResult
+            if (planner != null) {
+                val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
+                val predYellow = planner.h2Sec.toInt()
+                val predFc = planner.fcPredSec.toInt()
+                val predDrop = planner.dropSec.toInt()
+
+                syncStateAndTimeline(
+                    predTurning = predTurning,
+                    predYellow = predYellow,
+                    predFc = predFc,
+                    predDrop = predDrop
+                )
+            }
+
+            onDataChanged()
+        }
+
+        clearBtn.setOnClickListener {
+            AppState.liveActualTurningSec = null
+            AppState.liveActualYellowSec = null
+            AppState.liveActualFcSec = null
+            AppState.liveActualDropSec = null
+            AppState.liveActualPreFcRor = null
+
+            RoastTimelineStore.syncActual(
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                ror = null
+            )
+
+            BatchSessionEngine.syncLiveData(
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                ror = null
+            )
+
+            RoastStateModel.syncLiveState(
+                phase = "Idle",
+                ror = defaultRorForPhase("Idle"),
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                powerW = DEFAULT_POWER_W,
+                airflowPa = DEFAULT_AIRFLOW_PA,
+                drumRpm = DEFAULT_DRUM_RPM
+            )
+
+            turningInput.setText("")
+            yellowInput.setText("")
+            fcInput.setText("")
+            dropInput.setText("")
+            rorInput.setText("")
+
+            onDataChanged()
+        }
+
+        parent.addView(card)
+    }
+
+    private fun syncStateAndTimeline(
+        predTurning: Int,
+        predYellow: Int,
+        predFc: Int,
+        predDrop: Int
+    ) {
+        val plannerInput = AppState.lastPlannerInput ?: return
+
         RoastStateModel.syncPlannerInput(plannerInput)
+
+        val phase = currentPhase()
+
         RoastStateModel.syncLiveState(
-            phase = currentPhase(),
-            ror = AppState.liveActualPreFcRor ?: defaultRorForCurrentState(),
+            phase = phase,
+            ror = AppState.liveActualPreFcRor ?: defaultRorForPhase(phase),
             turningSec = AppState.liveActualTurningSec,
             yellowSec = AppState.liveActualYellowSec,
             fcSec = AppState.liveActualFcSec,
@@ -68,20 +241,6 @@ Go to Planner first.
             dropSec = AppState.liveActualDropSec,
             ror = AppState.liveActualPreFcRor
         )
-
-        return """
-LIVE EXECUTION OVERVIEW
-
-${buildPlannerBaselineCard(predTurning, predYellow, predFc, predDrop)}
-
-${buildTimelineCard()}
-
-${buildDecisionCard(predTurning, predYellow, predFc, predDrop)}
-
-${buildControlCard(predTurning, predYellow, predFc, predDrop)}
-
-${buildSessionCard()}
-        """.trimIndent()
     }
 
     private fun buildPlannerBaselineCard(
@@ -317,12 +476,36 @@ Charge    ${session.plannerSnapshot.chargeTemp}℃
         }
     }
 
-    private fun defaultRorForCurrentState(): Double {
-        return when (currentPhase()) {
+    private fun defaultRorForPhase(phase: String): Double {
+        return when (phase) {
             "Drying" -> 16.0
             "Maillard / Pre-FC" -> 12.0
             "Development" -> 7.0
             else -> 12.0
         }
+    }
+
+    private fun makeIntInput(
+        context: Context,
+        hint: String,
+        value: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        input.setText(value)
+        return input
+    }
+
+    private fun makeDecimalInput(
+        context: Context,
+        hint: String,
+        value: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        input.setText(value)
+        return input
     }
 }
