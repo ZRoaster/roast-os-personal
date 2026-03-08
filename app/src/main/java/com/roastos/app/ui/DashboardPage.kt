@@ -1,240 +1,242 @@
 package com.roastos.app.ui
 
-import android.app.Activity
-import android.widget.Button
+import android.content.Context
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.AppState
-import com.roastos.app.CurveEngine
-import com.roastos.app.PhaseEngine
+import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastEngine
+import com.roastos.app.RoastStateModel
 
 object DashboardPage {
 
-    fun show(activity: Activity, container: LinearLayout) {
+    private const val DEFAULT_POWER_W = 540
+    private const val DEFAULT_AIRFLOW_PA = 10
+    private const val DEFAULT_DRUM_RPM = 60
+
+    fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
-        val root = LinearLayout(activity)
+        val scroll = ScrollView(context)
+        val root = LinearLayout(context)
         root.orientation = LinearLayout.VERTICAL
 
-        val title = TextView(activity)
-        title.text = "DASHBOARD"
-        title.textSize = 22f
+        val title = TextView(context)
+        title.text = "ROAST OS"
+        title.textSize = 24f
 
-        val machineCard = TextView(activity)
-        machineCard.text = """
-Machine
-HB M2SE
-Batch 200g
-Charge Base 204℃
-Max Power 1450W
+        val subtitle = TextView(context)
+        subtitle.text = "Main Control Dashboard"
+
+        val plannerCard = TextView(context)
+        plannerCard.text = buildPlannerCard()
+
+        val roastCard = TextView(context)
+        roastCard.text = buildRoastStateCard()
+
+        val decisionCard = TextView(context)
+        decisionCard.text = buildDecisionCard()
+
+        val calibrationCard = TextView(context)
+        calibrationCard.text = buildCalibrationCard()
+
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(plannerCard)
+        root.addView(roastCard)
+        root.addView(decisionCard)
+        root.addView(calibrationCard)
+
+        scroll.addView(root)
+        container.addView(scroll)
+    }
+
+    private fun buildPlannerCard(): String {
+        val planner = AppState.lastPlannerResult ?: return """
+Planner
+No planner result available
         """.trimIndent()
 
-        val plannerCard = TextView(activity)
-        val batchCard = TextView(activity)
-        val liveCard = TextView(activity)
-        val curveCard = TextView(activity)
-        val correctionCard = TextView(activity)
-        val nextStepCard = TextView(activity)
+        val plannerInput = AppState.lastPlannerInput ?: return """
+Planner
+No planner input available
+        """.trimIndent()
 
-        val resetBatchBtn = Button(activity)
-        resetBatchBtn.text = "Reset Current Batch"
+        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
+        val predYellow = planner.h2Sec.toInt()
+        val predFc = planner.fcPredSec.toInt()
+        val predDrop = planner.dropSec.toInt()
 
-        val resetAllBtn = Button(activity)
-        resetAllBtn.text = "Reset Planner + Batch"
+        return """
+Planner Baseline
 
-        val planner = AppState.lastPlannerResult
-        val plannerInput = AppState.lastPlannerInput
+Process
+${plannerInput.process}
 
-        if (planner == null || plannerInput == null) {
+Bean
+Density ${"%.1f".format(plannerInput.density)}
+Moisture ${"%.1f".format(plannerInput.moisture)}
+aw ${"%.2f".format(plannerInput.aw)}
 
-            plannerCard.text = """
-Planner Status
-Not Ready
+Environment
+Temp ${"%.1f".format(plannerInput.envTemp)}℃
+RH ${"%.1f".format(plannerInput.envRH)}%
 
-Action
-Go to Roast → Planner
-Generate roast baseline
-            """.trimIndent()
-
-            batchCard.text = """
-Batch Overview
-No active batch
-            """.trimIndent()
-
-            liveCard.text = """
-Live Status
-Turning -
-Yellow -
-FC -
-Drop -
-Pre-FC ROR -
-            """.trimIndent()
-
-            curveCard.text = """
-Curve Prediction
-No prediction yet
-
-Action
-Run Planner first
-            """.trimIndent()
-
-            correctionCard.text = """
-Correction Status
-Not ready
-            """.trimIndent()
-
-            nextStepCard.text = """
-Next Step
-Open Roast → Planner
-Generate first roast card
-            """.trimIndent()
-
-        } else {
-
-            val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-            val predYellow = planner.h2Sec.toInt()
-            val predFc = planner.fcPredSec.toInt()
-            val predDrop = planner.dropSec.toInt()
-
-            val liveTurning = AppState.liveActualTurningSec
-            val liveYellow = AppState.liveActualYellowSec
-            val liveFc = AppState.liveActualFcSec
-            val liveDrop = AppState.liveActualDropSec
-            val liveRor = AppState.liveActualPreFcRor
-
-            plannerCard.text = """
-Planner Status
-Ready
-
-Roast Card
-Charge ${planner.chargeBT}℃
+Predicted Anchors
 Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
-            """.trimIndent()
 
-            val phase = PhaseEngine.detect(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop,
-                actualTurning = liveTurning,
-                actualYellow = liveYellow,
-                actualFc = liveFc,
-                actualDrop = liveDrop,
-                actualPreFcRor = liveRor
-            )
+Development
+Dev ${planner.devTime}s
+DTR ${"%.1f".format(planner.dtrPercent)}%
+        """.trimIndent()
+    }
 
-            batchCard.text = """
-Batch Overview
+    private fun buildRoastStateCard(): String {
+        val planner = AppState.lastPlannerResult
+        val predTurning = planner?.let { (it.h1Sec - 60.0).toInt().coerceAtLeast(50) }
+        val predYellow = planner?.h2Sec?.toInt()
+        val predFc = planner?.fcPredSec?.toInt()
+        val predDrop = planner?.dropSec?.toInt()
+
+        val actualTurning = AppState.liveActualTurningSec
+        val actualYellow = AppState.liveActualYellowSec
+        val actualFc = AppState.liveActualFcSec
+        val actualDrop = AppState.liveActualDropSec
+        val actualRor = AppState.liveActualPreFcRor
+
+        val phase = when {
+            actualDrop != null -> "Finished"
+            actualFc != null -> "Development"
+            actualYellow != null -> "Maillard / Pre-FC"
+            actualTurning != null -> "Drying"
+            else -> "Idle"
+        }
+
+        return """
+Roast State
 
 Current Phase
-${phase.currentPhase}
+$phase
 
-Next Target
-${phase.nextTargetLabel} ${RoastEngine.toMMSS(phase.nextTargetSec.toDouble())}
+Current ROR
+${actualRor?.let { "%.1f".format(it) } ?: "-"}
 
-Risk
-${phase.riskHint}
-            """.trimIndent()
+Actual Anchors
+Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
-            liveCard.text = """
-Live Status
+Predicted Anchors
+Turning ${predTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${predYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${predFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${predDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
-Turning ${liveTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${liveYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${liveFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${liveDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Pre-FC ROR ${liveRor?.let { "%.1f".format(it) } ?: "-"}
-            """.trimIndent()
+State Model
+Bean Density ${"%.1f".format(RoastStateModel.bean.density)}
+Bean Moisture ${"%.1f".format(RoastStateModel.bean.moisture)}
+Ambient Temp ${"%.1f".format(RoastStateModel.environment.ambientTemp)}℃
+Power ${RoastStateModel.control.powerW}W
+Air ${RoastStateModel.control.airflowPa}Pa
+Drum ${RoastStateModel.control.drumRpm}rpm
+        """.trimIndent()
+    }
 
-            val curve = CurveEngine.predict(
-                predTurning = predTurning,
-                predYellow = predYellow,
-                predFc = predFc,
-                predDrop = predDrop,
-                actualTurning = liveTurning,
-                actualYellow = liveYellow,
-                actualFc = liveFc,
-                currentRor = liveRor
-            )
+    private fun buildDecisionCard(): String {
+        val planner = AppState.lastPlannerResult ?: return """
+Decision
+No planner result available
+        """.trimIndent()
 
-            curveCard.text = """
-Curve Prediction
+        val plannerInput = AppState.lastPlannerInput ?: return """
+Decision
+No planner input available
+        """.trimIndent()
 
-Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}
-FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}
-Drop ${RoastEngine.toMMSS(curve.predictedDropSec.toDouble())}
-Dev ${curve.predictedDevSec}s
+        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
+        val predYellow = planner.h2Sec.toInt()
+        val predFc = planner.fcPredSec.toInt()
+        val predDrop = planner.dropSec.toInt()
 
-Confidence
-${curve.confidence}
+        val decision = DecisionEngine.decide(
+            predTurning = predTurning,
+            predYellow = predYellow,
+            predFc = predFc,
+            predDrop = predDrop,
+            actualTurning = AppState.liveActualTurningSec,
+            actualYellow = AppState.liveActualYellowSec,
+            actualFc = AppState.liveActualFcSec,
+            actualDrop = AppState.liveActualDropSec,
+            currentRor = AppState.liveActualPreFcRor,
+            envTemp = plannerInput.envTemp,
+            humidity = plannerInput.envRH,
+            pressureKpa = 1013.0,
+            density = plannerInput.density,
+            moisture = plannerInput.moisture,
+            aw = plannerInput.aw,
+            heatLevelW = if (RoastStateModel.control.powerW > 0) RoastStateModel.control.powerW else DEFAULT_POWER_W,
+            airflowPa = if (RoastStateModel.control.airflowPa > 0) RoastStateModel.control.airflowPa else DEFAULT_AIRFLOW_PA,
+            drumRpm = if (RoastStateModel.control.drumRpm > 0) RoastStateModel.control.drumRpm else DEFAULT_DRUM_RPM
+        )
 
-Logic
-${curve.summary}
-            """.trimIndent()
+        return """
+Decision Center
 
-            val correctionReady =
-                liveTurning != null &&
-                liveYellow != null &&
-                liveFc != null &&
-                liveDrop != null &&
-                liveRor != null
+Current Phase
+${decision.currentPhase}
 
-            correctionCard.text = if (correctionReady) {
-                """
-Correction Status
-Ready
+Action Now
+${decision.actionNow}
 
-Action
-Roast → Correction
-Generate Batch 2
-                """.trimIndent()
-            } else {
-                """
-Correction Status
-Waiting For Data
-                """.trimIndent()
-            }
+Heat Command
+${decision.heatCommand}
 
-            val nextStep = when {
-                liveTurning == null -> "Go to Roast → Live and record Turning"
-                liveYellow == null -> "Go to Roast → Live and record Yellow"
-                liveFc == null -> "Go to Roast → Live and record FC"
-                liveDrop == null || liveRor == null ->
-                    "Go to Roast → Live and finish Development / Drop"
-                else -> "Go to Roast → Correction"
-            }
+Air Command
+${decision.airCommand}
 
-            nextStepCard.text = """
-Next Step
-$nextStep
-            """.trimIndent()
-        }
+Target Window
+${decision.targetWindow}
 
-        resetBatchBtn.setOnClickListener {
-            AppState.resetBatch()
-            show(activity, container)
-        }
+Risk Level
+${decision.riskLevel}
 
-        resetAllBtn.setOnClickListener {
-            AppState.resetAll()
-            show(activity, container)
-        }
+Reason
+${decision.reason}
 
-        root.addView(title)
-        root.addView(machineCard)
-        root.addView(plannerCard)
-        root.addView(batchCard)
-        root.addView(liveCard)
-        root.addView(curveCard)
-        root.addView(correctionCard)
-        root.addView(nextStepCard)
-        root.addView(resetBatchBtn)
-        root.addView(resetAllBtn)
+Physics / Energy
+${decision.physicsSummary}
+        """.trimIndent()
+    }
 
-        container.addView(root)
+    private fun buildCalibrationCard(): String {
+        val appCalibration = AppState.calibrationState
+        val modelCalibration = RoastStateModel.calibration
+
+        return """
+Adaptive Calibration
+
+AppState
+FC Bias ${"%.1f".format(appCalibration.fcBiasSec)}
+Drop Bias ${"%.1f".format(appCalibration.dropBiasSec)}
+Heat Bias ${"%.2f".format(appCalibration.heatResponseBias)}
+Air Bias ${"%.2f".format(appCalibration.airResponseBias)}
+Bean Bias ${"%.2f".format(appCalibration.beanLoadBias)}
+Learning Count ${appCalibration.learningCount}
+
+RoastStateModel
+FC Bias ${"%.1f".format(modelCalibration.fcBias)}
+Drop Bias ${"%.1f".format(modelCalibration.dropBias)}
+ROR Bias ${"%.1f".format(modelCalibration.rorBias)}
+Heat Bias ${"%.2f".format(modelCalibration.heatBias)}
+Air Bias ${"%.2f".format(modelCalibration.airBias)}
+Bean Bias ${"%.2f".format(modelCalibration.beanBias)}
+Machine Response ${"%.2f".format(modelCalibration.machineResponseFactor)}
+Learning Count ${modelCalibration.learningCount}
+        """.trimIndent()
     }
 }
