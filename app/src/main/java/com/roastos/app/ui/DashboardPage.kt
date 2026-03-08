@@ -5,9 +5,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.AppState
+import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
 import com.roastos.app.RoastEngine
 import com.roastos.app.RoastStateModel
+import com.roastos.app.RoastTimelineStore
 
 object DashboardPage {
 
@@ -32,8 +34,11 @@ object DashboardPage {
         val plannerCard = TextView(context)
         plannerCard.text = buildPlannerCard()
 
-        val roastCard = TextView(context)
-        roastCard.text = buildRoastStateCard()
+        val sessionCard = TextView(context)
+        sessionCard.text = buildSessionCard()
+
+        val timelineCard = TextView(context)
+        timelineCard.text = buildTimelineCard()
 
         val decisionCard = TextView(context)
         decisionCard.text = buildDecisionCard()
@@ -44,7 +49,8 @@ object DashboardPage {
         root.addView(title)
         root.addView(subtitle)
         root.addView(plannerCard)
-        root.addView(roastCard)
+        root.addView(sessionCard)
+        root.addView(timelineCard)
         root.addView(decisionCard)
         root.addView(calibrationCard)
 
@@ -88,62 +94,41 @@ Turning ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop ${RoastEngine.toMMSS(predDrop.toDouble())}
-
-Development
-Dev ${planner.devTime}s
-DTR ${"%.1f".format(planner.dtrPercent)}%
         """.trimIndent()
     }
 
-    private fun buildRoastStateCard(): String {
-        val planner = AppState.lastPlannerResult
-        val predTurning = planner?.let { (it.h1Sec - 60.0).toInt().coerceAtLeast(50) }
-        val predYellow = planner?.h2Sec?.toInt()
-        val predFc = planner?.fcPredSec?.toInt()
-        val predDrop = planner?.dropSec?.toInt()
+    private fun buildSessionCard(): String {
+        return BatchSessionEngine.summary()
+    }
 
-        val actualTurning = AppState.liveActualTurningSec
-        val actualYellow = AppState.liveActualYellowSec
-        val actualFc = AppState.liveActualFcSec
-        val actualDrop = AppState.liveActualDropSec
-        val actualRor = AppState.liveActualPreFcRor
-
-        val phase = when {
-            actualDrop != null -> "Finished"
-            actualFc != null -> "Development"
-            actualYellow != null -> "Maillard / Pre-FC"
-            actualTurning != null -> "Drying"
-            else -> "Idle"
-        }
-
+    private fun buildTimelineCard(): String {
+        val tl = RoastTimelineStore.current
         return """
-Roast State
+Timeline
+
+Predicted
+Turning ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Actual
+Turning ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
 Current Phase
-$phase
+${tl.currentPhase}
 
-Current ROR
-${actualRor?.let { "%.1f".format(it) } ?: "-"}
+ROR
+${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
 
-Actual Anchors
-Turning ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Dev
+${tl.devSec?.toString() ?: "-"}
 
-Predicted Anchors
-Turning ${predTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow ${predYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC ${predFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop ${predDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-State Model
-Bean Density ${"%.1f".format(RoastStateModel.bean.density)}
-Bean Moisture ${"%.1f".format(RoastStateModel.bean.moisture)}
-Ambient Temp ${"%.1f".format(RoastStateModel.environment.ambientTemp)}℃
-Power ${RoastStateModel.control.powerW}W
-Air ${RoastStateModel.control.airflowPa}Pa
-Drum ${RoastStateModel.control.drumRpm}rpm
+DTR
+${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
         """.trimIndent()
     }
 
