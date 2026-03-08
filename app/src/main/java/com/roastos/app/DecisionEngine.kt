@@ -92,6 +92,9 @@ object DecisionEngine {
         )
 
         val energy = EnergyEngine.evaluate()
+        val calibration = RoastStateModel.calibration
+
+        val calibrationSummary = buildCalibrationSummary(calibration)
 
         val physicsSummary = """
 Energy Target ${"%.1f".format(energy.targetRor)}
@@ -104,7 +107,12 @@ ROR+30s ${"%.1f".format(physics.predictedRor30s)}
 
 Bean Load ${"%.1f".format(energy.beanLoad)}
 Env Load ${"%.1f".format(energy.envLoad)}
+Machine Effect ${"%.1f".format(energy.machineEffect)}
 Control Effect ${"%.1f".format(energy.controlEffect)}
+Calibration Effect ${"%.1f".format(energy.calibrationEffect)}
+
+Calibration
+$calibrationSummary
 
 ${energy.summary}
 ${physics.summary}
@@ -118,7 +126,7 @@ ${physics.summary}
                 airCommand = "Air Safe Hold",
                 targetWindow = "Move to Correction",
                 riskLevel = "Low",
-                reason = "Drop has already been recorded. Current batch should move into review and correction.",
+                reason = "Drop has already been recorded. Current batch should move into review and correction. Calibration from previous batches is already loaded for future roasts.",
                 physicsSummary = physicsSummary
             )
         }
@@ -130,6 +138,7 @@ ${physics.summary}
                 currentRor = currentRor ?: 9.0,
                 physics = physics,
                 energy = energy,
+                calibration = calibration,
                 physicsSummary = physicsSummary
             )
         }
@@ -143,6 +152,7 @@ ${physics.summary}
                 currentRor = currentRor ?: 13.0,
                 physics = physics,
                 energy = energy,
+                calibration = calibration,
                 physicsSummary = physicsSummary
             )
         }
@@ -155,6 +165,7 @@ ${physics.summary}
                 curve = curve,
                 physics = physics,
                 energy = energy,
+                calibration = calibration,
                 physicsSummary = physicsSummary
             )
         }
@@ -166,7 +177,7 @@ ${physics.summary}
             airCommand = "Air Hold",
             targetWindow = "Turning ${RoastEngine.toMMSS(predTurning.toDouble())}",
             riskLevel = "Low",
-            reason = "No actual event has been recorded yet. Use planner baseline and wait for Turning response.",
+            reason = "No actual event has been recorded yet. Use planner baseline and wait for Turning response. Learned calibration is loaded but no roast anchor is available yet.",
             physicsSummary = physicsSummary
         )
     }
@@ -177,19 +188,23 @@ ${physics.summary}
         currentRor: Double,
         physics: PhysicsOutput,
         energy: EnergyState,
+        calibration: RoastStateModel.CalibrationState,
         physicsSummary: String
     ): DecisionOutput {
+
+        val strongHeatBias = calibration.heatBias > 0.3
+        val weakAirBias = calibration.airBias < -0.2
 
         return when {
             physics.predictedRor20s > 10.5 || energy.energyError < -2.0 || currentRor > 10.0 -> {
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Protect Development",
-                    heatCommand = "Heat -60W",
-                    airCommand = "Air +2Pa",
+                    heatCommand = if (strongHeatBias) "Heat -80W" else "Heat -60W",
+                    airCommand = if (weakAirBias) "Air +3Pa" else "Air +2Pa",
                     targetWindow = "Drop ${RoastEngine.toMMSS(curve.predictedDropSec.toDouble())}",
                     riskLevel = "High",
-                    reason = "Physics and energy layers both indicate excessive post-crack energy. Risk of overshoot and sharp finish is elevated.",
+                    reason = "Physics and energy layers both indicate excessive post-crack energy. Calibration also suggests this machine carries energy strongly, so trimming should be slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -198,11 +213,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Preserve Momentum",
-                    heatCommand = "Heat +40W",
-                    airCommand = "Air Hold",
+                    heatCommand = if (strongHeatBias) "Heat +20W" else "Heat +40W",
+                    airCommand = if (weakAirBias) "Air -1Pa / Hold" else "Air Hold",
                     targetWindow = "Drop ${RoastEngine.toMMSS(curve.predictedDropSec.toDouble())}",
                     riskLevel = "High",
-                    reason = "Physics and energy layers indicate weak development momentum. Risk of crash, hollow body, and flat finish is elevated.",
+                    reason = "Physics and energy layers indicate weak development momentum. Calibration suggests command response may already be strong, so support is applied more carefully.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -215,7 +230,7 @@ ${physics.summary}
                     airCommand = "Air Hold",
                     targetWindow = "Drop ${RoastEngine.toMMSS(curve.predictedDropSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Development energy is within a manageable window. Focus on stable finish and target drop.",
+                    reason = "Development energy is within a manageable window. Learned calibration does not justify extra correction beyond stable finishing.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -230,21 +245,25 @@ ${physics.summary}
         currentRor: Double,
         physics: PhysicsOutput,
         energy: EnergyState,
+        calibration: RoastStateModel.CalibrationState,
         physicsSummary: String
     ): DecisionOutput {
 
         val yellowDelta = actualYellow - predYellow
+        val strongHeatBias = calibration.heatBias > 0.3
+        val strongBeanLoad = calibration.beanBias > 0.3
+        val weakAirBias = calibration.airBias < -0.2
 
         return when {
             yellowDelta > 15 && (physics.netEnergy < 0.0 || energy.energyError > 2.0) -> {
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Recover Mid-Phase Momentum",
-                    heatCommand = "Heat +60W",
+                    heatCommand = if (strongBeanLoad) "Heat +80W" else "Heat +60W",
                     airCommand = "Air Hold / Slight Delay",
                     targetWindow = "FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}",
                     riskLevel = "High",
-                    reason = "Yellow is late and both physics and energy layers show insufficient momentum. Risk of late FC and flat cup is increasing.",
+                    reason = "Yellow is late and both physics and energy layers show insufficient momentum. Learned bean load is also high, so stronger support is justified.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -253,11 +272,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Slow Pre-FC Push",
-                    heatCommand = "Heat -60W",
-                    airCommand = "Air +1Pa to +2Pa",
+                    heatCommand = if (strongHeatBias) "Heat -80W" else "Heat -60W",
+                    airCommand = if (weakAirBias) "Air +3Pa" else "Air +2Pa",
                     targetWindow = "FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}",
                     riskLevel = "High",
-                    reason = "Yellow is early and both physics and energy layers still show excess momentum. Risk of pre-FC spike is elevated.",
+                    reason = "Yellow is early and both physics and energy layers still show excess momentum. Calibration suggests trimming should be slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -266,11 +285,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Trim ROR",
-                    heatCommand = "Heat -40W",
-                    airCommand = "Air +2Pa",
+                    heatCommand = if (strongHeatBias) "Heat -60W" else "Heat -40W",
+                    airCommand = if (weakAirBias) "Air +3Pa" else "Air +2Pa",
                     targetWindow = "FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}",
                     riskLevel = "High",
-                    reason = "Current and predicted ROR are above the desired pre-FC window. System should protect against overshoot.",
+                    reason = "Current and predicted ROR are above the desired pre-FC window. Learned calibration suggests this roaster may hold momentum strongly, so correction is slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -279,11 +298,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Support FC Arrival",
-                    heatCommand = "Heat +40W",
+                    heatCommand = if (strongBeanLoad) "Heat +60W" else "Heat +40W",
                     airCommand = "Air Hold",
                     targetWindow = "FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Current and predicted ROR are softer than target. System should preserve enough momentum into FC.",
+                    reason = "Current and predicted ROR are softer than target. Calibration indicates bean load may be higher than baseline, so support is slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -296,7 +315,7 @@ ${physics.summary}
                     airCommand = "Air Hold",
                     targetWindow = "FC ${RoastEngine.toMMSS(curve.predictedFcSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Yellow timing and integrated energy state are close to target. Maintain stable approach into FC.",
+                    reason = "Yellow timing and integrated energy state are close to target. Learned calibration does not justify extra intervention here.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -310,21 +329,25 @@ ${physics.summary}
         curve: CurvePrediction,
         physics: PhysicsOutput,
         energy: EnergyState,
+        calibration: RoastStateModel.CalibrationState,
         physicsSummary: String
     ): DecisionOutput {
 
         val turningDelta = actualTurning - predTurning
+        val strongBeanLoad = calibration.beanBias > 0.3
+        val strongHeatBias = calibration.heatBias > 0.3
+        val weakAirBias = calibration.airBias < -0.2
 
         return when {
             turningDelta > 8 && (physics.netEnergy < 0.0 || energy.energyError > 2.0) -> {
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Recover Front-End Energy",
-                    heatCommand = "Heat +60W",
+                    heatCommand = if (strongBeanLoad) "Heat +80W" else "Heat +60W",
                     airCommand = "Air Delay 10s",
                     targetWindow = "Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Turning arrived late and integrated energy state is weak. System should protect drying pace.",
+                    reason = "Turning arrived late and integrated energy state is weak. Learned bean load suggests front-end support may need to be slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -333,11 +356,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Reduce Early Push",
-                    heatCommand = "Heat -60W",
-                    airCommand = "Air Earlier 10s",
+                    heatCommand = if (strongHeatBias) "Heat -80W" else "Heat -60W",
+                    airCommand = if (weakAirBias) "Air Earlier 10s +1Pa" else "Air Earlier 10s",
                     targetWindow = "Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Turning arrived early and integrated energy state is still strong. Avoid excessive early momentum.",
+                    reason = "Turning arrived early and integrated energy state is still strong. Learned response suggests stronger early trimming may be appropriate.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -346,11 +369,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Soften Drying Rise",
-                    heatCommand = "Heat -40W",
-                    airCommand = "Air +1Pa",
+                    heatCommand = if (strongHeatBias) "Heat -60W" else "Heat -40W",
+                    airCommand = if (weakAirBias) "Air +2Pa" else "Air +1Pa",
                     targetWindow = "Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Integrated model predicts excessive early ROR. System should avoid over-compressing drying.",
+                    reason = "Integrated model predicts excessive early ROR. Learned calibration suggests slightly stronger damping is appropriate.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -359,11 +382,11 @@ ${physics.summary}
                 DecisionOutput(
                     currentPhase = phase,
                     actionNow = "Support Drying Pace",
-                    heatCommand = "Heat +40W",
+                    heatCommand = if (strongBeanLoad) "Heat +60W" else "Heat +40W",
                     airCommand = "Air Hold",
                     targetWindow = "Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}",
                     riskLevel = "Medium",
-                    reason = "Integrated model predicts weak drying ROR. System should support front-end pace.",
+                    reason = "Integrated model predicts weak drying ROR. Learned bean load indicates support may need to be slightly stronger.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -376,7 +399,7 @@ ${physics.summary}
                     airCommand = "Air Hold",
                     targetWindow = "Yellow ${RoastEngine.toMMSS(curve.predictedYellowSec.toDouble())}",
                     riskLevel = "Low",
-                    reason = "Turning and integrated drying energy are close to target. Continue shaping drying phase.",
+                    reason = "Turning and integrated drying energy are close to target. Learned calibration does not justify extra correction.",
                     physicsSummary = physicsSummary
                 )
             }
@@ -432,5 +455,20 @@ ${physics.summary}
     private fun signed1(value: Double): String {
         val txt = "%.1f".format(value)
         return if (value > 0) "+$txt" else txt
+    }
+
+    private fun buildCalibrationSummary(
+        calibration: RoastStateModel.CalibrationState
+    ): String {
+        return """
+FC Bias ${signed1(calibration.fcBias)}
+Drop Bias ${signed1(calibration.dropBias)}
+ROR Bias ${signed1(calibration.rorBias)}
+Heat Bias ${signed1(calibration.heatBias)}
+Air Bias ${signed1(calibration.airBias)}
+Bean Bias ${signed1(calibration.beanBias)}
+Machine Response ${"%.2f".format(calibration.machineResponseFactor)}
+Learning Count ${calibration.learningCount}
+        """.trimIndent()
     }
 }
