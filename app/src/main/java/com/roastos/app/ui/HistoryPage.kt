@@ -11,6 +11,9 @@ import com.roastos.app.RoastHistoryEntry
 
 object HistoryPage {
 
+    private var filterEvaluatedOnly = false
+    private var filterHighRiskOnly = false
+
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
@@ -21,7 +24,7 @@ object HistoryPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "View roast history, evaluation status, replayability, risk summary, open batch detail, or clear all history"
+                "View roast history, evaluation status, replayability, risk summary, open batch detail, clear all history, and filter key batches"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -35,10 +38,22 @@ object HistoryPage {
         val clearBtn = Button(context)
         clearBtn.text = "Clear All History"
 
+        val evaluatedFilterBtn = Button(context)
+        evaluatedFilterBtn.text = "Evaluated Only OFF"
+
+        val highRiskFilterBtn = Button(context)
+        highRiskFilterBtn.text = "High Risk Only OFF"
+
+        val resetFilterBtn = Button(context)
+        resetFilterBtn.text = "Reset Filters"
+
         val summaryBody = UiKit.bodyText(context, RoastHistoryEngine.summary())
 
         actionCard.addView(refreshBtn)
         actionCard.addView(clearBtn)
+        actionCard.addView(evaluatedFilterBtn)
+        actionCard.addView(highRiskFilterBtn)
+        actionCard.addView(resetFilterBtn)
         actionCard.addView(summaryBody)
 
         root.addView(actionCard)
@@ -48,18 +63,35 @@ object HistoryPage {
         listHost.orientation = LinearLayout.VERTICAL
         root.addView(listHost)
 
+        fun updateFilterButtonText() {
+            evaluatedFilterBtn.text =
+                if (filterEvaluatedOnly) "Evaluated Only ON" else "Evaluated Only OFF"
+
+            highRiskFilterBtn.text =
+                if (filterHighRiskOnly) "High Risk Only ON" else "High Risk Only OFF"
+        }
+
+        fun filteredItems(): List<RoastHistoryEntry> {
+            return RoastHistoryEngine.all().filter { entry ->
+                val passEvaluated = !filterEvaluatedOnly || entry.evaluation != null
+                val passHighRisk = !filterHighRiskOnly || buildRisk(entry) == "High"
+                passEvaluated && passHighRisk
+            }
+        }
+
         fun renderList() {
-            summaryBody.text = RoastHistoryEngine.summary()
+            summaryBody.text = buildFilteredSummary()
+            updateFilterButtonText()
             listHost.removeAllViews()
 
-            val items = RoastHistoryEngine.all()
+            val items = filteredItems()
 
             if (items.isEmpty()) {
                 listHost.addView(
                     UiKit.buildCard(
                         context,
-                        "NO HISTORY",
-                        "No roast history saved yet."
+                        "NO MATCHING HISTORY",
+                        buildEmptyFilterText()
                     )
                 )
                 return
@@ -82,10 +114,69 @@ object HistoryPage {
             renderList()
         }
 
+        evaluatedFilterBtn.setOnClickListener {
+            filterEvaluatedOnly = !filterEvaluatedOnly
+            renderList()
+        }
+
+        highRiskFilterBtn.setOnClickListener {
+            filterHighRiskOnly = !filterHighRiskOnly
+            renderList()
+        }
+
+        resetFilterBtn.setOnClickListener {
+            filterEvaluatedOnly = false
+            filterHighRiskOnly = false
+            renderList()
+        }
+
         renderList()
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildFilteredSummary(): String {
+        val total = RoastHistoryEngine.count()
+        val filtered = RoastHistoryEngine.all().count { entry ->
+            val passEvaluated = !filterEvaluatedOnly || entry.evaluation != null
+            val passHighRisk = !filterHighRiskOnly || buildRisk(entry) == "High"
+            passEvaluated && passHighRisk
+        }
+
+        val latest = RoastHistoryEngine.latest()
+
+        return """
+Roast History
+
+Total Count
+$total
+
+Filtered Count
+$filtered
+
+Latest Batch
+${latest?.batchId ?: "-"}
+
+Latest Evaluation
+${if (latest?.evaluation != null) "Saved" else "Not saved"}
+
+Filters
+Evaluated Only ${if (filterEvaluatedOnly) "ON" else "OFF"}
+High Risk Only ${if (filterHighRiskOnly) "ON" else "OFF"}
+        """.trimIndent()
+    }
+
+    private fun buildEmptyFilterText(): String {
+        return """
+No roast history matches current filters.
+
+Filters
+Evaluated Only ${if (filterEvaluatedOnly) "ON" else "OFF"}
+High Risk Only ${if (filterHighRiskOnly) "ON" else "OFF"}
+
+Try turning one filter off or reset filters.
+        """.trimIndent()
     }
 
     private fun buildEntryCard(
