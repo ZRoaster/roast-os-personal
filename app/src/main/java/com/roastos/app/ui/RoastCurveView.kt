@@ -38,21 +38,26 @@ class RoastCurveView(context: Context) : View(context) {
         isAntiAlias = true
     }
 
-    private val rorPaint = Paint().apply {
-        color = Color.parseColor("#1976D2")
-        strokeWidth = 3f
-        style = Paint.Style.STROKE
-        isAntiAlias = true
-    }
-
-    private val anchorPaint = Paint().apply {
-        color = Color.GRAY
-        strokeWidth = 2f
-    }
-
     private val textPaint = Paint().apply {
         color = Color.BLACK
         textSize = 28f
+        isAntiAlias = true
+    }
+
+    private val smallTextPaint = Paint().apply {
+        color = Color.DKGRAY
+        textSize = 22f
+        isAntiAlias = true
+    }
+
+    private val predictedAnchorPaint = Paint().apply {
+        color = Color.parseColor("#9E9E9E")
+        strokeWidth = 2f
+    }
+
+    private val actualAnchorPaint = Paint().apply {
+        color = Color.parseColor("#388E3C")
+        strokeWidth = 3f
     }
 
     fun setCurve(curveResult: RoastCurveResult) {
@@ -61,7 +66,7 @@ class RoastCurveView(context: Context) : View(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredHeight = 700
+        val desiredHeight = 720
         val resolvedWidth = MeasureSpec.getSize(widthMeasureSpec)
         setMeasuredDimension(resolvedWidth, desiredHeight)
     }
@@ -69,69 +74,78 @@ class RoastCurveView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val data = curve ?: return
-
-        val allPoints = data.predictedPoints + data.actualPoints
-
-        if (allPoints.isEmpty()) {
+        val data = curve ?: run {
             canvas.drawText("No curve data", 40f, 80f, textPaint)
             return
         }
 
-        val left = 80f
+        val allPoints = data.predictedPoints + data.actualPoints
+
+        if (allPoints.isEmpty()) {
+            canvas.drawText("No curve points", 40f, 80f, textPaint)
+            return
+        }
+
+        val left = 90f
         val top = 60f
         val right = width - 40f
-        val bottom = height - 80f
+        val bottom = height - 90f
 
         val plotWidth = right - left
         val plotHeight = bottom - top
 
         canvas.drawRect(left, top, right, bottom, axisPaint)
-
         drawGrid(canvas, left, top, right, bottom)
 
         val maxTime = max(1, allPoints.maxOf { it.timeSec })
-
         val minBt = allPoints.minOf { it.bt }
         val maxBt = allPoints.maxOf { it.bt }
 
         drawAnchors(
-            canvas,
-            data.anchors,
-            left,
-            top,
-            bottom,
-            plotWidth,
-            maxTime
+            canvas = canvas,
+            anchors = data.anchors,
+            left = left,
+            top = top,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            maxTime = maxTime
         )
 
         drawCurve(
-            canvas,
-            data.predictedPoints,
-            predictedBtPaint,
-            left,
-            bottom,
-            plotWidth,
-            plotHeight,
-            maxTime,
-            minBt,
-            maxBt
+            canvas = canvas,
+            points = data.predictedPoints,
+            paint = predictedBtPaint,
+            left = left,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime,
+            minBt = minBt,
+            maxBt = maxBt
         )
 
         drawCurve(
-            canvas,
-            data.actualPoints,
-            actualBtPaint,
-            left,
-            bottom,
-            plotWidth,
-            plotHeight,
-            maxTime,
-            minBt,
-            maxBt
+            canvas = canvas,
+            points = data.actualPoints,
+            paint = actualBtPaint,
+            left = left,
+            bottom = bottom,
+            plotWidth = plotWidth,
+            plotHeight = plotHeight,
+            maxTime = maxTime,
+            minBt = minBt,
+            maxBt = maxBt
         )
 
-        drawLabels(canvas, left, bottom, right, minBt, maxBt, maxTime)
+        drawLabels(
+            canvas = canvas,
+            left = left,
+            bottom = bottom,
+            right = right,
+            minBt = minBt,
+            maxBt = maxBt,
+            maxTime = maxTime
+        )
     }
 
     private fun drawGrid(
@@ -165,17 +179,13 @@ class RoastCurveView(context: Context) : View(context) {
         maxTime: Int
     ) {
         anchors.forEach { anchor ->
-
             val x = left + (anchor.timeSec.toFloat() / maxTime) * plotWidth
+            val paint = if (anchor.isActual) actualAnchorPaint else predictedAnchorPaint
 
-            canvas.drawLine(x, top, x, bottom, anchorPaint)
+            canvas.drawLine(x, top, x, bottom, paint)
 
-            canvas.drawText(
-                anchor.label,
-                x + 4f,
-                top + 24f,
-                textPaint
-            )
+            val label = if (anchor.isActual) "${anchor.label} A" else "${anchor.label} P"
+            canvas.drawText(label, x + 4f, top + 24f, smallTextPaint)
         }
     }
 
@@ -192,9 +202,9 @@ class RoastCurveView(context: Context) : View(context) {
         maxBt: Double
     ) {
         if (points.size < 2) return
+        if (maxBt <= minBt) return
 
         for (i in 1 until points.size) {
-
             val p0 = points[i - 1]
             val p1 = points[i]
 
@@ -217,33 +227,18 @@ class RoastCurveView(context: Context) : View(context) {
         maxBt: Double,
         maxTime: Int
     ) {
+        canvas.drawText("${maxBt.toInt()}°", 10f, 80f, textPaint)
+        canvas.drawText("${minBt.toInt()}°", 10f, bottom, textPaint)
 
-        canvas.drawText(
-            "${maxBt.toInt()}°",
-            10f,
-            80f,
-            textPaint
-        )
-
-        canvas.drawText(
-            "${minBt.toInt()}°",
-            10f,
-            bottom,
-            textPaint
-        )
-
-        canvas.drawText(
-            "0:00",
-            left,
-            bottom + 40f,
-            textPaint
-        )
-
+        canvas.drawText("0:00", left, bottom + 40f, smallTextPaint)
         canvas.drawText(
             "${maxTime / 60}:${(maxTime % 60).toString().padStart(2, '0')}",
-            right - 80f,
+            right - 90f,
             bottom + 40f,
-            textPaint
+            smallTextPaint
         )
+
+        canvas.drawText("Pred BT", left, 36f, smallTextPaint)
+        canvas.drawText("Actual BT", left + 140f, 36f, smallTextPaint)
     }
 }
