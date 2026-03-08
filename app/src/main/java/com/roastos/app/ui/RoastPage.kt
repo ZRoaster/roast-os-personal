@@ -1,55 +1,86 @@
 package com.roastos.app.ui
 
-import android.content.Context
+import android.app.Activity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
 object RoastPage {
 
-    fun show(context: Context, container: LinearLayout) {
+    fun show(activity: Activity, container: LinearLayout) {
 
         container.removeAllViews()
 
-        val root = LinearLayout(context)
+        val root = LinearLayout(activity)
         root.orientation = LinearLayout.VERTICAL
 
-        val title = TextView(context)
-        title.text = "ROAST CENTER"
+        val title = TextView(activity)
+        title.text = "ROAST CONTROL"
         title.textSize = 22f
 
-        val plannerBtn = Button(context)
-        plannerBtn.text = "Planner"
+        val subtitle = TextView(activity)
+        subtitle.text = "Planner → Live Assist → Correction"
 
-        val liveBtn = Button(context)
-        liveBtn.text = "Live Assist"
+        val plannerCard = TextView(activity)
+        plannerCard.text = """
+Planner
 
-        val correctionBtn = Button(context)
-        correctionBtn.text = "Correction"
+Generate roast baseline
+Calculate charge / FC / drop prediction
+Build heat and airflow plan
+        """.trimIndent()
 
-        val content = LinearLayout(context)
-        content.orientation = LinearLayout.VERTICAL
-
-        root.addView(title)
-        root.addView(plannerBtn)
-        root.addView(liveBtn)
-        root.addView(correctionBtn)
-        root.addView(content)
-
-        container.addView(root)
+        val plannerBtn = Button(activity)
+        plannerBtn.text = "Open Planner"
 
         plannerBtn.setOnClickListener {
-            PlannerPage.show(context, content)
+            PlannerPage.show(activity, container)
         }
+
+        val liveCard = TextView(activity)
+        liveCard.text = """
+Live Assist
+
+Record Turning / Yellow / FC
+Get real-time heat and airflow advice
+Phase detection + curve prediction
+        """.trimIndent()
+
+        val liveBtn = Button(activity)
+        liveBtn.text = "Open Live Assist"
 
         liveBtn.setOnClickListener {
-            LiveAssistPage.show(context, content)
+            LiveAssistPage.show(activity, container)
         }
+
+        val correctionCard = TextView(activity)
+        correctionCard.text = """
+Batch Correction
+
+Compare predicted vs actual anchors
+Diagnose roast deviation
+Generate Batch-2 execution card
+        """.trimIndent()
+
+        val correctionBtn = Button(activity)
+        correctionBtn.text = "Open Correction"
 
         correctionBtn.setOnClickListener {
-            CorrectionPage.show(context, content)
+            CorrectionPage.show(activity, container)
         }
 
-        PlannerPage.show(context, content)
+        root.addView(title)
+        root.addView(subtitle)
+
+        root.addView(plannerCard)
+        root.addView(plannerBtn)
+
+        root.addView(liveCard)
+        root.addView(liveBtn)
+
+        root.addView(correctionCard)
+        root.addView(correctionBtn)
+
+        container.addView(root)
     }
 }
