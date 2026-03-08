@@ -23,7 +23,7 @@ object RoastPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST CENTER"))
-        root.addView(UiKit.pageSubtitle(context, "Live assist, timeline tracking, roast curve, and actual input"))
+        root.addView(UiKit.pageSubtitle(context, "Live assist, workflow, timeline tracking, roast curve, and actual input"))
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -31,6 +31,13 @@ object RoastPage {
         val statusBody = UiKit.bodyText(context, "")
         statusCard.addView(statusBody)
         root.addView(statusCard)
+        root.addView(UiKit.spacer(context))
+
+        val workflowCard = UiKit.card(context)
+        workflowCard.addView(UiKit.cardTitle(context, "WORKFLOW GUIDE"))
+        val workflowBody = UiKit.bodyText(context, "")
+        workflowCard.addView(workflowBody)
+        root.addView(workflowCard)
         root.addView(UiKit.spacer(context))
 
         val actionCard = UiKit.card(context)
@@ -87,6 +94,7 @@ object RoastPage {
             summaryBody.text = curve.summary
             sessionBody.text = BatchSessionEngine.summary()
             statusBody.text = buildTopStatus()
+            workflowBody.text = RoastWorkflowGuide.buildText()
             curveView.setCurve(curve)
             liveAssistBody.text = LiveAssistPage.buildLiveAssist()
         }
