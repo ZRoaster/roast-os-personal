@@ -1,11 +1,9 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.graphics.Typeface
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.TextView
 import com.roastos.app.AdaptiveCalibrationEngine
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
@@ -22,9 +20,14 @@ object CorrectionPage {
         val plannerInput = AppState.lastPlannerInput
 
         if (planner == null || plannerInput == null) {
-            val t = TextView(context)
-            t.text = "Run Planner first."
-            container.addView(t)
+            val scroll = ScrollView(context)
+            val root = UiKit.pageRoot(context)
+            root.addView(UiKit.pageTitle(context, "BATCH CORRECTION"))
+            root.addView(UiKit.pageSubtitle(context, "Review actual roast, generate next-batch correction, and apply learning"))
+            root.addView(UiKit.spacer(context))
+            root.addView(UiKit.buildCard(context, "STATUS", "Run Planner first."))
+            scroll.addView(root)
+            container.addView(scroll)
             return
         }
 
@@ -40,87 +43,68 @@ object CorrectionPage {
         val predDrop = planner.dropSec.toInt()
 
         val scroll = ScrollView(context)
-        val root = LinearLayout(context)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(24, 24, 24, 24)
+        val root = UiKit.pageRoot(context)
 
-        val title = TextView(context)
-        title.text = "BATCH CORRECTION"
-        title.textSize = 24f
-        title.setTypeface(null, Typeface.BOLD)
+        root.addView(UiKit.pageTitle(context, "BATCH CORRECTION"))
+        root.addView(UiKit.pageSubtitle(context, "Review actual roast, generate next-batch correction, and apply learning"))
+        root.addView(UiKit.spacer(context))
 
-        val subtitle = TextView(context)
-        subtitle.text = "Review actual roast, generate next-batch correction, and apply learning"
-        subtitle.textSize = 14f
-
-        val baselineCard = buildCard(
-            context,
-            "PLANNER BASELINE",
-            """
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "PLANNER BASELINE",
+                """
 Charge     ${planner.chargeBT}℃
 Turning    ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow     ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC         ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop       ${RoastEngine.toMMSS(predDrop.toDouble())}
-            """.trimIndent()
+                """.trimIndent()
+            )
         )
+        root.addView(UiKit.spacer(context))
 
-        val liveCard = buildCard(
-            context,
-            "ACTUAL BATCH DATA",
-            """
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "ACTUAL BATCH DATA",
+                """
 Turning    ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Yellow     ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 FC         ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Drop       ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
-            """.trimIndent()
+                """.trimIndent()
+            )
         )
+        root.addView(UiKit.spacer(context))
 
-        val timelineCard = buildCard(
-            context,
-            "TIMELINE SUMMARY",
-            RoastTimelineStore.current.summary()
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "TIMELINE SUMMARY",
+                RoastTimelineStore.current.summary()
+            )
         )
+        root.addView(UiKit.spacer(context))
 
-        val resultSection = LinearLayout(context)
-        resultSection.orientation = LinearLayout.VERTICAL
-        resultSection.setPadding(24, 24, 24, 24)
-
-        val resultTitle = TextView(context)
-        resultTitle.text = "CORRECTION RESULT"
-        resultTitle.textSize = 18f
-        resultTitle.setTypeface(null, Typeface.BOLD)
+        val resultCard = UiKit.card(context)
+        resultCard.addView(UiKit.cardTitle(context, "CORRECTION RESULT"))
 
         val runBtn = Button(context)
         runBtn.text = "Generate Batch 2 Correction"
 
-        val resultCard = TextView(context)
-        resultCard.textSize = 15f
-        resultCard.setPadding(0, 16, 0, 0)
+        val resultBody = UiKit.bodyText(context, "No correction generated yet.")
+        val learningTitle = UiKit.cardTitle(context, "ADAPTIVE LEARNING")
+        learningTitle.setPadding(0, UiKit.SECTION_GAP, 0, 0)
+        val learningBody = UiKit.bodyText(context, "No learning update yet.")
 
-        val learningTitle = TextView(context)
-        learningTitle.text = "ADAPTIVE LEARNING"
-        learningTitle.textSize = 18f
-        learningTitle.setTypeface(null, Typeface.BOLD)
-        learningTitle.setPadding(0, 24, 0, 0)
+        resultCard.addView(runBtn)
+        resultCard.addView(resultBody)
+        resultCard.addView(learningTitle)
+        resultCard.addView(learningBody)
 
-        val learningCard = TextView(context)
-        learningCard.textSize = 15f
-        learningCard.setPadding(0, 16, 0, 0)
-
-        resultSection.addView(resultTitle)
-        resultSection.addView(runBtn)
-        resultSection.addView(resultCard)
-        resultSection.addView(learningTitle)
-        resultSection.addView(learningCard)
-
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(baselineCard)
-        root.addView(liveCard)
-        root.addView(timelineCard)
-        root.addView(resultSection)
+        root.addView(resultCard)
 
         scroll.addView(root)
         container.addView(scroll)
@@ -132,7 +116,7 @@ Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
                 actualDrop == null ||
                 actualRor == null
             ) {
-                resultCard.text = """
+                resultBody.text = """
 Correction Status
 
 Not ready
@@ -140,7 +124,7 @@ Not ready
 Needed
 ${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow == null) "• Yellow actual\n" else ""}${if (actualFc == null) "• FC actual\n" else ""}${if (actualDrop == null) "• Drop actual\n" else ""}${if (actualRor == null) "• Pre-FC ROR" else ""}
                 """.trimIndent()
-                learningCard.text = ""
+                learningBody.text = "No learning update yet."
                 return@setOnClickListener
             }
 
@@ -159,7 +143,7 @@ ${if (actualTurning == null) "• Turning actual\n" else ""}${if (actualYellow =
             val predictedBatch2Fc = predFc - (fcDelta * 0.45).toInt()
             val predictedBatch2Drop = predDrop - (dropDelta * 0.45).toInt()
 
-            resultCard.text = """
+            resultBody.text = """
 Correction Diagnosis
 
 Turning Δ   ${formatSigned(turningDelta)}s
@@ -204,7 +188,7 @@ Drop       ${RoastEngine.toMMSS(predictedBatch2Drop.toDouble())}
             RoastStateModel.syncCalibration(AppState.calibrationState)
             BatchSessionEngine.markCorrected("Adaptive calibration applied")
 
-            learningCard.text = """
+            learningBody.text = """
 ${update.summary}
 
 RoastStateModel Calibration
@@ -221,30 +205,6 @@ Session
 ${BatchSessionEngine.summary()}
             """.trimIndent()
         }
-    }
-
-    private fun buildCard(
-        context: Context,
-        heading: String,
-        content: String
-    ): LinearLayout {
-        val card = LinearLayout(context)
-        card.orientation = LinearLayout.VERTICAL
-        card.setPadding(24, 24, 24, 24)
-
-        val title = TextView(context)
-        title.text = heading
-        title.textSize = 18f
-        title.setTypeface(null, Typeface.BOLD)
-
-        val body = TextView(context)
-        body.text = content
-        body.textSize = 15f
-        body.setPadding(0, 16, 0, 0)
-
-        card.addView(title)
-        card.addView(body)
-        return card
     }
 
     private fun chargeCorrection(turningDelta: Int): Int {
