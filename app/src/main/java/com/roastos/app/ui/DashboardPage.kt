@@ -1,10 +1,8 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.graphics.Typeface
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.TextView
 import com.roastos.app.AppState
 import com.roastos.app.BatchSessionEngine
 import com.roastos.app.DecisionEngine
@@ -22,76 +20,28 @@ object DashboardPage {
         container.removeAllViews()
 
         val scroll = ScrollView(context)
-        val root = LinearLayout(context)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(24, 24, 24, 24)
+        val root = UiKit.pageRoot(context)
 
-        root.addView(buildHeaderCard(context))
-        root.addView(buildCard(context, "PLANNER BASELINE", buildPlannerCard()))
-        root.addView(buildCard(context, "BATCH SESSION", buildSessionCard()))
-        root.addView(buildCard(context, "ROAST TIMELINE", buildTimelineCard()))
-        root.addView(buildCard(context, "DECISION CENTER", buildDecisionCard()))
-        root.addView(buildCard(context, "ADAPTIVE CALIBRATION", buildCalibrationCard()))
+        root.addView(UiKit.pageTitle(context, "ROAST OS"))
+        root.addView(UiKit.pageSubtitle(context, "Main Control Dashboard"))
+        root.addView(UiKit.spacer(context))
+
+        root.addView(UiKit.buildCard(context, "PLANNER BASELINE", buildPlannerCard()))
+        root.addView(UiKit.spacer(context))
+
+        root.addView(UiKit.buildCard(context, "BATCH SESSION", buildSessionCard()))
+        root.addView(UiKit.spacer(context))
+
+        root.addView(UiKit.buildCard(context, "ROAST TIMELINE", buildTimelineCard()))
+        root.addView(UiKit.spacer(context))
+
+        root.addView(UiKit.buildCard(context, "DECISION CENTER", buildDecisionCard()))
+        root.addView(UiKit.spacer(context))
+
+        root.addView(UiKit.buildCard(context, "ADAPTIVE CALIBRATION", buildCalibrationCard()))
 
         scroll.addView(root)
         container.addView(scroll)
-    }
-
-    private fun buildHeaderCard(context: Context): LinearLayout {
-        val card = LinearLayout(context)
-        card.orientation = LinearLayout.VERTICAL
-        card.setPadding(24, 24, 24, 24)
-
-        val title = TextView(context)
-        title.text = "ROAST OS"
-        title.textSize = 24f
-        title.setTypeface(null, Typeface.BOLD)
-
-        val subtitle = TextView(context)
-        subtitle.text = "Main Control Dashboard"
-        subtitle.textSize = 14f
-
-        val phase = RoastTimelineStore.current.currentPhase
-        val ror = RoastTimelineStore.current.currentRor?.let { "%.1f".format(it) } ?: "-"
-        val learningCount = RoastStateModel.calibration.learningCount
-
-        val status = TextView(context)
-        status.text = """
-Current Phase  $phase
-Current ROR    $ror
-Learning Count $learningCount
-        """.trimIndent()
-        status.textSize = 16f
-        status.setPadding(0, 20, 0, 0)
-
-        card.addView(title)
-        card.addView(subtitle)
-        card.addView(status)
-        return card
-    }
-
-    private fun buildCard(
-        context: Context,
-        heading: String,
-        content: String
-    ): LinearLayout {
-        val card = LinearLayout(context)
-        card.orientation = LinearLayout.VERTICAL
-        card.setPadding(24, 24, 24, 24)
-
-        val title = TextView(context)
-        title.text = heading
-        title.textSize = 18f
-        title.setTypeface(null, Typeface.BOLD)
-
-        val body = TextView(context)
-        body.text = content
-        body.textSize = 15f
-        body.setPadding(0, 16, 0, 0)
-
-        card.addView(title)
-        card.addView(body)
-        return card
     }
 
     private fun buildPlannerCard(): String {
@@ -121,43 +71,11 @@ Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
 Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
 FC        ${RoastEngine.toMMSS(predFc.toDouble())}
 Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
-
-Development
-Dev       ${planner.devTime}s
-DTR       ${"%.1f".format(planner.dtrPercent)}%
         """.trimIndent()
     }
 
     private fun buildSessionCard(): String {
-        val session = BatchSessionEngine.current() ?: return "No active session"
-
-        return """
-Batch ID
-${session.batchId}
-
-Status
-${session.status}
-
-Bean Snapshot
-Process   ${session.beanSnapshot.process}
-Density   ${"%.1f".format(session.beanSnapshot.density)}
-Moisture  ${"%.1f".format(session.beanSnapshot.moisture)}
-aw        ${"%.2f".format(session.beanSnapshot.aw)}
-
-Environment Snapshot
-Temp      ${"%.1f".format(session.envSnapshot.tempC)}℃
-RH        ${"%.1f".format(session.envSnapshot.humidityRh)}%
-
-Planner Snapshot
-Charge    ${session.plannerSnapshot.chargeTemp}℃
-Turning   ${session.plannerSnapshot.predictedTurningSec?.toString() ?: "-"}
-Yellow    ${session.plannerSnapshot.predictedYellowSec?.toString() ?: "-"}
-FC        ${session.plannerSnapshot.predictedFcSec?.toString() ?: "-"}
-Drop      ${session.plannerSnapshot.predictedDropSec?.toString() ?: "-"}
-
-Notes
-${if (session.notes.isBlank()) "-" else session.notes}
-        """.trimIndent()
+        return BatchSessionEngine.summary()
     }
 
     private fun buildTimelineCard(): String {
@@ -176,7 +94,7 @@ Yellow    ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-
 FC        ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 Drop      ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
 
-Derived
+Current
 Phase     ${tl.currentPhase}
 ROR       ${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
 Dev       ${tl.devSec?.toString() ?: "-"}
