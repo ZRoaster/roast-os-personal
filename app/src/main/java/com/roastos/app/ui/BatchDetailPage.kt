@@ -22,7 +22,7 @@ object BatchDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "BATCH DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, and full report"))
+        root.addView(UiKit.pageSubtitle(context, "Roast replay, diagnosis, correction, report, and evaluation entry"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -34,7 +34,18 @@ object BatchDetailPage {
             HistoryPage.show(context, container)
         }
 
+        val evaluationBtn = Button(context)
+        evaluationBtn.text = "Open Evaluation"
+        evaluationBtn.setOnClickListener {
+            RoastEvaluationPage.show(
+                context = context,
+                container = container,
+                batchId = batchId
+            )
+        }
+
         navCard.addView(backBtn)
+        navCard.addView(evaluationBtn)
         root.addView(navCard)
         root.addView(UiKit.spacer(context))
 
@@ -110,6 +121,15 @@ object BatchDetailPage {
                 context,
                 "DEVIATION SUMMARY",
                 buildDeviation(entry)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "EVALUATION STATUS",
+                buildEvaluationStatus(entry)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -257,6 +277,40 @@ Yellow    ${deviationLine(entry.predictedYellowSec, entry.actualYellowSec)}
 FC        ${deviationLine(entry.predictedFcSec, entry.actualFcSec)}
 Drop      ${deviationLine(entry.predictedDropSec, entry.actualDropSec)}
 ROR       ${entry.actualPreFcRor?.let { "%.1f".format(it) } ?: "-"}
+        """.trimIndent()
+    }
+
+    private fun buildEvaluationStatus(entry: RoastHistoryEntry): String {
+        val evaluation = entry.evaluation ?: return """
+Status
+Not saved
+
+Next Step
+Open Evaluation and enter roasted bean / cup data
+        """.trimIndent()
+
+        return """
+Status
+Saved
+
+Bean Color
+${evaluation.beanColor?.let { "%.2f".format(it) } ?: "-"}
+
+Ground Color
+${evaluation.groundColor?.let { "%.2f".format(it) } ?: "-"}
+
+Roasted aw
+${evaluation.roastedAw?.let { "%.3f".format(it) } ?: "-"}
+
+Cup
+Sweetness ${evaluation.sweetness ?: "-"}
+Acidity ${evaluation.acidity ?: "-"}
+Body ${evaluation.body ?: "-"}
+Flavor Clarity ${evaluation.flavorClarity ?: "-"}
+Balance ${evaluation.balance ?: "-"}
+
+Notes
+${evaluation.notes.ifBlank { "-" }}
         """.trimIndent()
     }
 
