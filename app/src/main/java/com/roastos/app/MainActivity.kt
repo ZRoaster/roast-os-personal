@@ -1,22 +1,23 @@
 package com.roastos.app
 
+import android.app.Activity
+import android.content.Context
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
-import androidx.activity.ComponentActivity
 import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
 import com.roastos.app.ui.PlannerPage
 import com.roastos.app.ui.RoastPage
 
-class MainActivity : ComponentActivity() {
+class MainActivity : Activity() {
 
     private lateinit var pageContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val ctx = this as android.content.Context
+        val ctx: Context = this
 
         val root = LinearLayout(ctx)
         root.orientation = LinearLayout.VERTICAL
