@@ -6,10 +6,14 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.MachineTelemetryEngine
 import com.roastos.app.PreheatLiveInput
 import com.roastos.app.RoastPreheatAssistEngine
+import com.roastos.app.TelemetrySourceMode
 
 object PreheatPage {
+
+    private var simulatorElapsedSec = 0
 
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
@@ -21,9 +25,31 @@ object PreheatPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Semi-automatic preheat assist with target, window, hold, action, beep text, and charge countdown"
+                "Semi-automatic preheat assist with telemetry mode, target, action, beep text, and charge countdown"
             )
         )
+        root.addView(UiKit.spacer(context))
+
+        val telemetryCard = UiKit.card(context)
+        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY MODE"))
+
+        val manualBtn = Button(context)
+        manualBtn.text = "Use MANUAL"
+
+        val simulatorBtn = Button(context)
+        simulatorBtn.text = "Use SIMULATOR"
+
+        val machineBtn = Button(context)
+        machineBtn.text = "Use MACHINE"
+
+        val telemetryBody = UiKit.bodyText(context, "")
+
+        telemetryCard.addView(manualBtn)
+        telemetryCard.addView(simulatorBtn)
+        telemetryCard.addView(machineBtn)
+        telemetryCard.addView(telemetryBody)
+
+        root.addView(telemetryCard)
         root.addView(UiKit.spacer(context))
 
         val targetCard = UiKit.card(context)
@@ -34,7 +60,7 @@ object PreheatPage {
         root.addView(UiKit.spacer(context))
 
         val inputCard = UiKit.card(context)
-        inputCard.addView(UiKit.cardTitle(context, "LIVE INPUT"))
+        inputCard.addView(UiKit.cardTitle(context, "MANUAL / SIM INPUT"))
 
         val currentTempInput = decimalInput(context, "Current Temp ℃", "205.0")
         val riseRateInput = decimalInput(context, "Rise Rate ℃/s", "0.18")
@@ -43,6 +69,18 @@ object PreheatPage {
         val holdElapsedInput = intInput(context, "Hold Elapsed Sec", "0")
         val ambientTempInput = decimalInput(context, "Ambient Temp ℃", "")
         val ambientRhInput = decimalInput(context, "Ambient RH %", "")
+
+        val pushManualBtn = Button(context)
+        pushManualBtn.text = "Push Manual Frame"
+
+        val simStep10Btn = Button(context)
+        simStep10Btn.text = "Simulator +10s"
+
+        val simStep30Btn = Button(context)
+        simStep30Btn.text = "Simulator +30s"
+
+        val simResetBtn = Button(context)
+        simResetBtn.text = "Reset Simulator"
 
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh Preheat Assist"
@@ -54,6 +92,10 @@ object PreheatPage {
         inputCard.addView(holdElapsedInput)
         inputCard.addView(ambientTempInput)
         inputCard.addView(ambientRhInput)
+        inputCard.addView(pushManualBtn)
+        inputCard.addView(simStep10Btn)
+        inputCard.addView(simStep30Btn)
+        inputCard.addView(simResetBtn)
         inputCard.addView(refreshBtn)
 
         root.addView(inputCard)
@@ -72,30 +114,39 @@ object PreheatPage {
         statusCard.addView(statusBody)
         root.addView(statusCard)
 
-        fun refreshAll() {
-            val target = RoastPreheatAssistEngine.buildTargetFromCurrentState()
+        fun currentAmbientTemp(targetTemp: Double): Double {
+            return ambientTempInput.text.toString().toDoubleOrNull()
+                ?: com.roastos.app.AppState.lastPlannerInput?.envTemp
+                ?: (targetTemp - 185.0).coerceAtLeast(20.0)
+        }
 
-            val ambientTemp = ambientTempInput.text.toString().toDoubleOrNull()
-                ?: target.targetTempC.let {  // fallback not used semantically; just avoid null
-                    val plannerTemp = com.roastos.app.AppState.lastPlannerInput?.envTemp
-                    plannerTemp ?: 25.0
-                }
-
-            val ambientRh = ambientRhInput.text.toString().toDoubleOrNull()
+        fun currentAmbientRh(): Double {
+            return ambientRhInput.text.toString().toDoubleOrNull()
                 ?: com.roastos.app.AppState.lastPlannerInput?.envRH
                 ?: 50.0
+        }
+
+        fun refreshAll() {
+            val target = RoastPreheatAssistEngine.buildTargetFromCurrentState()
+            val telemetry = MachineTelemetryEngine.currentState()
 
             val live = PreheatLiveInput(
-                currentTempC = currentTempInput.text.toString().toDoubleOrNull() ?: 0.0,
-                riseRateCPerSec = riseRateInput.text.toString().toDoubleOrNull() ?: 0.0,
-                currentPowerW = powerInput.text.toString().toIntOrNull() ?: 0,
-                elapsedSec = elapsedInput.text.toString().toIntOrNull() ?: 0,
+                currentTempC = telemetry.liveBtC
+                    ?: currentTempInput.text.toString().toDoubleOrNull()
+                    ?: 0.0,
+                riseRateCPerSec = ((telemetry.liveRorCPerMin
+                    ?: (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0))
+                    ?: 0.0) / 60.0),
+                currentPowerW = telemetry.livePowerW,
+                elapsedSec = telemetry.liveElapsedSec,
                 holdElapsedSec = holdElapsedInput.text.toString().toIntOrNull() ?: 0,
-                ambientTempC = ambientTemp,
-                ambientRh = ambientRh
+                ambientTempC = currentAmbientTemp(target.targetTempC),
+                ambientRh = currentAmbientRh()
             )
 
             val result = RoastPreheatAssistEngine.assess(target, live)
+
+            telemetryBody.text = MachineTelemetryEngine.summary()
 
             targetBody.text = """
 Target
@@ -116,6 +167,70 @@ ${target.reason}
 
             assistBody.text = result.summary
             statusBody.text = result.statusText
+
+            if (telemetry.liveBtC != null) {
+                currentTempInput.setText("%.1f".format(telemetry.liveBtC))
+            }
+            if (telemetry.liveRorCPerMin != null) {
+                riseRateInput.setText("%.2f".format(telemetry.liveRorCPerMin / 60.0))
+            }
+            powerInput.setText(telemetry.livePowerW.toString())
+            elapsedInput.setText(telemetry.liveElapsedSec.toString())
+        }
+
+        manualBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+            refreshAll()
+        }
+
+        simulatorBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refreshAll()
+        }
+
+        machineBtn.setOnClickListener {
+            MachineTelemetryEngine.connectMachine()
+            refreshAll()
+        }
+
+        pushManualBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+            MachineTelemetryEngine.pushManualFrame(
+                btC = currentTempInput.text.toString().toDoubleOrNull(),
+                etC = null,
+                rorCPerMin = (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0)),
+                powerW = powerInput.text.toString().toIntOrNull(),
+                airflowPa = null,
+                drumRpm = null,
+                elapsedSec = elapsedInput.text.toString().toIntOrNull(),
+                turningSec = null,
+                yellowSec = null,
+                fcSec = null,
+                dropSec = null,
+                machineState = "Preheating"
+            )
+            refreshAll()
+        }
+
+        simStep10Btn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 10
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refreshAll()
+        }
+
+        simStep30Btn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 30
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refreshAll()
+        }
+
+        simResetBtn.setOnClickListener {
+            simulatorElapsedSec = 0
+            MachineTelemetryEngine.reset()
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refreshAll()
         }
 
         refreshBtn.setOnClickListener {
@@ -135,7 +250,10 @@ ${target.reason}
     ): EditText {
         val input = EditText(context)
         input.hint = hint
-        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_DECIMAL or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
         input.setText(defaultText)
         return input
     }
@@ -147,7 +265,9 @@ ${target.reason}
     ): EditText {
         val input = EditText(context)
         input.hint = hint
-        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
         input.setText(defaultText)
         return input
     }
