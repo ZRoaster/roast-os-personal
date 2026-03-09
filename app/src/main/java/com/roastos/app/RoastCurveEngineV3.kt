@@ -9,14 +9,18 @@ data class RoastCurvePredictionV3(
     val predictedBt15: Double,
     val predictedBt30: Double,
     val predictedBt45: Double,
+    val predictedTurningTimeSec: Double?,
     val predictedYellowTimeSec: Double?,
     val predictedFcTimeSec: Double?,
     val predictedDropTimeSec: Double?,
     val predictedDevelopmentSec: Double?,
     val predictedDtrPercent: Double?,
+    val baselineTurningDeltaSec: Double?,
     val baselineYellowDeltaSec: Double?,
     val baselineFcDeltaSec: Double?,
     val baselineDropDeltaSec: Double?,
+    val chainTrendScore: Int,
+    val chainTrendLabel: String,
     val phase: String,
     val trend: String,
     val confidence: Int,
@@ -31,6 +35,7 @@ object RoastCurveEngineV3 {
     )
 
     private data class ConstrainedAnchors(
+        val turningSec: Double?,
         val yellowSec: Double?,
         val fcSec: Double?,
         val developmentSec: Double?
@@ -40,8 +45,15 @@ object RoastCurveEngineV3 {
 
     private const val MAX_POINTS = 120
 
+    private const val TURNING_TARGET_BT = 95.0
     private const val YELLOW_TARGET_BT = 150.0
     private const val FC_TARGET_BT = 198.0
+
+    // Turning 稳定化
+    private const val TURNING_ACTIVE_BT_MAX = 120.0
+    private const val TURNING_MIN_ROR = 1.2
+    private const val TURNING_SMOOTHING_ALPHA = 0.18
+    private const val TURNING_MAX_STEP_SEC = 10.0
 
     // Yellow 稳定化
     private const val YELLOW_ACTIVE_BT_MIN = 120.0
@@ -63,17 +75,21 @@ object RoastCurveEngineV3 {
     private const val DEV_MAX_STEP_SEC = 10.0
 
     // 锚点一致性约束
+    private const val MIN_TURNING_TO_YELLOW_SEC = 80.0
+    private const val MAX_TURNING_TO_YELLOW_SEC = 260.0
     private const val MIN_YELLOW_TO_FC_SEC = 90.0
     private const val MAX_YELLOW_TO_FC_SEC = 330.0
     private const val MIN_FC_TO_DROP_SEC = 45.0
     private const val MAX_FC_TO_DROP_SEC = 140.0
 
+    private var turningPredictionCacheSec: Double? = null
     private var yellowPredictionCacheSec: Double? = null
     private var fcPredictionCacheSec: Double? = null
     private var devPredictionCacheSec: Double? = null
 
     fun reset() {
         history.clear()
+        turningPredictionCacheSec = null
         yellowPredictionCacheSec = null
         fcPredictionCacheSec = null
         devPredictionCacheSec = null
@@ -109,6 +125,13 @@ object RoastCurveEngineV3 {
         val predictedBt30 = smoothedBt + smoothedRor * (30.0 / 60.0)
         val predictedBt45 = smoothedBt + smoothedRor * (45.0 / 60.0)
 
+        val rawTurningTimeSec = predictRawTurningTimeSec(
+            currentBt = smoothedBt,
+            currentRor = smoothedRor,
+            confidence = confidence
+        )
+        val stabilizedTurningTimeSec = stabilizeTurningPrediction(rawTurningTimeSec)
+
         val rawYellowTimeSec = predictRawYellowTimeSec(
             currentBt = smoothedBt,
             currentRor = smoothedRor,
@@ -132,6 +155,7 @@ object RoastCurveEngineV3 {
         val stabilizedDevelopmentSec = stabilizeDevelopmentPrediction(rawDevelopmentSec)
 
         val constrainedAnchors = applyAnchorConsistency(
+            turningSec = stabilizedTurningTimeSec,
             yellowSec = stabilizedYellowTimeSec,
             fcSec = stabilizedFcTimeSec,
             developmentSec = stabilizedDevelopmentSec
@@ -151,6 +175,11 @@ object RoastCurveEngineV3 {
 
         val baseline = PlannerBaselineStore.current()
 
+        val baselineTurningDeltaSec = computeDeltaSec(
+            predicted = constrainedAnchors.turningSec,
+            baseline = baseline?.turningSec?.toDouble()
+        )
+
         val baselineYellowDeltaSec = computeDeltaSec(
             predicted = constrainedAnchors.yellowSec,
             baseline = baseline?.yellowSec?.toDouble()
@@ -166,14 +195,27 @@ object RoastCurveEngineV3 {
             baseline = baseline?.dropSec?.toDouble()
         )
 
+        val chainTrendScore = computeChainTrendScore(
+            baselineTurningDeltaSec = baselineTurningDeltaSec,
+            baselineYellowDeltaSec = baselineYellowDeltaSec,
+            baselineFcDeltaSec = baselineFcDeltaSec,
+            baselineDropDeltaSec = baselineDropDeltaSec,
+            confidence = confidence
+        )
+
+        val chainTrendLabel = classifyChainTrendScore(chainTrendScore)
+
         val trend = detectTrend(
             smoothedRor = smoothedRor,
+            predictedTurningTimeSec = constrainedAnchors.turningSec,
             predictedYellowTimeSec = constrainedAnchors.yellowSec,
             predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec,
+            baselineTurningDeltaSec = baselineTurningDeltaSec,
             baselineYellowDeltaSec = baselineYellowDeltaSec,
             baselineFcDeltaSec = baselineFcDeltaSec,
-            baselineDropDeltaSec = baselineDropDeltaSec
+            baselineDropDeltaSec = baselineDropDeltaSec,
+            chainTrendLabel = chainTrendLabel
         )
 
         val summary = buildSummary(
@@ -182,14 +224,18 @@ object RoastCurveEngineV3 {
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
+            predictedTurningTimeSec = constrainedAnchors.turningSec,
             predictedYellowTimeSec = constrainedAnchors.yellowSec,
             predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec,
             predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
+            baselineTurningDeltaSec = baselineTurningDeltaSec,
             baselineYellowDeltaSec = baselineYellowDeltaSec,
             baselineFcDeltaSec = baselineFcDeltaSec,
             baselineDropDeltaSec = baselineDropDeltaSec,
+            chainTrendScore = chainTrendScore,
+            chainTrendLabel = chainTrendLabel,
             phase = phase,
             trend = trend,
             confidence = confidence
@@ -201,14 +247,18 @@ object RoastCurveEngineV3 {
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
+            predictedTurningTimeSec = constrainedAnchors.turningSec,
             predictedYellowTimeSec = constrainedAnchors.yellowSec,
             predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec,
             predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
+            baselineTurningDeltaSec = baselineTurningDeltaSec,
             baselineYellowDeltaSec = baselineYellowDeltaSec,
             baselineFcDeltaSec = baselineFcDeltaSec,
             baselineDropDeltaSec = baselineDropDeltaSec,
+            chainTrendScore = chainTrendScore,
+            chainTrendLabel = chainTrendLabel,
             phase = phase,
             trend = trend,
             confidence = confidence,
@@ -222,7 +272,7 @@ object RoastCurveEngineV3 {
 
     private fun emptyPrediction(reason: String): RoastCurvePredictionV3 {
         val summary = """
-Curve Prediction V3.4
+Curve Prediction V3.5
 
 Status
 $reason
@@ -242,6 +292,9 @@ BT +30s
 BT +45s
 0.0 ℃
 
+Predicted Turning
+-
+
 Predicted Yellow
 -
 
@@ -257,6 +310,9 @@ Predicted Development
 Predicted DTR
 -
 
+Baseline Turning Δ
+-
+
 Baseline Yellow Δ
 -
 
@@ -265,6 +321,12 @@ Baseline FC Δ
 
 Baseline Drop Δ
 -
+
+Chain Trend Score
+0
+
+Chain Trend Label
+Unknown
 
 Phase
 Unknown
@@ -282,14 +344,18 @@ Confidence
             predictedBt15 = 0.0,
             predictedBt30 = 0.0,
             predictedBt45 = 0.0,
+            predictedTurningTimeSec = null,
             predictedYellowTimeSec = null,
             predictedFcTimeSec = null,
             predictedDropTimeSec = null,
             predictedDevelopmentSec = null,
             predictedDtrPercent = null,
+            baselineTurningDeltaSec = null,
             baselineYellowDeltaSec = null,
             baselineFcDeltaSec = null,
             baselineDropDeltaSec = null,
+            chainTrendScore = 0,
+            chainTrendLabel = "Unknown",
             phase = "Unknown",
             trend = "Unknown",
             confidence = 0,
@@ -345,6 +411,38 @@ Confidence
         }
 
         return if (totalWeight > 0.0) weightedSum / totalWeight else 0.0
+    }
+
+    private fun predictRawTurningTimeSec(
+        currentBt: Double,
+        currentRor: Double,
+        confidence: Int
+    ): Double? {
+        if (currentBt >= TURNING_TARGET_BT) return 0.0
+        if (currentBt > TURNING_ACTIVE_BT_MAX) return null
+        if (currentRor <= TURNING_MIN_ROR) return null
+        if (confidence < 25) return null
+
+        val deltaBt = TURNING_TARGET_BT - currentBt
+        val rawSec = (deltaBt / currentRor) * 60.0
+        return if (rawSec.isFinite() && rawSec >= 0.0) rawSec else null
+    }
+
+    private fun stabilizeTurningPrediction(rawTurningSec: Double?): Double? {
+        if (rawTurningSec == null) return turningPredictionCacheSec
+
+        val cached = turningPredictionCacheSec
+        if (cached == null) {
+            turningPredictionCacheSec = rawTurningSec
+            return rawTurningSec
+        }
+
+        val delta = rawTurningSec - cached
+        val limitedTarget = cached + delta.coerceIn(-TURNING_MAX_STEP_SEC, TURNING_MAX_STEP_SEC)
+        val smoothed = cached + (limitedTarget - cached) * TURNING_SMOOTHING_ALPHA
+
+        turningPredictionCacheSec = max(0.0, smoothed)
+        return turningPredictionCacheSec
     }
 
     private fun predictRawYellowTimeSec(
@@ -459,23 +557,29 @@ Confidence
     }
 
     private fun applyAnchorConsistency(
+        turningSec: Double?,
         yellowSec: Double?,
         fcSec: Double?,
         developmentSec: Double?
     ): ConstrainedAnchors {
+        var t = turningSec
         var y = yellowSec
         var fc = fcSec
         var dev = developmentSec
 
+        if (t != null && y != null) {
+            val ty = y - t
+            when {
+                ty < MIN_TURNING_TO_YELLOW_SEC -> y = t + MIN_TURNING_TO_YELLOW_SEC
+                ty > MAX_TURNING_TO_YELLOW_SEC -> y = t + MAX_TURNING_TO_YELLOW_SEC
+            }
+        }
+
         if (y != null && fc != null) {
             val yf = fc - y
             when {
-                yf < MIN_YELLOW_TO_FC_SEC -> {
-                    fc = y + MIN_YELLOW_TO_FC_SEC
-                }
-                yf > MAX_YELLOW_TO_FC_SEC -> {
-                    fc = y + MAX_YELLOW_TO_FC_SEC
-                }
+                yf < MIN_YELLOW_TO_FC_SEC -> fc = y + MIN_YELLOW_TO_FC_SEC
+                yf > MAX_YELLOW_TO_FC_SEC -> fc = y + MAX_YELLOW_TO_FC_SEC
             }
         }
 
@@ -483,11 +587,16 @@ Confidence
             dev = dev.coerceIn(MIN_FC_TO_DROP_SEC, MAX_FC_TO_DROP_SEC)
         }
 
+        if (t != null && y == null && t < 20.0) {
+            y = t + MIN_TURNING_TO_YELLOW_SEC
+        }
+
         if (y != null && fc == null && dev != null && y < 25.0) {
             dev = max(dev, 65.0)
         }
 
         return ConstrainedAnchors(
+            turningSec = t,
             yellowSec = y,
             fcSec = fc,
             developmentSec = dev
@@ -502,163 +611,35 @@ Confidence
         return predicted - baseline
     }
 
-    private fun detectPhase(smoothedBt: Double): String {
-        return when {
-            smoothedBt < 105.0 -> "Charge / Turning"
-            smoothedBt < 150.0 -> "Drying"
-            smoothedBt < 185.0 -> "Maillard"
-            smoothedBt < 198.0 -> "Pre-FC"
-            else -> "Development"
-        }
-    }
-
-    private fun detectTrend(
-        smoothedRor: Double,
-        predictedYellowTimeSec: Double?,
-        predictedFcTimeSec: Double?,
-        predictedDropTimeSec: Double?,
-        baselineYellowDeltaSec: Double?,
-        baselineFcDeltaSec: Double?,
-        baselineDropDeltaSec: Double?
-    ): String {
-        return when {
-            smoothedRor < 3.0 -> "Crash Risk"
-            smoothedRor < 5.5 -> "Low Momentum"
-            smoothedRor > 16.0 -> "Runaway Heat"
-            smoothedRor > 12.0 -> "Too Fast"
-            baselineFcDeltaSec != null && baselineFcDeltaSec > 20.0 -> "FC Later Than Baseline"
-            baselineFcDeltaSec != null && baselineFcDeltaSec < -20.0 -> "FC Earlier Than Baseline"
-            baselineDropDeltaSec != null && baselineDropDeltaSec > 25.0 -> "Drop Later Than Baseline"
-            baselineDropDeltaSec != null && baselineDropDeltaSec < -25.0 -> "Drop Earlier Than Baseline"
-            predictedYellowTimeSec != null && predictedYellowTimeSec < 20.0 -> "Approaching Yellow"
-            predictedFcTimeSec != null && predictedFcTimeSec < 15.0 -> "FC Imminent"
-            predictedFcTimeSec != null && predictedFcTimeSec < 35.0 -> "Approaching FC"
-            predictedDropTimeSec != null && predictedDropTimeSec < 45.0 -> "Approaching Drop"
-            baselineYellowDeltaSec != null && abs(baselineYellowDeltaSec) > 18.0 -> "Yellow Offset vs Baseline"
-            else -> "Stable"
-        }
-    }
-
-    private fun estimateConfidence(): Int {
-        val points = history.takeLast(8)
-        if (points.size < 4) return 35
-
-        val localRors = mutableListOf<Double>()
-
-        for (i in 1 until points.size) {
-            val prev = points[i - 1]
-            val curr = points[i]
-            val dtSec = (curr.timeMillis - prev.timeMillis).toDouble() / 1000.0
-            if (dtSec <= 0.0) continue
-
-            val deltaBt = curr.bt - prev.bt
-            localRors.add((deltaBt / dtSec) * 60.0)
-        }
-
-        if (localRors.isEmpty()) return 30
-
-        val avg = localRors.average()
-        val variance = localRors.map { abs(it - avg) }.average()
-
-        return when {
-            variance < 0.8 -> 90
-            variance < 1.5 -> 78
-            variance < 2.5 -> 65
-            variance < 4.0 -> 50
-            else -> 35
-        }
-    }
-
-    private fun buildSummary(
-        smoothedBt: Double,
-        smoothedRor: Double,
-        predictedBt15: Double,
-        predictedBt30: Double,
-        predictedBt45: Double,
-        predictedYellowTimeSec: Double?,
-        predictedFcTimeSec: Double?,
-        predictedDropTimeSec: Double?,
-        predictedDevelopmentSec: Double?,
-        predictedDtrPercent: Double?,
+    private fun computeChainTrendScore(
+        baselineTurningDeltaSec: Double?,
         baselineYellowDeltaSec: Double?,
         baselineFcDeltaSec: Double?,
         baselineDropDeltaSec: Double?,
-        phase: String,
-        trend: String,
         confidence: Int
-    ): String {
-        val yellowText = formatTime(predictedYellowTimeSec)
-        val fcText = formatTime(predictedFcTimeSec)
-        val dropText = formatTime(predictedDropTimeSec)
-        val devText = predictedDevelopmentSec?.let { "%.0f".format(it) + "s" } ?: "-"
-        val dtrText = predictedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
+    ): Int {
+        var score = 100
 
-        return """
-Curve Prediction V3.4
+        score -= deltaPenalty(baselineTurningDeltaSec, mild = 8.0, mid = 15.0, high = 25.0)
+        score -= deltaPenalty(baselineYellowDeltaSec, mild = 12.0, mid = 20.0, high = 35.0)
+        score -= deltaPenalty(baselineFcDeltaSec, mild = 15.0, mid = 25.0, high = 40.0)
+        score -= deltaPenalty(baselineDropDeltaSec, mild = 18.0, mid = 30.0, high = 50.0)
 
-Smoothed BT
-${"%.1f".format(smoothedBt)} ℃
+        if (confidence < 40) score -= 12
+        else if (confidence < 55) score -= 8
+        else if (confidence < 70) score -= 4
 
-Smoothed ROR
-${"%.1f".format(smoothedRor)} ℃/min
-
-BT +15s
-${"%.1f".format(predictedBt15)} ℃
-
-BT +30s
-${"%.1f".format(predictedBt30)} ℃
-
-BT +45s
-${"%.1f".format(predictedBt45)} ℃
-
-Predicted Yellow
-$yellowText
-
-Predicted FC
-$fcText
-
-Predicted Drop
-$dropText
-
-Predicted Development
-$devText
-
-Predicted DTR
-$dtrText
-
-Baseline Yellow Δ
-${formatDelta(baselineYellowDeltaSec)}
-
-Baseline FC Δ
-${formatDelta(baselineFcDeltaSec)}
-
-Baseline Drop Δ
-${formatDelta(baselineDropDeltaSec)}
-
-Phase
-$phase
-
-Trend
-$trend
-
-Confidence
-$confidence
-        """.trimIndent()
+        return score.coerceIn(0, 100)
     }
 
-    private fun formatTime(value: Double?): String {
+    private fun deltaPenalty(
+        value: Double?,
+        mild: Double,
+        mid: Double,
+        high: Double
+    ): Int {
+        val absValue = abs(value ?: return 0.0)
         return when {
-            value == null -> "-"
-            value <= 0.0 -> "Now"
-            else -> "%.0f".format(value) + "s"
-        }
-    }
-
-    private fun formatDelta(value: Double?): String {
-        return when {
-            value == null -> "-"
-            value > 0.0 -> "+" + "%.0f".format(value) + "s"
-            else -> "%.0f".format(value) + "s"
-        }
-    }
-}
+            absValue >= high -> 24
+            absValue >= mid -> 14
+            absValue
