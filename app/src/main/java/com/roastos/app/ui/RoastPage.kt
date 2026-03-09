@@ -10,6 +10,7 @@ import com.roastos.app.RoastCurveEngineV2
 import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastCurvePredictionV3
 import com.roastos.app.RoastLiveAssistEngine
+import com.roastos.app.RoastStabilityEngine
 import com.roastos.app.TelemetrySourceMode
 
 object RoastPage {
@@ -27,7 +28,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, and curve prediction engines"
+                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, curve prediction engines, and RoastStabilityEngine"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -84,6 +85,20 @@ object RoastPage {
         val curveBody = UiKit.bodyText(context, "")
         curveCard.addView(curveBody)
         root.addView(curveCard)
+        root.addView(UiKit.spacer(context))
+
+        val stabilityCard = UiKit.cardAlt(context)
+        stabilityCard.addView(UiKit.cardTitle(context, "ROAST STABILITY"))
+        stabilityCard.addView(
+            UiKit.captionText(
+                context,
+                "Overall roast stability derived from crash/flick behavior, anchor chain score, baseline deltas, and prediction confidence."
+            )
+        )
+        val stabilityBody = UiKit.bodyText(context, "")
+        stabilityCard.addView(UiKit.tinySpacer(context))
+        stabilityCard.addView(stabilityBody)
+        root.addView(stabilityCard)
         root.addView(UiKit.spacer(context))
 
         val anchorChainCard = UiKit.cardAlt(context)
@@ -202,6 +217,7 @@ object RoastPage {
             )
 
             val predictionV3 = RoastCurveEngineV3.predict()
+            val stability = RoastStabilityEngine.evaluate(predictionV3)
 
             telemetryBody.text = MachineTelemetryEngine.summary()
             baselineBody.text = buildBaselineText()
@@ -229,6 +245,7 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
+            stabilityBody.text = stability.summary
             anchorChainBody.text = buildAnchorChain(predictionV3)
             baselineDeltaBody.text = buildBaselineDeltaChain(predictionV3)
             rorBehaviorBody.text = buildRorBehavior(predictionV3)
