@@ -7,6 +7,7 @@ import com.roastos.app.MachineTelemetryEngine
 import com.roastos.app.PlannerBaseline
 import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastCurveEngineV2
+import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.TelemetrySourceMode
 
@@ -25,7 +26,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, and RoastCurveEngineV2"
+                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, RoastCurveEngineV2, and RoastCurveEngineV3"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -84,11 +85,18 @@ object RoastPage {
         root.addView(curveCard)
         root.addView(UiKit.spacer(context))
 
-        val predictionCard = UiKit.card(context)
-        predictionCard.addView(UiKit.cardTitle(context, "CURVE PREDICTION"))
-        val predictionBody = UiKit.bodyText(context, "")
-        predictionCard.addView(predictionBody)
-        root.addView(predictionCard)
+        val predictionV2Card = UiKit.card(context)
+        predictionV2Card.addView(UiKit.cardTitle(context, "CURVE PREDICTION V2"))
+        val predictionV2Body = UiKit.bodyText(context, "")
+        predictionV2Card.addView(predictionV2Body)
+        root.addView(predictionV2Card)
+        root.addView(UiKit.spacer(context))
+
+        val predictionV3Card = UiKit.card(context)
+        predictionV3Card.addView(UiKit.cardTitle(context, "CURVE PREDICTION V3"))
+        val predictionV3Body = UiKit.bodyText(context, "")
+        predictionV3Card.addView(predictionV3Body)
+        root.addView(predictionV3Card)
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -110,10 +118,16 @@ object RoastPage {
             val drum = telemetry.liveDrumRpm
             val time = telemetry.liveElapsedSec
             val machineState = telemetry.machineState
+            val nowMillis = System.currentTimeMillis()
 
             RoastCurveEngineV2.record(
                 bt = bt,
-                timeMillis = System.currentTimeMillis()
+                timeMillis = nowMillis
+            )
+
+            RoastCurveEngineV3.record(
+                bt = bt,
+                timeMillis = nowMillis
             )
 
             telemetryBody.text = MachineTelemetryEngine.summary()
@@ -142,7 +156,8 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
-            predictionBody.text = RoastCurveEngineV2.summary()
+            predictionV2Body.text = RoastCurveEngineV2.summary()
+            predictionV3Body.text = RoastCurveEngineV3.summary()
 
             statusBody.text = """
 Machine State
@@ -198,6 +213,7 @@ ${telemetry.mode}
         simReset.setOnClickListener {
             simulatorElapsed = 0
             RoastCurveEngineV2.reset()
+            RoastCurveEngineV3.reset()
             MachineTelemetryEngine.reset()
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
             refresh()
