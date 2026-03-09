@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastCorrectionBridge
 import com.roastos.app.RoastCorrectionBridgeV2
 import com.roastos.app.RoastDeviationEngine
@@ -26,7 +27,7 @@ object CorrectionPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Live assist, deviation diagnosis, current correction, and latest unified correction"
+                "Live assist, planner baseline, deviation diagnosis, current correction, and latest unified correction"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -36,6 +37,13 @@ object CorrectionPage {
         val telemetryBody = UiKit.bodyText(context, "")
         telemetryCard.addView(telemetryBody)
         root.addView(telemetryCard)
+        root.addView(UiKit.spacer(context))
+
+        val baselineCard = UiKit.card(context)
+        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
+        val baselineBody = UiKit.bodyText(context, "")
+        baselineCard.addView(baselineBody)
+        root.addView(baselineCard)
         root.addView(UiKit.spacer(context))
 
         val liveAssistCard = UiKit.card(context)
@@ -126,8 +134,48 @@ ${unified.summary}
             """.trimIndent()
         }
 
+        fun buildBaselineText(): String {
+            val baseline = PlannerBaselineStore.current()
+                ?: return """
+Status
+No active planner baseline
+
+Next Step
+Apply profile suggestion or capture current planner result as baseline
+                """.trimIndent()
+
+            val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+
+            return """
+Source
+${baseline.source}
+
+Label
+${baseline.label}
+
+Match Grade
+${match?.grade?.name ?: "Unavailable"}
+
+Match Score
+${match?.score?.toString() ?: "-"}
+
+Turning
+${baseline.turningSec?.toString()?.plus("s") ?: "-"}
+
+Yellow
+${baseline.yellowSec?.toString()?.plus("s") ?: "-"}
+
+FC
+${baseline.fcSec?.toString()?.plus("s") ?: "-"}
+
+Drop
+${baseline.dropSec?.toString()?.plus("s") ?: "-"}
+            """.trimIndent()
+        }
+
         fun refreshAll() {
             telemetryBody.text = MachineTelemetryEngine.summary()
+            baselineBody.text = buildBaselineText()
             liveAssistBody.text = RoastLiveAssistEngine.buildFromTelemetry().summary
             diagnosisBody.text = RoastDeviationEngine.diagnoseFromCurrentState().summary
             currentCorrectionBody.text = RoastCorrectionBridge.buildFromCurrentState().summary
