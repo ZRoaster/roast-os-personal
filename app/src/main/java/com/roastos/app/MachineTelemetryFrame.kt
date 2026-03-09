@@ -35,9 +35,7 @@ data class MachineTelemetryFrame(
     val environmentTemp: Double,
     val environmentHumidity: Double,
 
-    val machineStateLabel: String,
-
-    val isSimulated: Boolean = false
+    val machineStateLabel: String
 ) {
     fun summary(): String {
         return """
@@ -81,9 +79,6 @@ ${"%.1f".format(environmentTemp)}℃ / ${"%.0f".format(environmentHumidity)}%RH
 
 State
 $machineStateLabel
-
-Simulated
-${if (isSimulated) "Yes" else "No"}
         """.trimIndent()
     }
 }
@@ -96,8 +91,7 @@ object MachineTelemetryFrames {
         source: String = "internal",
         connectionState: TelemetryConnectionState = TelemetryConnectionState.CONNECTED,
         controlMode: TelemetryControlMode = TelemetryControlMode.READ_ONLY,
-        machineStateLabel: String = "RUNNING",
-        isSimulated: Boolean = false
+        machineStateLabel: String = "RUNNING"
     ): MachineTelemetryFrame {
         return MachineTelemetryFrame(
             machineName = machineProfile.name,
@@ -114,8 +108,7 @@ object MachineTelemetryFrames {
             elapsedSec = machineState.elapsedSec,
             environmentTemp = machineState.environmentTemp,
             environmentHumidity = machineState.environmentHumidity,
-            machineStateLabel = machineStateLabel,
-            isSimulated = isSimulated
+            machineStateLabel = machineStateLabel
         )
     }
 
@@ -145,8 +138,7 @@ object MachineTelemetryFrames {
             elapsedSec = elapsedSec,
             environmentTemp = environmentTemp,
             environmentHumidity = environmentHumidity,
-            machineStateLabel = "SIMULATING",
-            isSimulated = true
+            machineStateLabel = "SIMULATING"
         )
     }
 
@@ -169,8 +161,7 @@ object MachineTelemetryFrames {
             elapsedSec = 0,
             environmentTemp = 25.0,
             environmentHumidity = 50.0,
-            machineStateLabel = "IDLE",
-            isSimulated = false
+            machineStateLabel = "IDLE"
         )
     }
 }
