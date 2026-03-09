@@ -2,111 +2,105 @@ package com.roastos.app
 
 object RoastAiService {
 
-    private var config = RoastAiServiceConfig()
+    suspend fun generate(
+        request: RoastAiRequest
+    ): RoastAiResponse {
 
-    private var provider: RoastAiProvider = MockRoastAiProvider()
-
-    fun currentConfig(): RoastAiServiceConfig {
-        return config
-    }
-
-    fun providerType(): RoastAiProviderType {
-        return provider.type
-    }
-
-    fun configure(newConfig: RoastAiServiceConfig) {
-
-        config = newConfig
-
-        provider = when (newConfig.providerType) {
-
+        val provider: RoastAiProvider = when (request.provider) {
             RoastAiProviderType.MOCK -> {
                 MockRoastAiProvider()
             }
 
             RoastAiProviderType.REMOTE_API -> {
-                OpenAiProvider()
+                MockRoastAiProvider()
             }
         }
+
+        return provider.generate(request)
     }
 
-    fun generate(
+    suspend fun generateRealtimeCoaching(
         context: RoastAiContext,
-        systemInstruction: String = "",
-        userMessageOverride: String = ""
-    ): RoastAiServiceResult {
+        providerType: RoastAiProviderType = RoastAiProviderType.MOCK,
+        apiKey: String? = null,
+        model: String? = null
+    ): RoastAiResponse {
 
         val request = RoastAiRequest(
-            context = context,
-            systemInstruction = systemInstruction,
-            userMessageOverride = userMessageOverride
-        )
-
-        return provider.generate(
-            request = request,
-            config = config
-        )
-    }
-
-    fun generateRealtimeCoaching(
-        context: RoastAiContext
-    ): RoastAiServiceResult {
-
-        return generate(
+            provider = providerType,
+            apiKey = apiKey,
+            model = model,
             context = context,
             systemInstruction = "You are a roast coaching assistant. Stay within machine limits and physical realism."
         )
+
+        return generate(request)
     }
 
-    fun generateDiagnosis(
-        context: RoastAiContext
-    ): RoastAiServiceResult {
+    suspend fun generateDiagnosis(
+        context: RoastAiContext,
+        providerType: RoastAiProviderType = RoastAiProviderType.MOCK,
+        apiKey: String? = null,
+        model: String? = null
+    ): RoastAiResponse {
 
-        return generate(
+        val request = RoastAiRequest(
+            provider = providerType,
+            apiKey = apiKey,
+            model = model,
             context = context,
             systemInstruction = "You are a roast diagnosis assistant. Explain roast deviations and risks."
         )
+
+        return generate(request)
     }
 
-    fun generateStyleProposal(
-        context: RoastAiContext
-    ): RoastAiServiceResult {
+    suspend fun generateStyleProposal(
+        context: RoastAiContext,
+        providerType: RoastAiProviderType = RoastAiProviderType.MOCK,
+        apiKey: String? = null,
+        model: String? = null
+    ): RoastAiResponse {
 
-        return generate(
+        val request = RoastAiRequest(
+            provider = providerType,
+            apiKey = apiKey,
+            model = model,
             context = context,
             systemInstruction = "You are a roast style planner. Generate roasting style proposals."
         )
+
+        return generate(request)
     }
 
-    fun generateBrewRecommendation(
-        context: RoastAiContext
-    ): RoastAiServiceResult {
+    suspend fun generateBrewRecommendation(
+        context: RoastAiContext,
+        providerType: RoastAiProviderType = RoastAiProviderType.MOCK,
+        apiKey: String? = null,
+        model: String? = null
+    ): RoastAiResponse {
 
-        return generate(
+        val request = RoastAiRequest(
+            provider = providerType,
+            apiKey = apiKey,
+            model = model,
             context = context,
             systemInstruction = "You are a coffee brewing advisor."
         )
+
+        return generate(request)
     }
 
     fun summary(): String {
-
         return """
 Roast AI Service
 
-Provider
-${provider.type}
+Supported Providers
+- MOCK
+- REMOTE_API
 
-Model
-${config.modelName}
-
-Base URL
-${config.apiBaseUrl}
-
-Vision
-${if (config.enableVision) "Enabled" else "Disabled"}
-
-Audio
-${if (config.enableAudio) "Enabled" else "Disabled"}
+Current Note
+REMOTE_API is temporarily routed to MockRoastAiProvider until real provider wiring is finalized.
         """.trimIndent()
     }
 }
