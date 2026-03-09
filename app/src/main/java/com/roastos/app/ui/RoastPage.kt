@@ -1,10 +1,10 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.PlannerBaseline
 import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.TelemetrySourceMode
@@ -52,24 +52,14 @@ object RoastPage {
 
         val controlCard = UiKit.card(context)
         controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
+        controlCard.addView(UiKit.captionText(context, "Use simulator or machine mode to drive live roast state."))
 
-        val manualBtn = Button(context)
-        manualBtn.text = "Manual Mode"
-
-        val simBtn = Button(context)
-        simBtn.text = "Simulator Mode"
-
-        val simStep10 = Button(context)
-        simStep10.text = "Sim +10s"
-
-        val simStep30 = Button(context)
-        simStep30.text = "Sim +30s"
-
-        val simReset = Button(context)
-        simReset.text = "Reset Simulator"
-
-        val machineBtn = Button(context)
-        machineBtn.text = "Machine Mode"
+        val manualBtn = UiKit.secondaryButton(context, "Manual Mode")
+        val simBtn = UiKit.secondaryButton(context, "Simulator Mode")
+        val simStep10 = UiKit.primaryButton(context, "Sim +10s")
+        val simStep30 = UiKit.primaryButton(context, "Sim +30s")
+        val simReset = UiKit.dangerButton(context, "Reset Simulator")
+        val machineBtn = UiKit.secondaryButton(context, "Machine Mode")
 
         controlCard.addView(manualBtn)
         controlCard.addView(simBtn)
@@ -223,7 +213,7 @@ Label
 ${baseline.label}
 
 Match Grade
-${match?.grade?.name ?: "Unavailable"}
+${formatBaselineMatch(match?.grade?.name)}
 
 Turning
 ${baseline.turningSec?.toString()?.plus("s") ?: "-"}
@@ -240,7 +230,7 @@ ${baseline.dropSec?.toString()?.plus("s") ?: "-"}
     }
 
     private fun buildBaselineReferenceText(
-        baseline: com.roastos.app.PlannerBaseline?,
+        baseline: PlannerBaseline?,
         elapsedSec: Int
     ): String {
         baseline ?: return "No baseline active"
@@ -256,6 +246,15 @@ ${baseline.dropSec?.toString()?.plus("s") ?: "-"}
                 "Working toward Drop anchor"
             else ->
                 "Past or near final baseline anchors"
+        }
+    }
+
+    private fun formatBaselineMatch(raw: String?): String {
+        return when (raw) {
+            "EXACT_MATCH" -> "Exact Match"
+            "SIMILAR_MATCH" -> "Similar Match"
+            "REFERENCE_ONLY" -> "Reference Only"
+            else -> "-"
         }
     }
 }
