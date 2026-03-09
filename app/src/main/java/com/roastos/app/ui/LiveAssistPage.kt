@@ -7,83 +7,86 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
-import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.TelemetrySourceMode
 
 object LiveAssistPage {
 
-    private var simulatorElapsed = 0
+    private var simulatorElapsedSec = 0
 
     fun show(context: Context, container: LinearLayout) {
+
         container.removeAllViews()
 
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "LIVE ASSIST"))
-        root.addView(
-            UiKit.pageSubtitle(
-                context,
-                "Live driving assist powered by MachineTelemetryEngine and RoastLiveAssistEngine"
-            )
-        )
+        root.addView(UiKit.pageSubtitle(context, "Real-time telemetry and roast assist"))
         root.addView(UiKit.spacer(context))
 
         val telemetryCard = UiKit.card(context)
-        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
+        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY"))
+
         val telemetryBody = UiKit.bodyText(context, "")
-        telemetryCard.addView(telemetryBody)
-        root.addView(telemetryCard)
-        root.addView(UiKit.spacer(context))
-
-        val assistCard = UiKit.card(context)
-        assistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
-        val assistBody = UiKit.bodyText(context, "")
-        assistCard.addView(assistBody)
-        root.addView(assistCard)
-        root.addView(UiKit.spacer(context))
-
-        val controlCard = UiKit.card(context)
-        controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
 
         val manualBtn = Button(context)
         manualBtn.text = "Manual Mode"
 
-        val simBtn = Button(context)
-        simBtn.text = "Simulator Mode"
-
-        val simStep10 = Button(context)
-        simStep10.text = "Sim +10s"
-
-        val simStep30 = Button(context)
-        simStep30.text = "Sim +30s"
-
-        val simReset = Button(context)
-        simReset.text = "Reset Simulator"
+        val simulatorBtn = Button(context)
+        simulatorBtn.text = "Simulator Mode"
 
         val machineBtn = Button(context)
         machineBtn.text = "Machine Mode"
 
-        controlCard.addView(manualBtn)
-        controlCard.addView(simBtn)
-        controlCard.addView(simStep10)
-        controlCard.addView(simStep30)
-        controlCard.addView(simReset)
-        controlCard.addView(machineBtn)
+        telemetryCard.addView(manualBtn)
+        telemetryCard.addView(simulatorBtn)
+        telemetryCard.addView(machineBtn)
+        telemetryCard.addView(telemetryBody)
 
-        root.addView(controlCard)
+        root.addView(telemetryCard)
         root.addView(UiKit.spacer(context))
 
-        attachLiveInputPanel(
-            context = context,
-            parent = root,
-            onDataChanged = {}
-        )
-        root.addView(UiKit.spacer(context))
+        val inputCard = UiKit.card(context)
+        inputCard.addView(UiKit.cardTitle(context, "MANUAL INPUT"))
+
+        val btInput = decimalInput(context, "BT ℃", "200")
+        val rorInput = decimalInput(context, "RoR ℃/s", "0.15")
+        val powerInput = intInput(context, "Power W", "600")
+        val airflowInput = intInput(context, "Airflow Pa", "10")
+        val drumInput = intInput(context, "Drum RPM", "60")
+        val elapsedInput = intInput(context, "Elapsed Sec", "0")
+
+        val pushBtn = Button(context)
+        pushBtn.text = "Push Frame"
+
+        val sim10 = Button(context)
+        sim10.text = "Simulator +10s"
+
+        val sim30 = Button(context)
+        sim30.text = "Simulator +30s"
+
+        val simReset = Button(context)
+        simReset.text = "Reset Simulator"
+
+        val refreshBtn = Button(context)
+        refreshBtn.text = "Refresh"
+
+        inputCard.addView(btInput)
+        inputCard.addView(rorInput)
+        inputCard.addView(powerInput)
+        inputCard.addView(airflowInput)
+        inputCard.addView(drumInput)
+        inputCard.addView(elapsedInput)
+        inputCard.addView(pushBtn)
+        inputCard.addView(sim10)
+        inputCard.addView(sim30)
+        inputCard.addView(simReset)
+        inputCard.addView(refreshBtn)
+
+        root.addView(inputCard)
 
         fun refresh() {
             telemetryBody.text = MachineTelemetryEngine.summary()
-            assistBody.text = buildLiveAssist()
         }
 
         manualBtn.setOnClickListener {
@@ -91,28 +94,7 @@ object LiveAssistPage {
             refresh()
         }
 
-        simBtn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            refresh()
-        }
-
-        simStep10.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 10
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refresh()
-        }
-
-        simStep30.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 30
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refresh()
-        }
-
-        simReset.setOnClickListener {
-            simulatorElapsed = 0
-            MachineTelemetryEngine.reset()
+        simulatorBtn.setOnClickListener {
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
             refresh()
         }
@@ -122,124 +104,55 @@ object LiveAssistPage {
             refresh()
         }
 
+        pushBtn.setOnClickListener {
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+
+            MachineTelemetryEngine.pushManualFrame(
+                bt = btInput.text.toString().toDoubleOrNull() ?: 0.0,
+                et = null,
+                ror = (rorInput.text.toString().toDoubleOrNull()?.times(60.0)) ?: 0.0,
+                powerW = powerInput.text.toString().toIntOrNull() ?: 600,
+                airflowPa = airflowInput.text.toString().toIntOrNull() ?: 10,
+                drumRpm = drumInput.text.toString().toIntOrNull() ?: 60,
+                elapsedSec = elapsedInput.text.toString().toIntOrNull() ?: 0,
+                machineStateLabel = "Roasting",
+                environmentTemp = 25.0,
+                environmentHumidity = 50.0
+            )
+
+            refresh()
+        }
+
+        sim10.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 10
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refresh()
+        }
+
+        sim30.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 30
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refresh()
+        }
+
+        simReset.setOnClickListener {
+            simulatorElapsedSec = 0
+            MachineTelemetryEngine.reset()
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refresh()
+        }
+
+        refreshBtn.setOnClickListener {
+            refresh()
+        }
+
         refresh()
 
         scroll.addView(root)
         container.addView(scroll)
-    }
-
-    fun buildLiveAssist(): String {
-        val telemetry = MachineTelemetryEngine.currentState()
-        val assist = RoastLiveAssistEngine.buildFromTelemetry()
-
-        val bt = telemetry.liveBtC?.let { "%.1f".format(it) + "℃" } ?: "-"
-        val et = telemetry.liveEtC?.let { "%.1f".format(it) + "℃" } ?: "-"
-        val ror = telemetry.liveRorCPerMin?.let { "%.1f".format(it) + "℃/min" } ?: "-"
-        val elapsed = "${telemetry.liveElapsedSec}s"
-
-        return """
-${assist.summary}
-
-LIVE INPUT SNAPSHOT
-BT
-$bt
-
-ET
-$et
-
-ROR
-$ror
-
-Elapsed
-$elapsed
-
-Machine State
-${telemetry.machineState}
-
-Source Mode
-${telemetry.mode}
-        """.trimIndent()
-    }
-
-    fun attachLiveInputPanel(
-        context: Context,
-        parent: LinearLayout,
-        onDataChanged: () -> Unit
-    ) {
-        val inputCard = UiKit.card(context)
-        inputCard.addView(UiKit.cardTitle(context, "MANUAL TELEMETRY INPUT"))
-
-        val btInput = decimalInput(context, "BT ℃", "")
-        val etInput = decimalInput(context, "ET ℃", "")
-        val rorInput = decimalInput(context, "ROR ℃/min", "")
-        val powerInput = intInput(context, "Power W", "540")
-        val airInput = intInput(context, "Airflow Pa", "10")
-        val drumInput = intInput(context, "Drum RPM", "60")
-        val elapsedInput = intInput(context, "Elapsed Sec", "0")
-
-        val turningInput = intInput(context, "Turning Sec", "")
-        val yellowInput = intInput(context, "Yellow Sec", "")
-        val fcInput = intInput(context, "FC Sec", "")
-        val dropInput = intInput(context, "Drop Sec", "")
-
-        val pushBtn = Button(context)
-        pushBtn.text = "Push Manual Frame"
-
-        val statusBody = UiKit.bodyText(context, "")
-
-        inputCard.addView(btInput)
-        inputCard.addView(etInput)
-        inputCard.addView(rorInput)
-        inputCard.addView(powerInput)
-        inputCard.addView(airInput)
-        inputCard.addView(drumInput)
-        inputCard.addView(elapsedInput)
-        inputCard.addView(turningInput)
-        inputCard.addView(yellowInput)
-        inputCard.addView(fcInput)
-        inputCard.addView(dropInput)
-        inputCard.addView(pushBtn)
-        inputCard.addView(statusBody)
-
-        pushBtn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
-
-            MachineTelemetryEngine.pushManualFrame(
-                btC = btInput.text.toString().toDoubleOrNull(),
-                etC = etInput.text.toString().toDoubleOrNull(),
-                rorCPerMin = rorInput.text.toString().toDoubleOrNull(),
-                powerW = powerInput.text.toString().toIntOrNull(),
-                airflowPa = airInput.text.toString().toIntOrNull(),
-                drumRpm = drumInput.text.toString().toIntOrNull(),
-                elapsedSec = elapsedInput.text.toString().toIntOrNull(),
-                turningSec = turningInput.text.toString().toIntOrNull(),
-                yellowSec = yellowInput.text.toString().toIntOrNull(),
-                fcSec = fcInput.text.toString().toIntOrNull(),
-                dropSec = dropInput.text.toString().toIntOrNull(),
-                machineState = "Running"
-            )
-
-            val assist = RoastLiveAssistEngine.buildFromTelemetry()
-            statusBody.text = """
-Manual frame pushed
-
-PHASE
-${assist.phase}
-
-RISK
-${assist.risk}
-
-ACTION NOW
-${assist.actionNow}
-
-NEXT WATCHPOINT
-${assist.nextWatchpoint}
-            """.trimIndent()
-
-            onDataChanged()
-        }
-
-        parent.addView(inputCard)
     }
 
     private fun decimalInput(
@@ -247,12 +160,14 @@ ${assist.nextWatchpoint}
         hint: String,
         defaultText: String
     ): EditText {
+
         val input = EditText(context)
         input.hint = hint
         input.inputType =
             InputType.TYPE_CLASS_NUMBER or
-                InputType.TYPE_NUMBER_FLAG_DECIMAL or
-                InputType.TYPE_NUMBER_FLAG_SIGNED
+            InputType.TYPE_NUMBER_FLAG_DECIMAL or
+            InputType.TYPE_NUMBER_FLAG_SIGNED
+
         input.setText(defaultText)
         return input
     }
@@ -262,11 +177,13 @@ ${assist.nextWatchpoint}
         hint: String,
         defaultText: String
     ): EditText {
+
         val input = EditText(context)
         input.hint = hint
         input.inputType =
             InputType.TYPE_CLASS_NUMBER or
-                InputType.TYPE_NUMBER_FLAG_SIGNED
+            InputType.TYPE_NUMBER_FLAG_SIGNED
+
         input.setText(defaultText)
         return input
     }
