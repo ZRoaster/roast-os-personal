@@ -23,7 +23,7 @@ object DashboardPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "System overview for telemetry, baseline, preheat, history, profile, and unified correction"
+                "System overview with quick navigation for telemetry, baseline, preheat, roast, correction, history, and profile"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -34,49 +34,92 @@ object DashboardPage {
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh Dashboard"
 
+        val goPlannerBtn = Button(context)
+        goPlannerBtn.text = "Go Planner"
+
+        val goPreheatBtn = Button(context)
+        goPreheatBtn.text = "Go Preheat"
+
+        val goRoastBtn = Button(context)
+        goRoastBtn.text = "Go Roast"
+
+        val goCorrectionBtn = Button(context)
+        goCorrectionBtn.text = "Go Correction"
+
+        val goHistoryBtn = Button(context)
+        goHistoryBtn.text = "Go History"
+
+        val goProfileBtn = Button(context)
+        goProfileBtn.text = "Go Profile"
+
         actionCard.addView(refreshBtn)
+        actionCard.addView(goPlannerBtn)
+        actionCard.addView(goPreheatBtn)
+        actionCard.addView(goRoastBtn)
+        actionCard.addView(goCorrectionBtn)
+        actionCard.addView(goHistoryBtn)
+        actionCard.addView(goProfileBtn)
+
         root.addView(actionCard)
         root.addView(UiKit.spacer(context))
 
         val telemetryCard = UiKit.card(context)
         telemetryCard.addView(UiKit.cardTitle(context, "MACHINE TELEMETRY"))
         val telemetryBody = UiKit.bodyText(context, "")
+        val telemetryJumpBtn = Button(context)
+        telemetryJumpBtn.text = "Open Roast"
         telemetryCard.addView(telemetryBody)
+        telemetryCard.addView(telemetryJumpBtn)
         root.addView(telemetryCard)
         root.addView(UiKit.spacer(context))
 
         val baselineCard = UiKit.card(context)
         baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
         val baselineBody = UiKit.bodyText(context, "")
+        val baselineJumpBtn = Button(context)
+        baselineJumpBtn.text = "Open Planner"
         baselineCard.addView(baselineBody)
+        baselineCard.addView(baselineJumpBtn)
         root.addView(baselineCard)
         root.addView(UiKit.spacer(context))
 
         val preheatCard = UiKit.card(context)
         preheatCard.addView(UiKit.cardTitle(context, "PREHEAT TARGET"))
         val preheatBody = UiKit.bodyText(context, "")
+        val preheatJumpBtn = Button(context)
+        preheatJumpBtn.text = "Open Preheat"
         preheatCard.addView(preheatBody)
+        preheatCard.addView(preheatJumpBtn)
         root.addView(preheatCard)
         root.addView(UiKit.spacer(context))
 
         val historyCard = UiKit.card(context)
         historyCard.addView(UiKit.cardTitle(context, "LATEST HISTORY"))
         val historyBody = UiKit.bodyText(context, "")
+        val historyJumpBtn = Button(context)
+        historyJumpBtn.text = "Open History"
         historyCard.addView(historyBody)
+        historyCard.addView(historyJumpBtn)
         root.addView(historyCard)
         root.addView(UiKit.spacer(context))
 
         val profileCard = UiKit.card(context)
         profileCard.addView(UiKit.cardTitle(context, "LATEST PROFILE"))
         val profileBody = UiKit.bodyText(context, "")
+        val profileJumpBtn = Button(context)
+        profileJumpBtn.text = "Open Profile"
         profileCard.addView(profileBody)
+        profileCard.addView(profileJumpBtn)
         root.addView(profileCard)
         root.addView(UiKit.spacer(context))
 
         val correctionCard = UiKit.card(context)
         correctionCard.addView(UiKit.cardTitle(context, "LATEST UNIFIED CORRECTION"))
         val correctionBody = UiKit.bodyText(context, "")
+        val correctionJumpBtn = Button(context)
+        correctionJumpBtn.text = "Open Correction"
         correctionCard.addView(correctionBody)
+        correctionCard.addView(correctionJumpBtn)
         root.addView(correctionCard)
 
         fun buildBaselineText(): String {
@@ -241,9 +284,47 @@ Save a batch into history first
             correctionBody.text = buildLatestUnifiedCorrectionText()
         }
 
+        fun openPlanner() {
+            PlannerPage.show(context, container)
+        }
+
+        fun openPreheat() {
+            PreheatPage.show(context, container)
+        }
+
+        fun openRoast() {
+            RoastPage.show(context, container)
+        }
+
+        fun openCorrection() {
+            CorrectionPage.show(context, container)
+        }
+
+        fun openHistory() {
+            HistoryPage.show(context, container)
+        }
+
+        fun openProfile() {
+            ProfilePage.show(context, container)
+        }
+
         refreshBtn.setOnClickListener {
             refreshAll()
         }
+
+        goPlannerBtn.setOnClickListener { openPlanner() }
+        goPreheatBtn.setOnClickListener { openPreheat() }
+        goRoastBtn.setOnClickListener { openRoast() }
+        goCorrectionBtn.setOnClickListener { openCorrection() }
+        goHistoryBtn.setOnClickListener { openHistory() }
+        goProfileBtn.setOnClickListener { openProfile() }
+
+        telemetryJumpBtn.setOnClickListener { openRoast() }
+        baselineJumpBtn.setOnClickListener { openPlanner() }
+        preheatJumpBtn.setOnClickListener { openPreheat() }
+        historyJumpBtn.setOnClickListener { openHistory() }
+        profileJumpBtn.setOnClickListener { openProfile() }
+        correctionJumpBtn.setOnClickListener { openCorrection() }
 
         refreshAll()
 
