@@ -65,6 +65,8 @@ object PreheatPage {
         val currentTempInput = decimalInput(context, "Current Temp ℃", "205.0")
         val riseRateInput = decimalInput(context, "Rise Rate ℃/s", "0.18")
         val powerInput = intInput(context, "Current Power W", "540")
+        val airflowInput = intInput(context, "Current Airflow Pa", "10")
+        val drumInput = intInput(context, "Current Drum RPM", "60")
         val elapsedInput = intInput(context, "Elapsed Sec", "0")
         val holdElapsedInput = intInput(context, "Hold Elapsed Sec", "0")
         val ambientTempInput = decimalInput(context, "Ambient Temp ℃", "")
@@ -88,6 +90,8 @@ object PreheatPage {
         inputCard.addView(currentTempInput)
         inputCard.addView(riseRateInput)
         inputCard.addView(powerInput)
+        inputCard.addView(airflowInput)
+        inputCard.addView(drumInput)
         inputCard.addView(elapsedInput)
         inputCard.addView(holdElapsedInput)
         inputCard.addView(ambientTempInput)
@@ -134,9 +138,13 @@ object PreheatPage {
                 currentTempC = telemetry.liveBtC
                     ?: currentTempInput.text.toString().toDoubleOrNull()
                     ?: 0.0,
-                riseRateCPerSec = ((telemetry.liveRorCPerMin
-                    ?: (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0))
-                    ?: 0.0) / 60.0),
+                riseRateCPerSec = (
+                    (
+                        telemetry.liveRorCPerMin
+                            ?: (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0))
+                            ?: 0.0
+                    ) / 60.0
+                ),
                 currentPowerW = telemetry.livePowerW,
                 elapsedSec = telemetry.liveElapsedSec,
                 holdElapsedSec = holdElapsedInput.text.toString().toIntOrNull() ?: 0,
@@ -175,6 +183,8 @@ ${target.reason}
                 riseRateInput.setText("%.2f".format(telemetry.liveRorCPerMin / 60.0))
             }
             powerInput.setText(telemetry.livePowerW.toString())
+            airflowInput.setText(telemetry.liveAirflowPa.toString())
+            drumInput.setText(telemetry.liveDrumRpm.toString())
             elapsedInput.setText(telemetry.liveElapsedSec.toString())
         }
 
@@ -194,20 +204,23 @@ ${target.reason}
         }
 
         pushManualBtn.setOnClickListener {
+            val ambientTemp = currentAmbientTemp(
+                RoastPreheatAssistEngine.buildTargetFromCurrentState().targetTempC
+            )
+            val ambientRh = currentAmbientRh()
+
             MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
             MachineTelemetryEngine.pushManualFrame(
-                btC = currentTempInput.text.toString().toDoubleOrNull(),
-                etC = null,
-                rorCPerMin = (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0)),
-                powerW = powerInput.text.toString().toIntOrNull(),
-                airflowPa = null,
-                drumRpm = null,
-                elapsedSec = elapsedInput.text.toString().toIntOrNull(),
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                machineState = "Preheating"
+                bt = currentTempInput.text.toString().toDoubleOrNull() ?: 0.0,
+                et = null,
+                ror = (riseRateInput.text.toString().toDoubleOrNull()?.times(60.0)) ?: 0.0,
+                powerW = powerInput.text.toString().toIntOrNull() ?: 540,
+                airflowPa = airflowInput.text.toString().toIntOrNull() ?: 10,
+                drumRpm = drumInput.text.toString().toIntOrNull() ?: 60,
+                elapsedSec = elapsedInput.text.toString().toIntOrNull() ?: 0,
+                machineStateLabel = "Preheating",
+                environmentTemp = ambientTemp,
+                environmentHumidity = ambientRh
             )
             refreshAll()
         }
