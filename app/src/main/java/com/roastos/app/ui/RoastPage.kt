@@ -91,7 +91,7 @@ object RoastPage {
         anchorChainCard.addView(
             UiKit.captionText(
                 context,
-                "Yellow → FC → Drop anchor chain from the primary V3.4 prediction layer."
+                "Turning → Yellow → FC → Drop anchor chain from the primary V3.5 prediction layer."
             )
         )
         val anchorChainBody = UiKit.bodyText(context, "")
@@ -119,7 +119,7 @@ object RoastPage {
         forecastCard.addView(
             UiKit.captionText(
                 context,
-                "Primary forecast layer from V3.4. Focus here first during roast."
+                "Primary forecast layer from V3.5. Focus here first during roast."
             )
         )
         val forecastBody = UiKit.bodyText(context, "")
@@ -133,7 +133,7 @@ object RoastPage {
         predictionV3Card.addView(
             UiKit.captionText(
                 context,
-                "V3.4 uses smoothed BT, smoothed ROR, stabilized anchors, consistency constraints, baseline deltas, and confidence."
+                "V3.5 uses smoothed BT, smoothed ROR, predicted anchors, baseline deltas, and chain scoring."
             )
         )
         val predictionV3Body = UiKit.bodyText(context, "")
@@ -293,33 +293,47 @@ ${telemetry.mode}
     }
 
     private fun buildAnchorChain(prediction: RoastCurvePredictionV3): String {
-        val yellowText = formatPredictionTime(prediction.predictedYellowTimeSec)
-        val fcText = formatPredictionTime(prediction.predictedFcTimeSec)
-        val dropText = formatPredictionTime(prediction.predictedDropTimeSec)
-        val devText = prediction.predictedDevelopmentSec?.let { "%.0f".format(it) + "s" } ?: "-"
-        val dtrText = prediction.predictedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
+        val turningText = formatPredictionTime(prediction.predictedTurning)
+        val yellowText = formatPredictionTime(prediction.predictedYellow)
+        val fcText = formatPredictionTime(prediction.predictedFc)
+        val dropText = formatPredictionTime(prediction.predictedDrop)
+        val devText = prediction.predictedDevelopment?.let { "%.0f".format(it) + "s" } ?: "-"
+        val dtrText = prediction.predictedDtr?.let { "%.1f".format(it) + "%" } ?: "-"
+
+        val turningToYellowText = if (
+            prediction.predictedTurning != null &&
+            prediction.predictedYellow != null
+        ) {
+            val delta = prediction.predictedYellow - prediction.predictedTurning
+            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
+        } else {
+            "-"
+        }
 
         val yellowToFcText = if (
-            prediction.predictedYellowTimeSec != null &&
-            prediction.predictedFcTimeSec != null
+            prediction.predictedYellow != null &&
+            prediction.predictedFc != null
         ) {
-            val delta = prediction.predictedFcTimeSec - prediction.predictedYellowTimeSec
+            val delta = prediction.predictedFc - prediction.predictedYellow
             if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
         } else {
             "-"
         }
 
         val fcToDropText = if (
-            prediction.predictedFcTimeSec != null &&
-            prediction.predictedDropTimeSec != null
+            prediction.predictedFc != null &&
+            prediction.predictedDrop != null
         ) {
-            val delta = prediction.predictedDropTimeSec - prediction.predictedFcTimeSec
+            val delta = prediction.predictedDrop - prediction.predictedFc
             if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
         } else {
             "-"
         }
 
         return """
+Predicted Turning
+$turningText
+
 Predicted Yellow
 $yellowText
 
@@ -328,6 +342,9 @@ $fcText
 
 Predicted Drop
 $dropText
+
+Turning → Yellow
+$turningToYellowText
 
 Yellow → FC
 $yellowToFcText
@@ -345,14 +362,17 @@ $dtrText
 
     private fun buildBaselineDeltaChain(prediction: RoastCurvePredictionV3): String {
         return """
+Turning Δ
+${formatDelta(prediction.turningDelta)}
+
 Yellow Δ
-${formatDelta(prediction.baselineYellowDeltaSec)}
+${formatDelta(prediction.yellowDelta)}
 
 FC Δ
-${formatDelta(prediction.baselineFcDeltaSec)}
+${formatDelta(prediction.fcDelta)}
 
 Drop Δ
-${formatDelta(prediction.baselineDropDeltaSec)}
+${formatDelta(prediction.dropDelta)}
 
 Interpretation
 ${buildBaselineDeltaInterpretation(prediction)}
@@ -360,9 +380,10 @@ ${buildBaselineDeltaInterpretation(prediction)}
     }
 
     private fun buildBaselineDeltaInterpretation(prediction: RoastCurvePredictionV3): String {
-        val yellow = prediction.baselineYellowDeltaSec
-        val fc = prediction.baselineFcDeltaSec
-        val drop = prediction.baselineDropDeltaSec
+        val turning = prediction.turningDelta
+        val yellow = prediction.yellowDelta
+        val fc = prediction.fcDelta
+        val drop = prediction.dropDelta
 
         return when {
             fc != null && fc > 20.0 -> "FC is trending later than baseline"
@@ -371,18 +392,20 @@ ${buildBaselineDeltaInterpretation(prediction)}
             drop != null && drop < -25.0 -> "Drop is trending earlier than baseline"
             yellow != null && yellow > 18.0 -> "Yellow is trending later than baseline"
             yellow != null && yellow < -18.0 -> "Yellow is trending earlier than baseline"
+            turning != null && turning > 15.0 -> "Turning is trending later than baseline"
+            turning != null && turning < -15.0 -> "Turning is trending earlier than baseline"
             else -> "Anchor chain is relatively close to baseline"
         }
     }
 
     private fun buildForecastHeadline(prediction: RoastCurvePredictionV3): String {
-        val fcText = formatPredictionTime(prediction.predictedFcTimeSec)
-        val dropText = formatPredictionTime(prediction.predictedDropTimeSec)
-        val devText = prediction.predictedDevelopmentSec?.let {
+        val fcText = formatPredictionTime(prediction.predictedFc)
+        val dropText = formatPredictionTime(prediction.predictedDrop)
+        val devText = prediction.predictedDevelopment?.let {
             "%.0f".format(it) + "s"
         } ?: "-"
 
-        val dtrText = prediction.predictedDtrPercent?.let {
+        val dtrText = prediction.predictedDtr?.let {
             "%.1f".format(it) + "%"
         } ?: "-"
 
@@ -403,7 +426,10 @@ Phase
 ${prediction.phase}
 
 Trend
-${prediction.trend}
+${prediction.chainLabel}
+
+Chain Score
+${prediction.chainScore}
 
 Confidence
 ${prediction.confidence}
