@@ -1,20 +1,17 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.AppState
-import com.roastos.app.BatchSessionEngine
-import com.roastos.app.DecisionEngine
-import com.roastos.app.RoastEngine
-import com.roastos.app.RoastStateModel
-import com.roastos.app.RoastTimelineStore
+import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.PlannerBaselineStore
+import com.roastos.app.RoastCorrectionBridgeV2
+import com.roastos.app.RoastHistoryEngine
+import com.roastos.app.RoastPreheatAssistEngine
+import com.roastos.app.RoastProfileEngine
 
 object DashboardPage {
-
-    private const val DEFAULT_POWER_W = 540
-    private const val DEFAULT_AIRFLOW_PA = 10
-    private const val DEFAULT_DRUM_RPM = 60
 
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
@@ -22,165 +19,262 @@ object DashboardPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        root.addView(UiKit.pageTitle(context, "ROAST OS"))
-        root.addView(UiKit.pageSubtitle(context, "Main Control Dashboard"))
+        root.addView(UiKit.pageTitle(context, "ROAST OS DASHBOARD"))
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "System overview for telemetry, baseline, preheat, history, profile, and unified correction"
+            )
+        )
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "PLANNER BASELINE", buildPlannerCard()))
+        val actionCard = UiKit.card(context)
+        actionCard.addView(UiKit.cardTitle(context, "DASHBOARD ACTIONS"))
+
+        val refreshBtn = Button(context)
+        refreshBtn.text = "Refresh Dashboard"
+
+        actionCard.addView(refreshBtn)
+        root.addView(actionCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "BATCH SESSION", buildSessionCard()))
+        val telemetryCard = UiKit.card(context)
+        telemetryCard.addView(UiKit.cardTitle(context, "MACHINE TELEMETRY"))
+        val telemetryBody = UiKit.bodyText(context, "")
+        telemetryCard.addView(telemetryBody)
+        root.addView(telemetryCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "ROAST TIMELINE", buildTimelineCard()))
+        val baselineCard = UiKit.card(context)
+        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
+        val baselineBody = UiKit.bodyText(context, "")
+        baselineCard.addView(baselineBody)
+        root.addView(baselineCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "DECISION CENTER", buildDecisionCard()))
+        val preheatCard = UiKit.card(context)
+        preheatCard.addView(UiKit.cardTitle(context, "PREHEAT TARGET"))
+        val preheatBody = UiKit.bodyText(context, "")
+        preheatCard.addView(preheatBody)
+        root.addView(preheatCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(UiKit.buildCard(context, "ADAPTIVE CALIBRATION", buildCalibrationCard()))
+        val historyCard = UiKit.card(context)
+        historyCard.addView(UiKit.cardTitle(context, "LATEST HISTORY"))
+        val historyBody = UiKit.bodyText(context, "")
+        historyCard.addView(historyBody)
+        root.addView(historyCard)
+        root.addView(UiKit.spacer(context))
+
+        val profileCard = UiKit.card(context)
+        profileCard.addView(UiKit.cardTitle(context, "LATEST PROFILE"))
+        val profileBody = UiKit.bodyText(context, "")
+        profileCard.addView(profileBody)
+        root.addView(profileCard)
+        root.addView(UiKit.spacer(context))
+
+        val correctionCard = UiKit.card(context)
+        correctionCard.addView(UiKit.cardTitle(context, "LATEST UNIFIED CORRECTION"))
+        val correctionBody = UiKit.bodyText(context, "")
+        correctionCard.addView(correctionBody)
+        root.addView(correctionCard)
+
+        fun buildBaselineText(): String {
+            val baseline = PlannerBaselineStore.current()
+                ?: return """
+Status
+No active planner baseline
+
+Next Step
+Apply a profile suggestion or capture a planner result as baseline
+                """.trimIndent()
+
+            val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+
+            return """
+Source
+${baseline.source}
+
+Label
+${baseline.label}
+
+Turning
+${baseline.turningSec?.toString()?.plus("s") ?: "-"}
+
+Yellow
+${baseline.yellowSec?.toString()?.plus("s") ?: "-"}
+
+FC
+${baseline.fcSec?.toString()?.plus("s") ?: "-"}
+
+Drop
+${baseline.dropSec?.toString()?.plus("s") ?: "-"}
+
+Dev
+${baseline.devSec?.let { "${it}s" } ?: "-"}
+
+DTR
+${baseline.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+
+Match Grade
+${formatBaselineMatch(match?.grade?.name)}
+
+Match Score
+${match?.score?.toString() ?: "-"}
+            """.trimIndent()
+        }
+
+        fun buildPreheatText(): String {
+            val target = RoastPreheatAssistEngine.buildTargetFromCurrentState()
+
+            return """
+Target
+${"%.1f".format(target.targetTempC)}℃
+
+Window
+${"%.1f".format(target.windowLowC)}–${"%.1f".format(target.windowHighC)}℃
+
+Hold
+${target.holdSec}s
+
+Intent
+${target.intent}
+
+Reason
+${target.reason}
+            """.trimIndent()
+        }
+
+        fun buildLatestHistoryText(): String {
+            val latest = RoastHistoryEngine.latest()
+                ?: return """
+Status
+No roast history yet
+
+Next Step
+Finish a batch and save it into history
+                """.trimIndent()
+
+            return """
+Batch ID
+${latest.batchId}
+
+Created
+${latest.createdAtMillis}
+
+Status
+${latest.batchStatus}
+
+Process
+${latest.process.ifBlank { "-" }}
+
+Replayability
+${buildReplayability(latest.actualPreFcRor)}
+
+Risk
+${buildRisk(latest.actualPreFcRor)}
+
+Evaluation
+${if (latest.evaluation != null) "Saved" else "Not saved"}
+
+Baseline
+${latest.baselineLabel ?: "Not recorded"}
+
+Baseline Match
+${formatBaselineMatch(latest.baselineMatchGrade)}
+            """.trimIndent()
+        }
+
+        fun buildLatestProfileText(): String {
+            val latest = RoastProfileEngine.latest()
+                ?: return """
+Status
+No roast profile yet
+
+Next Step
+Open a batch detail page and save a good batch as Profile
+                """.trimIndent()
+
+            return """
+Profile Name
+${latest.name}
+
+Profile ID
+${latest.profileId}
+
+Source Batch
+${latest.sourceBatchId}
+
+Replayability
+${latest.replayability}
+
+Risk
+${latest.risk}
+
+Evaluation
+${if (latest.evaluationSaved) "Saved" else "Not saved"}
+
+Process
+${latest.process.ifBlank { "-" }}
+            """.trimIndent()
+        }
+
+        fun buildLatestUnifiedCorrectionText(): String {
+            val latest = RoastHistoryEngine.latest()
+                ?: return """
+Status
+No roast history yet
+
+Next Step
+Save a batch into history first
+                """.trimIndent()
+
+            return RoastCorrectionBridgeV2.buildFromBatch(latest.batchId).summary
+        }
+
+        fun refreshAll() {
+            telemetryBody.text = MachineTelemetryEngine.summary()
+            baselineBody.text = buildBaselineText()
+            preheatBody.text = buildPreheatText()
+            historyBody.text = buildLatestHistoryText()
+            profileBody.text = buildLatestProfileText()
+            correctionBody.text = buildLatestUnifiedCorrectionText()
+        }
+
+        refreshBtn.setOnClickListener {
+            refreshAll()
+        }
+
+        refreshAll()
 
         scroll.addView(root)
         container.addView(scroll)
     }
 
-    private fun buildPlannerCard(): String {
-        val planner = AppState.lastPlannerResult ?: return "No planner result available"
-        val plannerInput = AppState.lastPlannerInput ?: return "No planner input available"
-
-        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-        val predYellow = planner.h2Sec.toInt()
-        val predFc = planner.fcPredSec.toInt()
-        val predDrop = planner.dropSec.toInt()
-
-        return """
-Process
-${plannerInput.process}
-
-Bean
-Density   ${"%.1f".format(plannerInput.density)}
-Moisture  ${"%.1f".format(plannerInput.moisture)}
-aw        ${"%.2f".format(plannerInput.aw)}
-
-Environment
-Temp      ${"%.1f".format(plannerInput.envTemp)}℃
-RH        ${"%.1f".format(plannerInput.envRH)}%
-
-Predicted Anchors
-Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC        ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
-        """.trimIndent()
+    private fun buildReplayability(ror: Double?): String {
+        val value = ror ?: return "Medium"
+        return when {
+            value in 8.0..9.5 -> "High"
+            value in 7.0..10.8 -> "Medium"
+            else -> "Low"
+        }
     }
 
-    private fun buildSessionCard(): String {
-        return BatchSessionEngine.summary()
+    private fun buildRisk(ror: Double?): String {
+        val value = ror ?: return "Minor"
+        return when {
+            value >= 10.8 || value <= 7.0 -> "High"
+            value >= 9.5 || value <= 8.0 -> "Medium"
+            else -> "Low"
+        }
     }
 
-    private fun buildTimelineCard(): String {
-        val tl = RoastTimelineStore.current
-
-        return """
-Predicted
-Turning   ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-Actual
-Turning   ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-Current
-Phase     ${tl.currentPhase}
-ROR       ${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
-Dev       ${tl.devSec?.toString() ?: "-"}
-DTR       ${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
-        """.trimIndent()
-    }
-
-    private fun buildDecisionCard(): String {
-        val planner = AppState.lastPlannerResult ?: return "No planner result available"
-        val plannerInput = AppState.lastPlannerInput ?: return "No planner input available"
-
-        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-        val predYellow = planner.h2Sec.toInt()
-        val predFc = planner.fcPredSec.toInt()
-        val predDrop = planner.dropSec.toInt()
-
-        val decision = DecisionEngine.decide(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop,
-            actualTurning = AppState.liveActualTurningSec,
-            actualYellow = AppState.liveActualYellowSec,
-            actualFc = AppState.liveActualFcSec,
-            actualDrop = AppState.liveActualDropSec,
-            currentRor = AppState.liveActualPreFcRor,
-            envTemp = plannerInput.envTemp,
-            humidity = plannerInput.envRH,
-            pressureKpa = 1013.0,
-            density = plannerInput.density,
-            moisture = plannerInput.moisture,
-            aw = plannerInput.aw,
-            heatLevelW = if (RoastStateModel.control.powerW > 0) RoastStateModel.control.powerW else DEFAULT_POWER_W,
-            airflowPa = if (RoastStateModel.control.airflowPa > 0) RoastStateModel.control.airflowPa else DEFAULT_AIRFLOW_PA,
-            drumRpm = if (RoastStateModel.control.drumRpm > 0) RoastStateModel.control.drumRpm else DEFAULT_DRUM_RPM
-        )
-
-        return """
-Current Phase
-${decision.currentPhase}
-
-Action Now
-${decision.actionNow}
-
-Heat Command
-${decision.heatCommand}
-
-Air Command
-${decision.airCommand}
-
-Target Window
-${decision.targetWindow}
-
-Risk Level
-${decision.riskLevel}
-
-Reason
-${decision.reason}
-
-Physics / Energy
-${decision.physicsSummary}
-        """.trimIndent()
-    }
-
-    private fun buildCalibrationCard(): String {
-        val appCalibration = AppState.calibrationState
-        val modelCalibration = RoastStateModel.calibration
-
-        return """
-AppState
-FC Bias      ${"%.1f".format(appCalibration.fcBiasSec)}
-Drop Bias    ${"%.1f".format(appCalibration.dropBiasSec)}
-Heat Bias    ${"%.2f".format(appCalibration.heatResponseBias)}
-Air Bias     ${"%.2f".format(appCalibration.airResponseBias)}
-Bean Bias    ${"%.2f".format(appCalibration.beanLoadBias)}
-Learn Count  ${appCalibration.learningCount}
-
-RoastStateModel
-FC Bias      ${"%.1f".format(modelCalibration.fcBias)}
-Drop Bias    ${"%.1f".format(modelCalibration.dropBias)}
-ROR Bias     ${"%.1f".format(modelCalibration.rorBias)}
-Heat Bias    ${"%.2f".format(modelCalibration.heatBias)}
-Air Bias     ${"%.2f".format(modelCalibration.airBias)}
-Bean Bias    ${"%.2f".format(modelCalibration.beanBias)}
-Machine Resp ${"%.2f".format(modelCalibration.machineResponseFactor)}
-Learn Count  ${modelCalibration.learningCount}
-        """.trimIndent()
+    private fun formatBaselineMatch(raw: String?): String {
+        return when (raw) {
+            "EXACT_MATCH" -> "Exact Match"
+            "SIMILAR_MATCH" -> "Similar Match"
+            "REFERENCE_ONLY" -> "Reference Only"
+            else -> "-"
+        }
     }
 }
