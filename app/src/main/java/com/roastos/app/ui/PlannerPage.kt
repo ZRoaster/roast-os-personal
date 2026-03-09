@@ -25,7 +25,7 @@ object PlannerPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Planner with profile suggestion entry and real baseline apply"
+                "Planner with profile suggestion entry, baseline apply, and bean match grading"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -68,6 +68,14 @@ object PlannerPage {
         baselineCard.addView(baselineBody)
 
         root.addView(baselineCard)
+        root.addView(UiKit.spacer(context))
+
+        val matchCard = UiKit.card(context)
+        matchCard.addView(UiKit.cardTitle(context, "BASELINE MATCH"))
+        val matchBody = UiKit.bodyText(context, "")
+        matchCard.addView(matchBody)
+
+        root.addView(matchCard)
         root.addView(UiKit.spacer(context))
 
         val plannerViewCard = UiKit.card(context)
@@ -254,9 +262,23 @@ DTR       ${"%.1f".format(planner.dtrPercent)}%
             """.trimIndent()
         }
 
+        fun buildMatchText(): String {
+            val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+                ?: return """
+Status
+Unavailable
+
+Reason
+Need both current planner input and active planner baseline
+                """.trimIndent()
+
+            return match.summary
+        }
+
         fun refreshAll() {
             profileSuggestionBody.text = buildProfileSuggestionText()
             baselineBody.text = PlannerBaselineStore.summary()
+            matchBody.text = buildMatchText()
             plannerViewBody.text = buildPlannerViewText()
             plannerInputBody.text = buildPlannerInputText()
             plannerResultBody.text = buildRawPlannerResultText()
