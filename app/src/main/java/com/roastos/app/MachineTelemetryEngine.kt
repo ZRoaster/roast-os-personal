@@ -8,6 +8,7 @@ enum class TelemetrySourceMode {
     SIMULATOR,
     MACHINE
 }
+
 data class MachineTelemetryState(
     val mode: TelemetrySourceMode = TelemetrySourceMode.MANUAL,
     val isConnected: Boolean = false,
@@ -30,147 +31,10 @@ object MachineTelemetryEngine {
 
     private var state = MachineTelemetryState()
 
-    fun currentState(): MachineTelemetryState {
-        return state
-    }
-
-    fun setMode(mode: TelemetrySourceMode) {
-        state = state.copy(mode = mode)
-    }
-
-    fun connectMachine() {
-        state = state.copy(
-            mode = TelemetrySourceMode.MACHINE,
-            isConnected = true
-        )
-    }
-
-    fun disconnectMachine() {
-        state = state.copy(
-            isConnected = false,
-            mode = TelemetrySourceMode.MANUAL
-        )
-    }
-
-    fun reset() {
-        state = MachineTelemetryState(
-            mode = state.mode,
-            isConnected = state.isConnected
-        )
-    }
-
-    fun pushManualFrame(
-        btC: Double?,
-        etC: Double?,
-        rorCPerMin: Double?,
-        powerW: Int?,
-        airflowPa: Int?,
-        drumRpm: Int?,
-        elapsedSec: Int?,
-        turningSec: Int?,
-        yellowSec: Int?,
-        fcSec: Int?,
-        dropSec: Int?,
-        machineState: String = "Running"
-    ): MachineTelemetryFrame {
-        val frame = MachineTelemetryFrame(
-            btC = btC,
-            etC = etC,
-            rorCPerMin = rorCPerMin,
-            powerW = powerW,
-            airflowPa = airflowPa,
-            drumRpm = drumRpm,
-            elapsedSec = elapsedSec,
-            turningSec = turningSec,
-            yellowSec = yellowSec,
-            fcSec = fcSec,
-            dropSec = dropSec,
-            machineState = machineState,
-            sourceLabel = "manual"
-        )
-
-        acceptFrame(frame, TelemetrySourceMode.MANUAL)
-        return frame
-    }
-
-    fun pushMachineFrame(frame: MachineTelemetryFrame) {
-        acceptFrame(
-            frame = frame.copy(sourceLabel = "machine"),
-            sourceOverride = TelemetrySourceMode.MACHINE
-        )
-    }
-
-    fun buildSimulatorFrame(elapsedSec: Int): MachineTelemetryFrame {
-        val t = max(0, elapsedSec)
-
-        val bt = when {
-            t <= 70 -> 200.0 - t * 1.45
-            t <= 240 -> 98.5 + (t - 70) * 0.30
-            t <= 480 -> 149.5 + (t - 240) * 0.19
-            else -> 195.1 + (t - 480) * 0.11
-        }
-
-        val et = bt + 18.0 + 2.0 * sin(t / 28.0)
-
-        val ror = when {
-            t <= 70 -> -8.0
-            t <= 180 -> 13.0
-            t <= 300 -> 11.0
-            t <= 420 -> 9.0
-            t <= 520 -> 7.8
-            else -> 6.2
-        }
-
-        val power = when {
-            t <= 60 -> 620
-            t <= 180 -> 600
-            t <= 300 -> 570
-            t <= 430 -> 540
-            t <= 520 -> 500
-            else -> 460
-        }
-
-        val air = when {
-            t <= 120 -> 8
-            t <= 260 -> 10
-            t <= 430 -> 12
-            else -> 14
-        }
-
-        val drum = 60
-
-        val turning = if (t >= 70) 70 else null
-        val yellow = if (t >= 240) 240 else null
-        val fc = if (t >= 480) 480 else null
-        val drop = if (t >= 570) 570 else null
-
-        return MachineTelemetryFrame(
-            btC = bt,
-            etC = et,
-            rorCPerMin = ror,
-            powerW = power,
-            airflowPa = air,
-            drumRpm = drum,
-            elapsedSec = t,
-            turningSec = turning,
-            yellowSec = yellow,
-            fcSec = fc,
-            dropSec = drop,
-            machineState = if (drop != null) "Finished" else "Running",
-            sourceLabel = "simulator"
-        )
-    }
-
-    fun pushSimulatorFrame(elapsedSec: Int): MachineTelemetryFrame {
-        val frame = buildSimulatorFrame(elapsedSec)
-        acceptFrame(frame, TelemetrySourceMode.SIMULATOR)
-        return frame
-    }
+    fun currentState(): MachineTelemetryState = state
 
     fun summary(): String {
         val s = state
-        val f = s.lastFrame
-
         return """
 Machine Telemetry
 
@@ -179,12 +43,6 @@ ${s.mode}
 
 Connected
 ${if (s.isConnected) "Yes" else "No"}
-
-Machine State
-${s.machineState}
-
-Elapsed
-${s.liveElapsedSec}s
 
 BT
 ${s.liveBtC?.let { "%.1f".format(it) + "℃" } ?: "-"}
@@ -198,88 +56,222 @@ ${s.liveRorCPerMin?.let { "%.1f".format(it) + "℃/min" } ?: "-"}
 Power
 ${s.livePowerW}W
 
-Air
+Airflow
 ${s.liveAirflowPa}Pa
 
 Drum
 ${s.liveDrumRpm}rpm
 
-Last Source
-${f?.sourceLabel ?: "-"}
+Elapsed
+${s.liveElapsedSec}s
+
+Machine State
+${s.machineState}
         """.trimIndent()
     }
 
-    private fun acceptFrame(
-        frame: MachineTelemetryFrame,
-        sourceOverride: TelemetrySourceMode
-    ) {
-        val now = System.currentTimeMillis()
+    fun setMode(mode: TelemetrySourceMode) {
+        state = state.copy(
+            mode = mode,
+            machineState = when (mode) {
+                TelemetrySourceMode.MANUAL -> "Manual"
+                TelemetrySourceMode.SIMULATOR -> "Simulator Ready"
+                TelemetrySourceMode.MACHINE -> "Machine Selected"
+            }
+        )
+    }
 
-        val nextState = state.copy(
-            mode = sourceOverride,
-            lastFrame = frame,
-            lastUpdateMillis = now,
-            liveBtC = frame.btC ?: state.liveBtC,
-            liveEtC = frame.etC ?: state.liveEtC,
-            liveRorCPerMin = frame.rorCPerMin ?: state.liveRorCPerMin,
-            livePowerW = frame.powerW ?: state.livePowerW,
-            liveAirflowPa = frame.airflowPa ?: state.liveAirflowPa,
-            liveDrumRpm = frame.drumRpm ?: state.liveDrumRpm,
-            liveElapsedSec = frame.elapsedSec ?: state.liveElapsedSec,
-            machineState = frame.machineState
+    fun reset() {
+        state = MachineTelemetryState()
+    }
+
+    fun connectMachine() {
+        state = state.copy(
+            mode = TelemetrySourceMode.MACHINE,
+            isConnected = true,
+            lastUpdateMillis = System.currentTimeMillis(),
+            machineState = "Connected"
+        )
+    }
+
+    fun disconnectMachine() {
+        state = state.copy(
+            isConnected = false,
+            lastUpdateMillis = System.currentTimeMillis(),
+            machineState = "Disconnected"
+        )
+    }
+
+    fun pushManualFrame(
+        bt: Double,
+        et: Double?,
+        ror: Double,
+        powerW: Int,
+        airflowPa: Int,
+        drumRpm: Int,
+        elapsedSec: Int,
+        machineStateLabel: String = "Manual Input",
+        environmentTemp: Double = 25.0,
+        environmentHumidity: Double = 50.0
+    ) {
+        val frame = MachineTelemetryFrame(
+            machineName = "Manual Input",
+            source = "MANUAL",
+            connectionState = TelemetryConnectionState.CONNECTED,
+            controlMode = TelemetryControlMode.READ_ONLY,
+            timestampMillis = System.currentTimeMillis(),
+            bt = bt,
+            et = et,
+            ror = ror,
+            powerW = powerW,
+            airflowPa = airflowPa,
+            drumRpm = drumRpm,
+            elapsedSec = elapsedSec,
+            environmentTemp = environmentTemp,
+            environmentHumidity = environmentHumidity,
+            machineStateLabel = machineStateLabel
         )
 
-        state = nextState
-
-        syncIntoAppState(nextState, frame)
-        syncIntoRoastStateModel(nextState, frame)
-        syncIntoTimeline(frame)
+        applyFrame(
+            mode = TelemetrySourceMode.MANUAL,
+            frame = frame
+        )
     }
 
-    private fun syncIntoAppState(
-        telemetry: MachineTelemetryState,
+    fun pushMachineFrame(
         frame: MachineTelemetryFrame
     ) {
-        AppState.liveActualTurningSec = frame.turningSec ?: AppState.liveActualTurningSec
-        AppState.liveActualYellowSec = frame.yellowSec ?: AppState.liveActualYellowSec
-        AppState.liveActualFcSec = frame.fcSec ?: AppState.liveActualFcSec
-        AppState.liveActualDropSec = frame.dropSec ?: AppState.liveActualDropSec
-        AppState.liveActualPreFcRor = telemetry.liveRorCPerMin ?: AppState.liveActualPreFcRor
+        applyFrame(
+            mode = TelemetrySourceMode.MACHINE,
+            frame = frame
+        )
     }
 
-    private fun syncIntoRoastStateModel(
-        telemetry: MachineTelemetryState,
-        frame: MachineTelemetryFrame
+    fun pushSimulatorFrame(
+        elapsedSec: Int
     ) {
-        val phase = when {
-            frame.dropSec != null -> "Finished"
-            frame.fcSec != null -> "Development"
-            frame.yellowSec != null -> "Maillard / Pre-FC"
-            frame.turningSec != null -> "Drying"
-            telemetry.machineState.equals("Running", ignoreCase = true) -> "Running"
-            else -> "Idle"
+        val bt = buildSimulatorBt(elapsedSec)
+        val et = buildSimulatorEt(elapsedSec, bt)
+        val ror = buildSimulatorRor(elapsedSec)
+
+        val powerW = when {
+            elapsedSec < 60 -> 1200
+            elapsedSec < 180 -> 980
+            elapsedSec < 300 -> 860
+            elapsedSec < 420 -> 760
+            elapsedSec < 540 -> 680
+            else -> 620
         }
 
-        RoastStateModel.syncLiveState(
-            phase = phase,
-            ror = telemetry.liveRorCPerMin ?: 0.0,
-            turningSec = frame.turningSec ?: AppState.liveActualTurningSec,
-            yellowSec = frame.yellowSec ?: AppState.liveActualYellowSec,
-            fcSec = frame.fcSec ?: AppState.liveActualFcSec,
-            dropSec = frame.dropSec ?: AppState.liveActualDropSec,
-            powerW = telemetry.livePowerW,
-            airflowPa = telemetry.liveAirflowPa,
-            drumRpm = telemetry.liveDrumRpm
+        val airflowPa = when {
+            elapsedSec < 90 -> 6
+            elapsedSec < 240 -> 8
+            elapsedSec < 420 -> 10
+            elapsedSec < 540 -> 12
+            else -> 14
+        }
+
+        val drumRpm = 60
+
+        val machineStateLabel = when {
+            elapsedSec < 60 -> "Charging"
+            elapsedSec < 240 -> "Drying"
+            elapsedSec < 420 -> "Maillard"
+            elapsedSec < 540 -> "Development"
+            else -> "Finish Window"
+        }
+
+        val frame = MachineTelemetryFrame(
+            machineName = MachineProfiles.HB_M2SE.name,
+            source = "HB_SIMULATOR",
+            connectionState = TelemetryConnectionState.CONNECTED,
+            controlMode = TelemetryControlMode.READ_ONLY,
+            timestampMillis = System.currentTimeMillis(),
+            bt = bt,
+            et = et,
+            ror = ror,
+            powerW = powerW,
+            airflowPa = airflowPa,
+            drumRpm = drumRpm,
+            elapsedSec = elapsedSec,
+            environmentTemp = 25.0,
+            environmentHumidity = 50.0,
+            machineStateLabel = machineStateLabel
+        )
+
+        applyFrame(
+            mode = TelemetrySourceMode.SIMULATOR,
+            frame = frame
         )
     }
 
-    private fun syncIntoTimeline(frame: MachineTelemetryFrame) {
-        RoastTimelineStore.syncActual(
-            turningSec = frame.turningSec ?: AppState.liveActualTurningSec,
-            yellowSec = frame.yellowSec ?: AppState.liveActualYellowSec,
-            fcSec = frame.fcSec ?: AppState.liveActualFcSec,
-            dropSec = frame.dropSec ?: AppState.liveActualDropSec,
-            ror = frame.rorCPerMin ?: AppState.liveActualPreFcRor
+    private fun applyFrame(
+        mode: TelemetrySourceMode,
+        frame: MachineTelemetryFrame
+    ) {
+        state = state.copy(
+            mode = mode,
+            isConnected = frame.connectionState == TelemetryConnectionState.CONNECTED,
+            lastFrame = frame,
+            lastUpdateMillis = frame.timestampMillis,
+
+            liveBtC = frame.bt,
+            liveEtC = frame.et,
+            liveRorCPerMin = frame.ror,
+
+            livePowerW = frame.powerW,
+            liveAirflowPa = frame.airflowPa,
+            liveDrumRpm = frame.drumRpm,
+
+            liveElapsedSec = frame.elapsedSec,
+            machineState = frame.machineStateLabel
         )
+    }
+
+    private fun buildSimulatorBt(
+        elapsedSec: Int
+    ): Double {
+        val t = elapsedSec.toDouble()
+
+        return when {
+            elapsedSec <= 0 -> 25.0
+            elapsedSec < 45 -> 25.0 + t * 0.55
+            elapsedSec < 180 -> 50.0 + (t - 45.0) * 0.42
+            elapsedSec < 360 -> 106.7 + (t - 180.0) * 0.24
+            elapsedSec < 540 -> 149.9 + (t - 360.0) * 0.15
+            else -> 176.9 + (t - 540.0) * 0.08
+        }
+    }
+
+    private fun buildSimulatorEt(
+        elapsedSec: Int,
+        bt: Double
+    ): Double {
+        val lift = when {
+            elapsedSec < 60 -> 85.0
+            elapsedSec < 180 -> 70.0
+            elapsedSec < 360 -> 55.0
+            elapsedSec < 540 -> 42.0
+            else -> 34.0
+        }
+
+        return bt + lift + sin(elapsedSec / 35.0) * 2.5
+    }
+
+    private fun buildSimulatorRor(
+        elapsedSec: Int
+    ): Double {
+        val base = when {
+            elapsedSec < 45 -> 22.0
+            elapsedSec < 120 -> 18.0
+            elapsedSec < 240 -> 13.0
+            elapsedSec < 360 -> 9.0
+            elapsedSec < 480 -> 6.0
+            elapsedSec < 600 -> 4.0
+            else -> 2.5
+        }
+
+        val wave = sin(elapsedSec / 28.0) * 0.8
+        return max(0.5, base + wave)
     }
 }
