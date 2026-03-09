@@ -8,13 +8,12 @@ class OpenAiProvider : RoastAiProvider {
 
         val ctx = request.context
 
-        val machine = ctx.machineName ?: "Unknown machine"
-        val bt = ctx.btC ?: 0.0
-        val ror = ctx.rorCPerMin ?: 0.0
-
+        val machine = ctx.machineProfile?.name ?: "Unknown machine"
+        val bt = ctx.machineState?.beanTemp ?: 0.0
+        val ror = ctx.machineState?.ror ?: 0.0
         val model = request.model ?: "gpt-default"
 
-        val message = """
+        val text = """
 OpenAI Provider (stub)
 
 Model
@@ -33,10 +32,9 @@ AI Suggestion
 Maintain RoR stability and avoid late-stage stall.
 """.trimIndent()
 
-        return RoastAiResponse(
-            message = message,
-            responseType = RoastAiResponseType.TEXT,
-            confidence = RoastAiConfidenceLevel.MEDIUM
+        return RoastAiResponses.textExplanation(
+            text = text,
+            reasoning = "OpenAI provider stub response"
         )
     }
 }
