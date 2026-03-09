@@ -10,6 +10,7 @@ data class RoastCurvePredictionV3(
     val predictedBt15: Double,
     val predictedBt30: Double,
     val predictedBt45: Double,
+    val predictedYellowTimeSec: Double?,
     val predictedFcTimeSec: Double?,
     val predictedDropTimeSec: Double?,
     val predictedDevelopmentSec: Double?,
@@ -30,7 +31,15 @@ object RoastCurveEngineV3 {
     private val history = mutableListOf<Sample>()
 
     private const val MAX_POINTS = 120
+
+    private const val YELLOW_TARGET_BT = 150.0
     private const val FC_TARGET_BT = 198.0
+
+    // Yellow 稳定化
+    private const val YELLOW_ACTIVE_BT_MIN = 120.0
+    private const val YELLOW_MIN_ROR = 3.0
+    private const val YELLOW_SMOOTHING_ALPHA = 0.20
+    private const val YELLOW_MAX_STEP_SEC = 14.0
 
     // FC 稳定化
     private const val FC_ACTIVE_BT_MIN = 170.0
@@ -45,11 +54,19 @@ object RoastCurveEngineV3 {
     private const val DEV_SMOOTHING_ALPHA = 0.25
     private const val DEV_MAX_STEP_SEC = 10.0
 
+    // 锚点一致性约束
+    private const val MIN_YELLOW_TO_FC_SEC = 90.0
+    private const val MAX_YELLOW_TO_FC_SEC = 330.0
+    private const val MIN_FC_TO_DROP_SEC = 45.0
+    private const val MAX_FC_TO_DROP_SEC = 140.0
+
+    private var yellowPredictionCacheSec: Double? = null
     private var fcPredictionCacheSec: Double? = null
     private var devPredictionCacheSec: Double? = null
 
     fun reset() {
         history.clear()
+        yellowPredictionCacheSec = null
         fcPredictionCacheSec = null
         devPredictionCacheSec = null
     }
@@ -77,20 +94,25 @@ object RoastCurveEngineV3 {
 
         val smoothedBt = weightedAverageBt(lastPoints(5))
         val smoothedRor = computeSmoothedRor()
+        val phase = detectPhase(smoothedBt)
+        val confidence = estimateConfidence()
 
         val predictedBt15 = smoothedBt + smoothedRor * (15.0 / 60.0)
         val predictedBt30 = smoothedBt + smoothedRor * (30.0 / 60.0)
         val predictedBt45 = smoothedBt + smoothedRor * (45.0 / 60.0)
 
-        val phase = detectPhase(smoothedBt)
-        val confidence = estimateConfidence()
+        val rawYellowTimeSec = predictRawYellowTimeSec(
+            currentBt = smoothedBt,
+            currentRor = smoothedRor,
+            confidence = confidence
+        )
+        val stabilizedYellowTimeSec = stabilizeYellowPrediction(rawYellowTimeSec)
 
         val rawFcTimeSec = predictRawFcTimeSec(
             currentBt = smoothedBt,
             currentRor = smoothedRor,
             confidence = confidence
         )
-
         val stabilizedFcTimeSec = stabilizeFcPrediction(rawFcTimeSec)
 
         val rawDevelopmentSec = predictRawDevelopmentSec(
@@ -99,24 +121,30 @@ object RoastCurveEngineV3 {
             phase = phase,
             confidence = confidence
         )
-
         val stabilizedDevelopmentSec = stabilizeDevelopmentPrediction(rawDevelopmentSec)
 
+        val constrainedAnchors = applyAnchorConsistency(
+            yellowSec = stabilizedYellowTimeSec,
+            fcSec = stabilizedFcTimeSec,
+            developmentSec = stabilizedDevelopmentSec
+        )
+
         val predictedDropTimeSec = when {
-            stabilizedFcTimeSec == null || stabilizedDevelopmentSec == null -> null
-            stabilizedFcTimeSec <= 0.0 -> stabilizedDevelopmentSec
-            else -> stabilizedFcTimeSec + stabilizedDevelopmentSec
+            constrainedAnchors.fcSec == null || constrainedAnchors.developmentSec == null -> null
+            constrainedAnchors.fcSec <= 0.0 -> constrainedAnchors.developmentSec
+            else -> constrainedAnchors.fcSec + constrainedAnchors.developmentSec
         }
 
         val predictedDtrPercent = when {
-            predictedDropTimeSec == null || stabilizedDevelopmentSec == null -> null
+            predictedDropTimeSec == null || constrainedAnchors.developmentSec == null -> null
             predictedDropTimeSec <= 0.0 -> null
-            else -> (stabilizedDevelopmentSec / predictedDropTimeSec) * 100.0
+            else -> (constrainedAnchors.developmentSec / predictedDropTimeSec) * 100.0
         }
 
         val trend = detectTrend(
             smoothedRor = smoothedRor,
-            predictedFcTimeSec = stabilizedFcTimeSec,
+            predictedYellowTimeSec = constrainedAnchors.yellowSec,
+            predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec
         )
 
@@ -126,9 +154,10 @@ object RoastCurveEngineV3 {
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
-            predictedFcTimeSec = stabilizedFcTimeSec,
+            predictedYellowTimeSec = constrainedAnchors.yellowSec,
+            predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec,
-            predictedDevelopmentSec = stabilizedDevelopmentSec,
+            predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
             phase = phase,
             trend = trend,
@@ -141,9 +170,10 @@ object RoastCurveEngineV3 {
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
-            predictedFcTimeSec = stabilizedFcTimeSec,
+            predictedYellowTimeSec = constrainedAnchors.yellowSec,
+            predictedFcTimeSec = constrainedAnchors.fcSec,
             predictedDropTimeSec = predictedDropTimeSec,
-            predictedDevelopmentSec = stabilizedDevelopmentSec,
+            predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
             phase = phase,
             trend = trend,
@@ -156,9 +186,15 @@ object RoastCurveEngineV3 {
         return predict().summary
     }
 
+    private data class ConstrainedAnchors(
+        val yellowSec: Double?,
+        val fcSec: Double?,
+        val developmentSec: Double?
+    )
+
     private fun emptyPrediction(reason: String): RoastCurvePredictionV3 {
         val summary = """
-Curve Prediction V3.2
+Curve Prediction V3.3
 
 Status
 $reason
@@ -177,6 +213,9 @@ BT +30s
 
 BT +45s
 0.0 ℃
+
+Predicted Yellow
+-
 
 Predicted FC
 -
@@ -206,6 +245,7 @@ Confidence
             predictedBt15 = 0.0,
             predictedBt30 = 0.0,
             predictedBt45 = 0.0,
+            predictedYellowTimeSec = null,
             predictedFcTimeSec = null,
             predictedDropTimeSec = null,
             predictedDevelopmentSec = null,
@@ -250,8 +290,7 @@ Confidence
             if (dtSec <= 0.0) continue
 
             val deltaBt = curr.bt - prev.bt
-            val ror = (deltaBt / dtSec) * 60.0
-            localRors.add(ror)
+            localRors.add((deltaBt / dtSec) * 60.0)
         }
 
         if (localRors.isEmpty()) return 0.0
@@ -268,6 +307,38 @@ Confidence
         return if (totalWeight > 0.0) weightedSum / totalWeight else 0.0
     }
 
+    private fun predictRawYellowTimeSec(
+        currentBt: Double,
+        currentRor: Double,
+        confidence: Int
+    ): Double? {
+        if (currentBt >= YELLOW_TARGET_BT) return 0.0
+        if (currentBt < YELLOW_ACTIVE_BT_MIN) return null
+        if (currentRor <= YELLOW_MIN_ROR) return null
+        if (confidence < 30) return null
+
+        val deltaBt = YELLOW_TARGET_BT - currentBt
+        val rawSec = (deltaBt / currentRor) * 60.0
+        return if (rawSec.isFinite() && rawSec >= 0.0) rawSec else null
+    }
+
+    private fun stabilizeYellowPrediction(rawYellowSec: Double?): Double? {
+        if (rawYellowSec == null) return yellowPredictionCacheSec
+
+        val cached = yellowPredictionCacheSec
+        if (cached == null) {
+            yellowPredictionCacheSec = rawYellowSec
+            return rawYellowSec
+        }
+
+        val delta = rawYellowSec - cached
+        val limitedTarget = cached + delta.coerceIn(-YELLOW_MAX_STEP_SEC, YELLOW_MAX_STEP_SEC)
+        val smoothed = cached + (limitedTarget - cached) * YELLOW_SMOOTHING_ALPHA
+
+        yellowPredictionCacheSec = max(0.0, smoothed)
+        return yellowPredictionCacheSec
+    }
+
     private fun predictRawFcTimeSec(
         currentBt: Double,
         currentRor: Double,
@@ -280,14 +351,11 @@ Confidence
 
         val deltaBt = FC_TARGET_BT - currentBt
         val rawSec = (deltaBt / currentRor) * 60.0
-
         return if (rawSec.isFinite() && rawSec >= 0.0) rawSec else null
     }
 
     private fun stabilizeFcPrediction(rawFcTimeSec: Double?): Double? {
-        if (rawFcTimeSec == null) {
-            return fcPredictionCacheSec
-        }
+        if (rawFcTimeSec == null) return fcPredictionCacheSec
 
         val cached = fcPredictionCacheSec
         if (cached == null) {
@@ -334,9 +402,7 @@ Confidence
     }
 
     private fun stabilizeDevelopmentPrediction(rawDevSec: Double?): Double? {
-        if (rawDevSec == null) {
-            return devPredictionCacheSec
-        }
+        if (rawDevSec == null) return devPredictionCacheSec
 
         val cached = devPredictionCacheSec
         if (cached == null) {
@@ -352,6 +418,43 @@ Confidence
         return devPredictionCacheSec
     }
 
+    private fun applyAnchorConsistency(
+        yellowSec: Double?,
+        fcSec: Double?,
+        developmentSec: Double?
+    ): ConstrainedAnchors {
+        var y = yellowSec
+        var fc = fcSec
+        var dev = developmentSec
+
+        if (y != null && fc != null) {
+            val yf = fc - y
+            when {
+                yf < MIN_YELLOW_TO_FC_SEC -> {
+                    fc = y + MIN_YELLOW_TO_FC_SEC
+                }
+                yf > MAX_YELLOW_TO_FC_SEC -> {
+                    fc = y + MAX_YELLOW_TO_FC_SEC
+                }
+            }
+        }
+
+        if (fc != null && dev != null) {
+            dev = dev.coerceIn(MIN_FC_TO_DROP_SEC, MAX_FC_TO_DROP_SEC)
+        }
+
+        if (y != null && fc == null && dev != null && y < 25.0) {
+            // Yellow 非常近但 FC 还没出来时，避免 development 过早主导整体
+            dev = max(dev, 65.0)
+        }
+
+        return ConstrainedAnchors(
+            yellowSec = y,
+            fcSec = fc,
+            developmentSec = dev
+        )
+    }
+
     private fun detectPhase(smoothedBt: Double): String {
         return when {
             smoothedBt < 105.0 -> "Charge / Turning"
@@ -364,6 +467,7 @@ Confidence
 
     private fun detectTrend(
         smoothedRor: Double,
+        predictedYellowTimeSec: Double?,
         predictedFcTimeSec: Double?,
         predictedDropTimeSec: Double?
     ): String {
@@ -372,6 +476,7 @@ Confidence
             smoothedRor < 5.5 -> "Low Momentum"
             smoothedRor > 16.0 -> "Runaway Heat"
             smoothedRor > 12.0 -> "Too Fast"
+            predictedYellowTimeSec != null && predictedYellowTimeSec < 20.0 -> "Approaching Yellow"
             predictedFcTimeSec != null && predictedFcTimeSec < 15.0 -> "FC Imminent"
             predictedFcTimeSec != null && predictedFcTimeSec < 35.0 -> "Approaching FC"
             predictedDropTimeSec != null && predictedDropTimeSec < 45.0 -> "Approaching Drop"
@@ -415,6 +520,7 @@ Confidence
         predictedBt15: Double,
         predictedBt30: Double,
         predictedBt45: Double,
+        predictedYellowTimeSec: Double?,
         predictedFcTimeSec: Double?,
         predictedDropTimeSec: Double?,
         predictedDevelopmentSec: Double?,
@@ -423,23 +529,14 @@ Confidence
         trend: String,
         confidence: Int
     ): String {
-        val fcText = when {
-            predictedFcTimeSec == null -> "-"
-            predictedFcTimeSec <= 0.0 -> "Now"
-            else -> "%.0f".format(predictedFcTimeSec) + "s"
-        }
-
-        val dropText = when {
-            predictedDropTimeSec == null -> "-"
-            predictedDropTimeSec <= 0.0 -> "Now"
-            else -> "%.0f".format(predictedDropTimeSec) + "s"
-        }
-
+        val yellowText = formatTime(predictedYellowTimeSec)
+        val fcText = formatTime(predictedFcTimeSec)
+        val dropText = formatTime(predictedDropTimeSec)
         val devText = predictedDevelopmentSec?.let { "%.0f".format(it) + "s" } ?: "-"
         val dtrText = predictedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
 
         return """
-Curve Prediction V3.2
+Curve Prediction V3.3
 
 Smoothed BT
 ${"%.1f".format(smoothedBt)} ℃
@@ -455,6 +552,9 @@ ${"%.1f".format(predictedBt30)} ℃
 
 BT +45s
 ${"%.1f".format(predictedBt45)} ℃
+
+Predicted Yellow
+$yellowText
 
 Predicted FC
 $fcText
@@ -477,5 +577,13 @@ $trend
 Confidence
 $confidence
         """.trimIndent()
+    }
+
+    private fun formatTime(value: Double?): String {
+        return when {
+            value == null -> "-"
+            value <= 0.0 -> "Now"
+            else -> "%.0f".format(value) + "s"
+        }
     }
 }
