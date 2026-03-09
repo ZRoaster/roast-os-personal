@@ -1,23 +1,17 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.MachineTelemetryEngine
-import com.roastos.app.PlannerBaselineStore
-import com.roastos.app.RoastCorrectionBridge
 import com.roastos.app.RoastCorrectionBridgeV2
 import com.roastos.app.RoastDeviationEngine
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastLiveAssistEngine
-import com.roastos.app.TelemetrySourceMode
 
 object CorrectionPage {
 
-    private var simulatorElapsed = 0
-
     fun show(context: Context, container: LinearLayout) {
+
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -27,200 +21,175 @@ object CorrectionPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Live assist, planner baseline, deviation diagnosis, current correction, and latest unified correction"
+                "Deviation diagnostics, live assist interpretation, and unified correction guidance"
             )
         )
+
         root.addView(UiKit.spacer(context))
 
-        val telemetryCard = UiKit.card(context)
-        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
-        val telemetryBody = UiKit.bodyText(context, "")
-        telemetryCard.addView(telemetryBody)
-        root.addView(telemetryCard)
+        val deviationCard = UiKit.card(context)
+        deviationCard.addView(UiKit.cardTitle(context, "DEVIATION DIAGNOSIS"))
+        val deviationBody = UiKit.bodyText(context, "")
+        deviationCard.addView(deviationBody)
+
+        val deviationRefresh = UiKit.primaryButton(context, "Refresh Diagnosis")
+        deviationCard.addView(deviationRefresh)
+
+        root.addView(deviationCard)
+
         root.addView(UiKit.spacer(context))
 
-        val baselineCard = UiKit.card(context)
-        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
-        val baselineBody = UiKit.bodyText(context, "")
-        baselineCard.addView(baselineBody)
-        root.addView(baselineCard)
+        val assistCard = UiKit.card(context)
+        assistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
+        val assistBody = UiKit.bodyText(context, "")
+        assistCard.addView(assistBody)
+
+        val assistRefresh = UiKit.secondaryButton(context, "Refresh Assist")
+        assistCard.addView(assistRefresh)
+
+        root.addView(assistCard)
+
         root.addView(UiKit.spacer(context))
 
-        val liveAssistCard = UiKit.card(context)
-        liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
-        val liveAssistBody = UiKit.bodyText(context, "")
-        liveAssistCard.addView(liveAssistBody)
-        root.addView(liveAssistCard)
-        root.addView(UiKit.spacer(context))
+        val correctionCard = UiKit.card(context)
+        correctionCard.addView(UiKit.cardTitle(context, "UNIFIED CORRECTION"))
+        val correctionBody = UiKit.bodyText(context, "")
+        correctionCard.addView(correctionBody)
 
-        val controlCard = UiKit.card(context)
-        controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
+        val correctionRefresh = UiKit.primaryButton(context, "Rebuild Correction")
+        correctionCard.addView(correctionRefresh)
 
-        val manualBtn = Button(context)
-        manualBtn.text = "Manual Mode"
+        root.addView(correctionCard)
 
-        val simBtn = Button(context)
-        simBtn.text = "Simulator Mode"
-
-        val simStep10Btn = Button(context)
-        simStep10Btn.text = "Sim +10s"
-
-        val simStep30Btn = Button(context)
-        simStep30Btn.text = "Sim +30s"
-
-        val simResetBtn = Button(context)
-        simResetBtn.text = "Reset Simulator"
-
-        val machineBtn = Button(context)
-        machineBtn.text = "Machine Mode"
-
-        val refreshBtn = Button(context)
-        refreshBtn.text = "Refresh Correction"
-
-        controlCard.addView(manualBtn)
-        controlCard.addView(simBtn)
-        controlCard.addView(simStep10Btn)
-        controlCard.addView(simStep30Btn)
-        controlCard.addView(simResetBtn)
-        controlCard.addView(machineBtn)
-        controlCard.addView(refreshBtn)
-
-        root.addView(controlCard)
-        root.addView(UiKit.spacer(context))
-
-        val diagnosisCard = UiKit.card(context)
-        diagnosisCard.addView(UiKit.cardTitle(context, "DEVIATION DIAGNOSIS"))
-        val diagnosisBody = UiKit.bodyText(context, "")
-        diagnosisCard.addView(diagnosisBody)
-        root.addView(diagnosisCard)
-        root.addView(UiKit.spacer(context))
-
-        val currentCorrectionCard = UiKit.card(context)
-        currentCorrectionCard.addView(UiKit.cardTitle(context, "CURRENT CORRECTION"))
-        val currentCorrectionBody = UiKit.bodyText(context, "")
-        currentCorrectionCard.addView(currentCorrectionBody)
-        root.addView(currentCorrectionCard)
-        root.addView(UiKit.spacer(context))
-
-        val unifiedCard = UiKit.card(context)
-        unifiedCard.addView(UiKit.cardTitle(context, "LATEST UNIFIED CORRECTION"))
-        val unifiedBody = UiKit.bodyText(context, "")
-        unifiedCard.addView(unifiedBody)
-        root.addView(unifiedCard)
         root.addView(UiKit.spacer(context))
 
         val historyCard = UiKit.card(context)
-        historyCard.addView(UiKit.cardTitle(context, "HISTORY SUMMARY"))
+        historyCard.addView(UiKit.cardTitle(context, "LATEST BATCH REFERENCE"))
         val historyBody = UiKit.bodyText(context, "")
         historyCard.addView(historyBody)
+
+        val openHistoryBtn = UiKit.secondaryButton(context, "Open History")
+        historyCard.addView(openHistoryBtn)
+
         root.addView(historyCard)
 
-        fun buildUnifiedCorrectionText(): String {
-            val latest = RoastHistoryEngine.latest()
-                ?: return """
-No saved roast history yet
+        fun buildDeviation(): String {
 
-Next Step
-Finish a batch and save it into history first
-                """.trimIndent()
-
-            val unified = RoastCorrectionBridgeV2.buildFromBatch(latest.batchId)
+            val result = RoastDeviationEngine.buildFromCurrentState()
 
             return """
-Latest Batch
-${latest.batchId}
+Deviation Summary
 
-${unified.summary}
+Phase
+${result.phase}
+
+Severity
+${result.severity}
+
+Diagnosis
+${result.diagnosis}
+
+Cause
+${result.cause}
+
+Risk
+${result.risk}
             """.trimIndent()
         }
 
-        fun buildBaselineText(): String {
-            val baseline = PlannerBaselineStore.current()
-                ?: return """
-Status
-No active planner baseline
+        fun buildAssist(): String {
 
-Next Step
-Apply profile suggestion or capture current planner result as baseline
-                """.trimIndent()
-
-            val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+            val assist = RoastLiveAssistEngine.buildFromTelemetry()
 
             return """
-Source
-${baseline.source}
+Live Interpretation
 
-Label
-${baseline.label}
+Phase
+${assist.phase}
 
-Match Grade
-${match?.grade?.name ?: "Unavailable"}
+Interpretation
+${assist.interpretation}
 
-Match Score
-${match?.score?.toString() ?: "-"}
+Action
+${assist.actionNow}
 
-Turning
-${baseline.turningSec?.toString()?.plus("s") ?: "-"}
+Heat Suggestion
+${assist.heatCommand}
 
-Yellow
-${baseline.yellowSec?.toString()?.plus("s") ?: "-"}
+Air Suggestion
+${assist.airCommand}
 
-FC
-${baseline.fcSec?.toString()?.plus("s") ?: "-"}
+Target Window
+${assist.targetWindow}
+            """.trimIndent()
+        }
 
-Drop
-${baseline.dropSec?.toString()?.plus("s") ?: "-"}
+        fun buildUnifiedCorrection(): String {
+
+            val latest = RoastHistoryEngine.latest()
+
+            if (latest == null) {
+                return """
+No roast history available
+
+Finish a roast batch and save it to generate unified correction guidance
+                """.trimIndent()
+            }
+
+            val correction = RoastCorrectionBridgeV2.buildFromBatch(latest.batchId)
+
+            return correction.summary
+        }
+
+        fun buildHistory(): String {
+
+            val latest = RoastHistoryEngine.latest()
+
+            if (latest == null) {
+                return """
+No history recorded
+
+Save a roast batch first
+                """.trimIndent()
+            }
+
+            return """
+Batch ID
+${latest.batchId}
+
+Status
+${latest.batchStatus}
+
+Process
+${latest.process}
+
+Replayability
+${latest.replayability}
+
+Risk
+${latest.risk}
+
+Evaluation
+${if (latest.evaluation != null) "Saved" else "Not saved"}
             """.trimIndent()
         }
 
         fun refreshAll() {
-            telemetryBody.text = MachineTelemetryEngine.summary()
-            baselineBody.text = buildBaselineText()
-            liveAssistBody.text = RoastLiveAssistEngine.buildFromTelemetry().summary
-            diagnosisBody.text = RoastDeviationEngine.diagnoseFromCurrentState().summary
-            currentCorrectionBody.text = RoastCorrectionBridge.buildFromCurrentState().summary
-            unifiedBody.text = buildUnifiedCorrectionText()
-            historyBody.text = RoastHistoryEngine.summary()
+
+            deviationBody.text = buildDeviation()
+            assistBody.text = buildAssist()
+            correctionBody.text = buildUnifiedCorrection()
+            historyBody.text = buildHistory()
         }
 
-        manualBtn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
-            refreshAll()
-        }
+        deviationRefresh.setOnClickListener { refreshAll() }
 
-        simBtn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            refreshAll()
-        }
+        assistRefresh.setOnClickListener { refreshAll() }
 
-        simStep10Btn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 10
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refreshAll()
-        }
+        correctionRefresh.setOnClickListener { refreshAll() }
 
-        simStep30Btn.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 30
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refreshAll()
-        }
-
-        simResetBtn.setOnClickListener {
-            simulatorElapsed = 0
-            MachineTelemetryEngine.reset()
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            refreshAll()
-        }
-
-        machineBtn.setOnClickListener {
-            MachineTelemetryEngine.connectMachine()
-            refreshAll()
-        }
-
-        refreshBtn.setOnClickListener {
-            refreshAll()
+        openHistoryBtn.setOnClickListener {
+            HistoryPage.show(context, container)
         }
 
         refreshAll()
