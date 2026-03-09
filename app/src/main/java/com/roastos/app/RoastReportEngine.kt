@@ -21,8 +21,27 @@ object RoastReportEngine {
         val session = BatchSessionEngine.current()
         val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
         val bridge = RoastCorrectionBridge.buildFromCurrentState()
+        val liveAssist = RoastLiveAssistEngine.buildFromTelemetry()
 
         val batchId = session?.batchId ?: "NO-BATCH"
+
+        val unifiedCorrectionText = if (RoastHistoryEngine.exists(batchId)) {
+            RoastCorrectionBridgeV2.buildFromBatch(batchId).summary
+        } else {
+            """
+Unified Correction
+
+Status
+Not available yet
+
+Reason
+Current batch is not saved in roast history yet
+
+Next Step
+Finish batch and save history, then unified correction can be generated from the saved batch
+            """.trimIndent()
+        }
+
         val title = "Roast Report"
 
         val predTurning = timeline.predicted.turningSec
@@ -176,6 +195,23 @@ ${deviationLine("Drop", predDrop, actualDrop)}
 Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
         """.trimIndent()
 
+        val liveAssistBody = """
+PHASE
+${liveAssist.phase}
+
+RISK
+${liveAssist.risk}
+
+ACTION NOW
+${liveAssist.actionNow}
+
+NEXT WATCHPOINT
+${liveAssist.nextWatchpoint}
+
+INTERPRETATION
+${liveAssist.interpretation}
+        """.trimIndent()
+
         val sections = listOf(
             RoastReportSection(
                 heading = "BATCH OVERVIEW",
@@ -198,12 +234,20 @@ Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
                 body = deviationBody
             ),
             RoastReportSection(
+                heading = "LIVE ASSIST SNAPSHOT",
+                body = liveAssistBody
+            ),
+            RoastReportSection(
                 heading = "DIAGNOSIS",
                 body = diagnosis.summary
             ),
             RoastReportSection(
                 heading = "NEXT-BATCH CORRECTION",
                 body = bridge.summary
+            ),
+            RoastReportSection(
+                heading = "UNIFIED CORRECTION",
+                body = unifiedCorrectionText
             )
         )
 
