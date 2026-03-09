@@ -17,30 +17,42 @@ data class MachineState(
 
 object MachineStateEngine {
 
-    fun buildState(): MachineState {
+    fun buildState(
 
-        val telemetry = MachineTelemetryEngine.currentTelemetry
+        powerW: Int,
+        airflowPa: Int,
+        drumRpm: Int,
+
+        beanTemp: Double,
+        ror: Double,
+
+        elapsedSec: Int,
+
+        environmentTemp: Double,
+        environmentHumidity: Double
+
+    ): MachineState {
 
         val profile = MachineProfiles.HB_M2SE
 
-        val power = telemetry.powerW
+        val power = powerW
             .coerceIn(profile.minPowerW, profile.maxPowerW)
 
-        val air = telemetry.airflowPa
+        val air = airflowPa
             .coerceIn(profile.minAirflowPa, profile.maxAirflowPa)
 
-        val rpm = telemetry.drumRpm
+        val rpm = drumRpm
             .coerceIn(profile.minDrumRpm, profile.maxDrumRpm)
 
         return MachineState(
             powerW = power,
             airflowPa = air,
             drumRpm = rpm,
-            beanTemp = telemetry.beanTemp,
-            ror = telemetry.ror,
-            elapsedSec = telemetry.elapsedSec,
-            environmentTemp = telemetry.environmentTemp,
-            environmentHumidity = telemetry.environmentHumidity
+            beanTemp = beanTemp,
+            ror = ror,
+            elapsedSec = elapsedSec,
+            environmentTemp = environmentTemp,
+            environmentHumidity = environmentHumidity
         )
     }
 }
