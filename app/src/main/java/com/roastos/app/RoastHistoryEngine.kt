@@ -40,7 +40,13 @@ data class RoastHistoryEntry(
     val reportText: String,
     val diagnosisText: String,
     val correctionText: String,
-    val evaluation: RoastEvaluation? = null
+    val evaluation: RoastEvaluation? = null,
+
+    val baselineSource: String? = null,
+    val baselineLabel: String? = null,
+    val baselineMatchGrade: String? = null,
+    val baselineSourceProfileId: String? = null,
+    val baselineSourceBatchId: String? = null
 )
 
 data class RoastHistorySaveResult(
@@ -91,6 +97,9 @@ object RoastHistoryEngine {
         val timeline = RoastTimelineStore.current
         val session = BatchSessionEngine.current()
 
+        val baseline = PlannerBaselineStore.current()
+        val baselineMatch = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+
         val batchId = session?.batchId ?: "NO-BATCH-${System.currentTimeMillis()}"
         val createdAtMillis = System.currentTimeMillis()
 
@@ -124,7 +133,13 @@ object RoastHistoryEngine {
             reportText = report.summary,
             diagnosisText = diagnosis.summary,
             correctionText = correction.summary,
-            evaluation = existing?.evaluation
+            evaluation = existing?.evaluation,
+
+            baselineSource = baseline?.source,
+            baselineLabel = baseline?.label,
+            baselineMatchGrade = baselineMatch?.grade?.name,
+            baselineSourceProfileId = baseline?.sourceProfileId,
+            baselineSourceBatchId = baseline?.sourceBatchId
         )
 
         val existingIndex = entries.indexOfFirst { it.batchId == batchId }
@@ -257,6 +272,9 @@ ${latest?.batchStatus ?: "-"}
 
 Latest Evaluation
 ${if (latest?.evaluation != null) "Saved" else "Not saved"}
+
+Latest Baseline
+${latest?.baselineLabel ?: "Not recorded"}
         """.trimIndent()
     }
 
