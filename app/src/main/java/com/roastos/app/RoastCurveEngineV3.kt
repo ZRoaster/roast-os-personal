@@ -1,6 +1,8 @@
 package com.roastos.app
 
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 data class RoastCurvePredictionV3(
     val smoothedBt: Double,
@@ -27,15 +29,29 @@ object RoastCurveEngineV3 {
     private const val MAX_POINTS = 120
     private const val FC_TARGET_BT = 198.0
 
+    // FC 稳定化参数
+    private const val FC_ACTIVE_BT_MIN = 170.0
+    private const val FC_MIN_ROR = 3.5
+    private const val FC_SMOOTHING_ALPHA = 0.22
+    private const val FC_MAX_STEP_SEC = 12.0
+
+    private var fcPredictionCacheSec: Double? = null
+
     fun reset() {
         history.clear()
+        fcPredictionCacheSec = null
     }
 
     fun record(
         bt: Double,
         timeMillis: Long
     ) {
-        history.add(Sample(timeMillis = timeMillis, bt = bt))
+        history.add(
+            Sample(
+                timeMillis = timeMillis,
+                bt = bt
+            )
+        )
 
         if (history.size > MAX_POINTS) {
             history.removeAt(0)
@@ -54,21 +70,29 @@ object RoastCurveEngineV3 {
         val predictedBt30 = smoothedBt + smoothedRor * (30.0 / 60.0)
         val predictedBt45 = smoothedBt + smoothedRor * (45.0 / 60.0)
 
-        val predictedFcTimeSec = predictFcTimeSec(
+        val phase = detectPhase(smoothedBt)
+        val confidence = estimateConfidence()
+
+        val rawFcTimeSec = predictRawFcTimeSec(
             currentBt = smoothedBt,
-            currentRor = smoothedRor
+            currentRor = smoothedRor,
+            confidence = confidence
         )
 
-        val phase = detectPhase(smoothedBt)
-        val trend = detectTrend(smoothedRor, predictedFcTimeSec)
-        val confidence = estimateConfidence()
+        val stabilizedFcTimeSec = stabilizeFcPrediction(rawFcTimeSec)
+
+        val trend = detectTrend(
+            smoothedRor = smoothedRor,
+            predictedFcTimeSec = stabilizedFcTimeSec
+        )
+
         val summary = buildSummary(
             smoothedBt = smoothedBt,
             smoothedRor = smoothedRor,
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
-            predictedFcTimeSec = predictedFcTimeSec,
+            predictedFcTimeSec = stabilizedFcTimeSec,
             phase = phase,
             trend = trend,
             confidence = confidence
@@ -80,7 +104,7 @@ object RoastCurveEngineV3 {
             predictedBt15 = predictedBt15,
             predictedBt30 = predictedBt30,
             predictedBt45 = predictedBt45,
-            predictedFcTimeSec = predictedFcTimeSec,
+            predictedFcTimeSec = stabilizedFcTimeSec,
             phase = phase,
             trend = trend,
             confidence = confidence,
@@ -94,7 +118,7 @@ object RoastCurveEngineV3 {
 
     private fun emptyPrediction(reason: String): RoastCurvePredictionV3 {
         val summary = """
-Curve Prediction V3
+Curve Prediction V3.1
 
 Status
 $reason
@@ -192,15 +216,40 @@ Confidence
         return if (totalWeight > 0.0) weightedSum / totalWeight else 0.0
     }
 
-    private fun predictFcTimeSec(
+    private fun predictRawFcTimeSec(
         currentBt: Double,
-        currentRor: Double
+        currentRor: Double,
+        confidence: Int
     ): Double? {
-        if (currentRor <= 0.1) return null
         if (currentBt >= FC_TARGET_BT) return 0.0
+        if (currentBt < FC_ACTIVE_BT_MIN) return null
+        if (currentRor <= FC_MIN_ROR) return null
+        if (confidence < 35) return null
 
         val deltaBt = FC_TARGET_BT - currentBt
-        return (deltaBt / currentRor) * 60.0
+        val rawSec = (deltaBt / currentRor) * 60.0
+
+        return if (rawSec.isFinite() && rawSec >= 0.0) rawSec else null
+    }
+
+    private fun stabilizeFcPrediction(rawFcTimeSec: Double?): Double? {
+        if (rawFcTimeSec == null) {
+            // 不立刻清空缓存，避免显示剧烈闪断；但缓存过久会自然被新数据覆盖
+            return fcPredictionCacheSec
+        }
+
+        val cached = fcPredictionCacheSec
+        if (cached == null) {
+            fcPredictionCacheSec = rawFcTimeSec
+            return rawFcTimeSec
+        }
+
+        val delta = rawFcTimeSec - cached
+        val limitedTarget = cached + delta.coerceIn(-FC_MAX_STEP_SEC, FC_MAX_STEP_SEC)
+        val smoothed = cached + (limitedTarget - cached) * FC_SMOOTHING_ALPHA
+
+        fcPredictionCacheSec = max(0.0, smoothed)
+        return fcPredictionCacheSec
     }
 
     private fun detectPhase(smoothedBt: Double): String {
@@ -222,8 +271,8 @@ Confidence
             smoothedRor < 5.5 -> "Low Momentum"
             smoothedRor > 16.0 -> "Runaway Heat"
             smoothedRor > 12.0 -> "Too Fast"
-            predictedFcTimeSec != null && predictedFcTimeSec < 20.0 -> "FC Very Close"
-            predictedFcTimeSec != null && predictedFcTimeSec < 45.0 -> "Approaching FC"
+            predictedFcTimeSec != null && predictedFcTimeSec < 15.0 -> "FC Imminent"
+            predictedFcTimeSec != null && predictedFcTimeSec < 35.0 -> "Approaching FC"
             else -> "Stable"
         }
     }
@@ -276,7 +325,7 @@ Confidence
         }
 
         return """
-Curve Prediction V3
+Curve Prediction V3.1
 
 Smoothed BT
 ${"%.1f".format(smoothedBt)} ℃
