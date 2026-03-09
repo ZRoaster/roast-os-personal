@@ -96,43 +96,79 @@ abstract class BaseMachineAdapter(
         return when (command.type) {
             MachineCommandType.SET_HEAT -> {
                 if (!capability.canSetHeat) {
-                    MachineCommandValidationResult(false, "Heat control is not supported")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Heat control is not supported"
+                    )
                 } else if (command.targetHeatW == null) {
-                    MachineCommandValidationResult(false, "Missing target heat")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Missing target heat"
+                    )
                 } else {
-                    MachineCommandValidationResult(true, "Heat command accepted")
+                    MachineCommandValidationResult(
+                        allowed = true,
+                        reason = "Heat command accepted"
+                    )
                 }
             }
 
             MachineCommandType.SET_AIRFLOW -> {
                 if (!capability.canSetAirflow) {
-                    MachineCommandValidationResult(false, "Airflow control is not supported")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Airflow control is not supported"
+                    )
                 } else if (command.targetAirflowPa == null) {
-                    MachineCommandValidationResult(false, "Missing target airflow")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Missing target airflow"
+                    )
                 } else {
-                    MachineCommandValidationResult(true, "Airflow command accepted")
+                    MachineCommandValidationResult(
+                        allowed = true,
+                        reason = "Airflow command accepted"
+                    )
                 }
             }
 
             MachineCommandType.SET_DRUM_SPEED -> {
                 if (!capability.canSetDrumSpeed) {
-                    MachineCommandValidationResult(false, "Drum speed control is not supported")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Drum speed control is not supported"
+                    )
                 } else if (command.targetDrumRpm == null) {
-                    MachineCommandValidationResult(false, "Missing target drum speed")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Missing target drum speed"
+                    )
                 } else {
-                    MachineCommandValidationResult(true, "Drum command accepted")
+                    MachineCommandValidationResult(
+                        allowed = true,
+                        reason = "Drum command accepted"
+                    )
                 }
             }
 
             MachineCommandType.HOLD -> {
-                MachineCommandValidationResult(true, "Hold command accepted")
+                MachineCommandValidationResult(
+                    allowed = true,
+                    reason = "Hold command accepted"
+                )
             }
 
             MachineCommandType.EMERGENCY_STOP -> {
                 if (!capability.supportsEmergencyStop) {
-                    MachineCommandValidationResult(false, "Emergency stop is not supported")
+                    MachineCommandValidationResult(
+                        allowed = false,
+                        reason = "Emergency stop is not supported"
+                    )
                 } else {
-                    MachineCommandValidationResult(true, "Emergency stop accepted")
+                    MachineCommandValidationResult(
+                        allowed = true,
+                        reason = "Emergency stop accepted"
+                    )
                 }
             }
         }
@@ -225,10 +261,14 @@ class NoOpMachineAdapter(
     fun ingestTelemetry(frame: MachineTelemetryFrame) {
         lastFrame = frame
         status = when (frame.connectionState) {
-            TelemetryConnectionState.DISCONNECTED -> MachineAdapterConnectionStatus.DISCONNECTED
-            TelemetryConnectionState.CONNECTING -> MachineAdapterConnectionStatus.CONNECTING
-            TelemetryConnectionState.CONNECTED -> MachineAdapterConnectionStatus.CONNECTED
-            TelemetryConnectionState.ERROR -> MachineAdapterConnectionStatus.ERROR
+            TelemetryConnectionState.DISCONNECTED ->
+                MachineAdapterConnectionStatus.DISCONNECTED
+
+            TelemetryConnectionState.CONNECTING ->
+                MachineAdapterConnectionStatus.CONNECTING
+
+            TelemetryConnectionState.CONNECTED ->
+                MachineAdapterConnectionStatus.CONNECTED
         }
     }
 }
