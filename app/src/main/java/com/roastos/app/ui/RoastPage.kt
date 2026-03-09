@@ -26,7 +26,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, RoastCurveEngineV2, and RoastCurveEngineV3"
+                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, and curve prediction engines"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -85,18 +85,32 @@ object RoastPage {
         root.addView(curveCard)
         root.addView(UiKit.spacer(context))
 
-        val predictionV2Card = UiKit.card(context)
-        predictionV2Card.addView(UiKit.cardTitle(context, "CURVE PREDICTION V2"))
-        val predictionV2Body = UiKit.bodyText(context, "")
-        predictionV2Card.addView(predictionV2Body)
-        root.addView(predictionV2Card)
-        root.addView(UiKit.spacer(context))
-
-        val predictionV3Card = UiKit.card(context)
-        predictionV3Card.addView(UiKit.cardTitle(context, "CURVE PREDICTION V3"))
+        val predictionV3Card = UiKit.cardAlt(context)
+        predictionV3Card.addView(UiKit.cardTitle(context, "PRIMARY CURVE PREDICTION"))
+        predictionV3Card.addView(
+            UiKit.captionText(
+                context,
+                "V3.1 is the main prediction layer. It uses smoothed BT, smoothed ROR, stabilized FC estimation, phase detection, and confidence."
+            )
+        )
         val predictionV3Body = UiKit.bodyText(context, "")
+        predictionV3Card.addView(UiKit.tinySpacer(context))
         predictionV3Card.addView(predictionV3Body)
         root.addView(predictionV3Card)
+        root.addView(UiKit.spacer(context))
+
+        val predictionV2Card = UiKit.card(context)
+        predictionV2Card.addView(UiKit.cardTitle(context, "REFERENCE PREDICTION V2"))
+        predictionV2Card.addView(
+            UiKit.captionText(
+                context,
+                "V2 is kept as a simple reference layer for comparison. Treat it as a lightweight check, not the main prediction."
+            )
+        )
+        val predictionV2Body = UiKit.bodyText(context, "")
+        predictionV2Card.addView(UiKit.tinySpacer(context))
+        predictionV2Card.addView(predictionV2Body)
+        root.addView(predictionV2Card)
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -156,8 +170,8 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
-            predictionV2Body.text = RoastCurveEngineV2.summary()
             predictionV3Body.text = RoastCurveEngineV3.summary()
+            predictionV2Body.text = RoastCurveEngineV2.summary()
 
             statusBody.text = """
 Machine State
