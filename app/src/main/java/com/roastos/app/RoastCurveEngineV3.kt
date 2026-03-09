@@ -49,32 +49,27 @@ object RoastCurveEngineV3 {
     private const val YELLOW_TARGET_BT = 150.0
     private const val FC_TARGET_BT = 198.0
 
-    // Turning 稳定化
     private const val TURNING_ACTIVE_BT_MAX = 120.0
     private const val TURNING_MIN_ROR = 1.2
     private const val TURNING_SMOOTHING_ALPHA = 0.18
     private const val TURNING_MAX_STEP_SEC = 10.0
 
-    // Yellow 稳定化
     private const val YELLOW_ACTIVE_BT_MIN = 120.0
     private const val YELLOW_MIN_ROR = 3.0
     private const val YELLOW_SMOOTHING_ALPHA = 0.20
     private const val YELLOW_MAX_STEP_SEC = 14.0
 
-    // FC 稳定化
     private const val FC_ACTIVE_BT_MIN = 170.0
     private const val FC_MIN_ROR = 3.5
     private const val FC_SMOOTHING_ALPHA = 0.22
     private const val FC_MAX_STEP_SEC = 12.0
 
-    // Drop / Development 预测
     private const val DEV_BASE_SEC = 75.0
     private const val DEV_MIN_SEC = 55.0
     private const val DEV_MAX_SEC = 120.0
     private const val DEV_SMOOTHING_ALPHA = 0.25
     private const val DEV_MAX_STEP_SEC = 10.0
 
-    // 锚点一致性约束
     private const val MIN_TURNING_TO_YELLOW_SEC = 80.0
     private const val MAX_TURNING_TO_YELLOW_SEC = 260.0
     private const val MIN_YELLOW_TO_FC_SEC = 90.0
@@ -99,12 +94,7 @@ object RoastCurveEngineV3 {
         bt: Double,
         timeMillis: Long
     ) {
-        history.add(
-            Sample(
-                timeMillis = timeMillis,
-                bt = bt
-            )
-        )
+        history.add(Sample(timeMillis = timeMillis, bt = bt))
 
         if (history.size > MAX_POINTS) {
             history.removeAt(0)
@@ -625,9 +615,11 @@ Confidence
         score -= deltaPenalty(baselineFcDeltaSec, mild = 15.0, mid = 25.0, high = 40.0)
         score -= deltaPenalty(baselineDropDeltaSec, mild = 18.0, mid = 30.0, high = 50.0)
 
-        if (confidence < 40) score -= 12
-        else if (confidence < 55) score -= 8
-        else if (confidence < 70) score -= 4
+        when {
+            confidence < 40 -> score -= 12
+            confidence < 55 -> score -= 8
+            confidence < 70 -> score -= 4
+        }
 
         return score.coerceIn(0, 100)
     }
@@ -638,8 +630,15 @@ Confidence
         mid: Double,
         high: Double
     ): Int {
-        val absValue = abs(value ?: return 0.0)
+        val absValue = abs(value ?: return 0)
         return when {
             absValue >= high -> 24
             absValue >= mid -> 14
-            absValue
+            absValue >= mild -> 6
+            else -> 0
+        }
+    }
+
+    private fun classifyChainTrendScore(score: Int): String {
+        return when {
+       
