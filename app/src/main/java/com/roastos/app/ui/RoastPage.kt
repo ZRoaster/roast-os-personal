@@ -5,9 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
-import com.roastos.app.RoastCurveEngine
 import com.roastos.app.TelemetrySourceMode
-import com.roastos.app.UiKit
 
 object RoastPage {
 
@@ -27,23 +25,14 @@ object RoastPage {
                 "Live roast monitoring driven by MachineTelemetryEngine"
             )
         )
-
         root.addView(UiKit.spacer(context))
-
-        /* ---------------- TELEMETRY STATUS ---------------- */
 
         val telemetryCard = UiKit.card(context)
         telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
-
         val telemetryBody = UiKit.bodyText(context, "")
-
         telemetryCard.addView(telemetryBody)
-
         root.addView(telemetryCard)
-
         root.addView(UiKit.spacer(context))
-
-        /* ---------------- TELEMETRY CONTROL ---------------- */
 
         val controlCard = UiKit.card(context)
         controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
@@ -74,57 +63,58 @@ object RoastPage {
         controlCard.addView(machineBtn)
 
         root.addView(controlCard)
-
         root.addView(UiKit.spacer(context))
-
-        /* ---------------- CURVE CARD ---------------- */
 
         val curveCard = UiKit.card(context)
         curveCard.addView(UiKit.cardTitle(context, "ROAST CURVE"))
-
         val curveBody = UiKit.bodyText(context, "")
-
         curveCard.addView(curveBody)
-
         root.addView(curveCard)
-
         root.addView(UiKit.spacer(context))
-
-        /* ---------------- ROAST STATUS ---------------- */
 
         val statusCard = UiKit.card(context)
         statusCard.addView(UiKit.cardTitle(context, "ROAST STATUS"))
-
         val statusBody = UiKit.bodyText(context, "")
-
         statusCard.addView(statusBody)
-
         root.addView(statusCard)
 
-        /* ---------------- REFRESH ---------------- */
-
         fun refresh() {
-
             val telemetry = MachineTelemetryEngine.currentState()
 
             telemetryBody.text = MachineTelemetryEngine.summary()
 
             val bt = telemetry.liveBtC ?: 0.0
+            val et = telemetry.liveEtC
             val ror = telemetry.liveRorCPerMin ?: 0.0
             val power = telemetry.livePowerW
             val air = telemetry.liveAirflowPa
             val drum = telemetry.liveDrumRpm
             val time = telemetry.liveElapsedSec
+            val machineState = telemetry.machineState
 
-            val curve = RoastCurveEngine.buildCurveSummary(
-                bt = bt,
-                ror = ror,
-                elapsedSec = time
-            )
+            curveBody.text = """
+Curve Monitor
 
-            curveBody.text = curve
+BT
+${"%.1f".format(bt)}℃
+
+ET
+${et?.let { "%.1f".format(it) + "℃" } ?: "-"}
+
+ROR
+${"%.1f".format(ror)}℃/min
+
+Elapsed
+${time}s
+
+Interpretation
+${buildCurveInterpretation(bt = bt, ror = ror, elapsedSec = time)}
+            """.trimIndent()
 
             statusBody.text = """
+Machine State
+$machineState
+
 BT
 ${"%.1f".format(bt)}℃
 
@@ -132,70 +122,55 @@ ROR
 ${"%.1f".format(ror)}℃/min
 
 Power
-$power W
+${power}W
 
 Air
-$air Pa
+${air}Pa
 
 Drum
-$drum rpm
+${drum}rpm
 
 Elapsed
-$time s
-""".trimIndent()
+${time}s
+
+Source Mode
+${telemetry.mode}
+            """.trimIndent()
         }
 
-        /* ---------------- BUTTON ACTIONS ---------------- */
-
         manualBtn.setOnClickListener {
-
             MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
             refresh()
         }
 
         simBtn.setOnClickListener {
-
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
             refresh()
         }
 
         simStep10.setOnClickListener {
-
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-
             simulatorElapsed += 10
-
             MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-
             refresh()
         }
 
         simStep30.setOnClickListener {
-
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-
             simulatorElapsed += 30
-
             MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-
             refresh()
         }
 
         simReset.setOnClickListener {
-
             simulatorElapsed = 0
-
             MachineTelemetryEngine.reset()
-
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-
             refresh()
         }
 
         machineBtn.setOnClickListener {
-
             MachineTelemetryEngine.connectMachine()
-
             refresh()
         }
 
@@ -203,5 +178,22 @@ $time s
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildCurveInterpretation(
+        bt: Double,
+        ror: Double,
+        elapsedSec: Int
+    ): String {
+        return when {
+            elapsedSec <= 60 -> "Front-end phase, monitor early momentum"
+            ror >= 10.8 -> "Late acceleration risk is high"
+            ror <= 7.0 && elapsedSec >= 240 -> "Energy may be collapsing"
+            ror in 8.0..9.8 -> "ROR looks relatively stable"
+            bt <= 120.0 -> "Likely early drying stage"
+            bt <= 160.0 -> "Likely drying to Maillard transition"
+            bt <= 195.0 -> "Likely Maillard / pre-FC stage"
+            else -> "Likely development stage"
+        }
     }
 }
