@@ -2,8 +2,17 @@ package com.roastos.app
 
 import kotlin.math.abs
 
+enum class EnergyState {
+    HIGH,
+    BALANCED,
+    MODERATE,
+    LOW,
+    DEFICIT
+}
+
 data class EnergySnapshot(
     val energyState: String,
+    val stateEnum: EnergyState,
     val score: Int,
     val heatLevel: String,
     val airflowLevel: String,
@@ -87,12 +96,20 @@ object EnergyEngine {
             else -> "ROR Falling"
         }
 
-        val energyState = when {
-            score >= 80 && machineState.ror >= 8.0 -> "High Energy"
-            score >= 65 && machineState.ror >= 5.0 -> "Balanced Energy"
-            score >= 50 -> "Moderate Energy"
-            score >= 35 -> "Low Energy"
-            else -> "Energy Deficit"
+        val stateEnum = when {
+            score >= 80 && machineState.ror >= 8.0 -> EnergyState.HIGH
+            score >= 65 && machineState.ror >= 5.0 -> EnergyState.BALANCED
+            score >= 50 -> EnergyState.MODERATE
+            score >= 35 -> EnergyState.LOW
+            else -> EnergyState.DEFICIT
+        }
+
+        val energyState = when (stateEnum) {
+            EnergyState.HIGH -> "High Energy"
+            EnergyState.BALANCED -> "Balanced Energy"
+            EnergyState.MODERATE -> "Moderate Energy"
+            EnergyState.LOW -> "Low Energy"
+            EnergyState.DEFICIT -> "Energy Deficit"
         }
 
         val reasons = mutableListOf<String>()
@@ -156,6 +173,7 @@ $reason
 
         return EnergySnapshot(
             energyState = energyState,
+            stateEnum = stateEnum,
             score = score,
             heatLevel = heatLevel,
             airflowLevel = airflowLevel,
@@ -214,10 +232,10 @@ $reason
         val energy = evaluate(machineProfile, machineState)
 
         return when {
-            energy.energyState == "Energy Deficit" && machineState.ror < 3.5 ->
+            energy.stateEnum == EnergyState.DEFICIT && machineState.ror < 3.5 ->
                 "Add heat earlier and avoid excessive airflow"
 
-            energy.energyState == "High Energy" && machineState.ror > 10.0 ->
+            energy.stateEnum == EnergyState.HIGH && machineState.ror > 10.0 ->
                 "Reduce heat slightly and prepare to widen airflow"
 
             energy.airflowLevel == "Very Strong" && machineState.ror < 5.0 ->
