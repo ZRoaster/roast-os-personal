@@ -3,7 +3,9 @@ package com.roastos.app
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
+import android.util.TypedValue
 import android.widget.Button
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import com.roastos.app.ui.CorrectionPage
 import com.roastos.app.ui.DashboardPage
@@ -28,62 +30,28 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(16, 16, 16, 16)
-
-        val navBar = LinearLayout(this)
-        navBar.orientation = LinearLayout.HORIZONTAL
-        navBar.setPadding(0, 0, 0, 16)
-
-        val navParams = LinearLayout.LayoutParams(
-            0,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            1f
-        )
-
-        dashboardBtn = Button(this).apply {
-            text = "Dashboard"
-            layoutParams = navParams
-        }
-
-        plannerBtn = Button(this).apply {
-            text = "Planner"
-            layoutParams = navParams
-        }
-
-        preheatBtn = Button(this).apply {
-            text = "Preheat"
-            layoutParams = navParams
-        }
-
-        roastBtn = Button(this).apply {
-            text = "Roast"
-            layoutParams = navParams
-        }
-
-        correctionBtn = Button(this).apply {
-            text = "Correction"
-            layoutParams = navParams
-        }
-
-        historyBtn = Button(this).apply {
-            text = "History"
-            layoutParams = navParams
-        }
-
-        profileBtn = Button(this).apply {
-            text = "Profile"
-            layoutParams = navParams
-        }
-
-        pageContainer = LinearLayout(this).apply {
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
+            setPadding(16, 16, 16, 16)
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
+
+        val navScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            setPadding(0, 0, 0, 18)
+        }
+
+        val navBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        dashboardBtn = buildNavButton("Dashboard")
+        plannerBtn = buildNavButton("Planner")
+        preheatBtn = buildNavButton("Preheat")
+        roastBtn = buildNavButton("Roast")
+        correctionBtn = buildNavButton("Correction")
+        historyBtn = buildNavButton("History")
+        profileBtn = buildNavButton("Profile")
 
         navBar.addView(dashboardBtn)
         navBar.addView(plannerBtn)
@@ -93,7 +61,17 @@ class MainActivity : Activity() {
         navBar.addView(historyBtn)
         navBar.addView(profileBtn)
 
-        root.addView(navBar)
+        navScroll.addView(navBar)
+
+        pageContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        root.addView(navScroll)
         root.addView(pageContainer)
 
         setContentView(root)
@@ -137,6 +115,26 @@ class MainActivity : Activity() {
         DashboardPage.show(this, pageContainer)
     }
 
+    private fun buildNavButton(label: String): Button {
+        return Button(this).apply {
+            text = label
+            setAllCaps(false)
+            textSize = 14f
+            setPadding(26, 16, 26, 16)
+            minWidth = 0
+            minimumWidth = 0
+            setTextColor(Color.BLACK)
+            setBackgroundColor(Color.parseColor("#E6E6E6"))
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 12
+            }
+        }
+    }
+
     private fun setSelected(btn: Button) {
         val buttons = listOf(
             dashboardBtn,
@@ -150,11 +148,13 @@ class MainActivity : Activity() {
 
         buttons.forEach {
             if (it == btn) {
-                it.setBackgroundColor(Color.parseColor("#222222"))
+                it.setBackgroundColor(Color.parseColor("#202124"))
                 it.setTextColor(Color.WHITE)
+                it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             } else {
-                it.setBackgroundColor(Color.parseColor("#DDDDDD"))
-                it.setTextColor(Color.BLACK)
+                it.setBackgroundColor(Color.parseColor("#E6E6E6"))
+                it.setTextColor(Color.parseColor("#202124"))
+                it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             }
         }
     }
