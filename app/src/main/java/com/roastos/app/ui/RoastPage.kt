@@ -91,7 +91,7 @@ object RoastPage {
         anchorChainCard.addView(
             UiKit.captionText(
                 context,
-                "Yellow → FC → Drop anchor chain from the primary V3.3 prediction layer."
+                "Yellow → FC → Drop anchor chain from the primary V3.4 prediction layer."
             )
         )
         val anchorChainBody = UiKit.bodyText(context, "")
@@ -100,12 +100,26 @@ object RoastPage {
         root.addView(anchorChainCard)
         root.addView(UiKit.spacer(context))
 
+        val baselineDeltaCard = UiKit.cardAlt(context)
+        baselineDeltaCard.addView(UiKit.cardTitle(context, "BASELINE DELTA CHAIN"))
+        baselineDeltaCard.addView(
+            UiKit.captionText(
+                context,
+                "Predicted anchor offsets versus the active baseline."
+            )
+        )
+        val baselineDeltaBody = UiKit.bodyText(context, "")
+        baselineDeltaCard.addView(UiKit.tinySpacer(context))
+        baselineDeltaCard.addView(baselineDeltaBody)
+        root.addView(baselineDeltaCard)
+        root.addView(UiKit.spacer(context))
+
         val forecastCard = UiKit.cardAlt(context)
         forecastCard.addView(UiKit.cardTitle(context, "FC / DROP / DEVELOPMENT FORECAST"))
         forecastCard.addView(
             UiKit.captionText(
                 context,
-                "Primary forecast layer from V3.3. Focus here first during roast."
+                "Primary forecast layer from V3.4. Focus here first during roast."
             )
         )
         val forecastBody = UiKit.bodyText(context, "")
@@ -119,7 +133,7 @@ object RoastPage {
         predictionV3Card.addView(
             UiKit.captionText(
                 context,
-                "V3.3 uses smoothed BT, smoothed ROR, stabilized anchor estimation, anchor consistency constraints, and confidence."
+                "V3.4 uses smoothed BT, smoothed ROR, stabilized anchors, consistency constraints, baseline deltas, and confidence."
             )
         )
         val predictionV3Body = UiKit.bodyText(context, "")
@@ -202,6 +216,7 @@ ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
             anchorChainBody.text = buildAnchorChain(predictionV3)
+            baselineDeltaBody.text = buildBaselineDeltaChain(predictionV3)
             forecastBody.text = buildForecastHeadline(predictionV3)
             predictionV3Body.text = predictionV3.summary
             predictionV2Body.text = RoastCurveEngineV2.summary()
@@ -328,6 +343,38 @@ $dtrText
         """.trimIndent()
     }
 
+    private fun buildBaselineDeltaChain(prediction: RoastCurvePredictionV3): String {
+        return """
+Yellow Δ
+${formatDelta(prediction.baselineYellowDeltaSec)}
+
+FC Δ
+${formatDelta(prediction.baselineFcDeltaSec)}
+
+Drop Δ
+${formatDelta(prediction.baselineDropDeltaSec)}
+
+Interpretation
+${buildBaselineDeltaInterpretation(prediction)}
+        """.trimIndent()
+    }
+
+    private fun buildBaselineDeltaInterpretation(prediction: RoastCurvePredictionV3): String {
+        val yellow = prediction.baselineYellowDeltaSec
+        val fc = prediction.baselineFcDeltaSec
+        val drop = prediction.baselineDropDeltaSec
+
+        return when {
+            fc != null && fc > 20.0 -> "FC is trending later than baseline"
+            fc != null && fc < -20.0 -> "FC is trending earlier than baseline"
+            drop != null && drop > 25.0 -> "Drop is trending later than baseline"
+            drop != null && drop < -25.0 -> "Drop is trending earlier than baseline"
+            yellow != null && yellow > 18.0 -> "Yellow is trending later than baseline"
+            yellow != null && yellow < -18.0 -> "Yellow is trending earlier than baseline"
+            else -> "Anchor chain is relatively close to baseline"
+        }
+    }
+
     private fun buildForecastHeadline(prediction: RoastCurvePredictionV3): String {
         val fcText = formatPredictionTime(prediction.predictedFcTimeSec)
         val dropText = formatPredictionTime(prediction.predictedDropTimeSec)
@@ -423,6 +470,14 @@ ${baseline.dropSec?.toString()?.plus("s") ?: "-"}
         return when {
             value == null -> "-"
             value <= 0.0 -> "Now"
+            else -> "%.0f".format(value) + "s"
+        }
+    }
+
+    private fun formatDelta(value: Double?): String {
+        return when {
+            value == null -> "-"
+            value > 0.0 -> "+" + "%.0f".format(value) + "s"
             else -> "%.0f".format(value) + "s"
         }
     }
