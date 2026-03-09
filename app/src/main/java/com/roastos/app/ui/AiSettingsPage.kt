@@ -17,6 +17,8 @@ object AiSettingsPage {
     private var selectedProvider: RoastAiProviderType =
         AiProviderRegistry.defaultProvider()
 
+    private var currentConfig = RoastAiServiceConfig()
+
     fun show(context: Context, container: LinearLayout) {
 
         container.removeAllViews()
@@ -33,10 +35,6 @@ object AiSettingsPage {
         )
 
         root.addView(UiKit.spacer(context))
-
-        val currentConfig = RoastAiService.config
-
-        selectedProvider = currentConfig.providerType
 
         val providerCard = UiKit.card(context)
         providerCard.addView(UiKit.cardTitle(context, "PROVIDER"))
@@ -68,27 +66,14 @@ object AiSettingsPage {
         val configCard = UiKit.card(context)
         configCard.addView(UiKit.cardTitle(context, "CONFIG"))
 
-        val modelInput = textInput(
-            context,
-            "Model",
-            currentConfig.modelName
-        )
+        val modelInput = textInput(context, "Model", currentConfig.modelName)
 
-        val baseUrlInput = textInput(
-            context,
-            "API Base URL",
-            currentConfig.apiBaseUrl
-        )
+        val baseUrlInput = textInput(context, "API Base URL", currentConfig.apiBaseUrl)
 
-        val apiKeyInput = textInput(
-            context,
-            "API Key",
-            currentConfig.apiKeyHint
-        )
+        val apiKeyInput = textInput(context, "API Key", currentConfig.apiKeyHint)
 
         apiKeyInput.inputType =
-            InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_VARIATION_PASSWORD
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
 
         val visionButton = Button(context)
         val audioButton = Button(context)
@@ -138,7 +123,7 @@ object AiSettingsPage {
 
         applyButton.setOnClickListener {
 
-            val newConfig = RoastAiServiceConfig(
+            currentConfig = RoastAiServiceConfig(
                 providerType = selectedProvider,
                 modelName = modelInput.text.toString(),
                 apiBaseUrl = baseUrlInput.text.toString(),
@@ -148,7 +133,7 @@ object AiSettingsPage {
                 enableFileContext = file
             )
 
-            RoastAiService.configure(newConfig)
+            RoastAiService.configure(currentConfig)
 
             refreshProvider(providerSummary)
             refreshConfig(configSummary)
@@ -158,6 +143,7 @@ object AiSettingsPage {
         resetButton.setOnClickListener {
 
             selectedProvider = AiProviderRegistry.defaultProvider()
+            currentConfig = RoastAiServiceConfig()
 
             modelInput.setText("")
             baseUrlInput.setText("")
@@ -169,7 +155,7 @@ object AiSettingsPage {
 
             refreshToggle()
 
-            RoastAiService.configure(RoastAiServiceConfig())
+            RoastAiService.configure(currentConfig)
 
             refreshProvider(providerSummary)
             refreshConfig(configSummary)
@@ -252,7 +238,7 @@ ${if (descriptor?.supportsRemoteApi == true) "Yes" else "No"}
 
     private fun refreshConfig(body: TextView) {
 
-        body.text = RoastAiService.config.summary()
+        body.text = currentConfig.summary()
     }
 
     private fun refreshService(body: TextView) {
