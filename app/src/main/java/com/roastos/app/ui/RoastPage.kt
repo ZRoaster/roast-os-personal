@@ -91,7 +91,7 @@ object RoastPage {
         anchorChainCard.addView(
             UiKit.captionText(
                 context,
-                "Turning → Yellow → FC → Drop anchor chain from the primary V3.5 prediction layer."
+                "Turning → Yellow → FC → Drop anchor chain from the primary V3.6 prediction layer."
             )
         )
         val anchorChainBody = UiKit.bodyText(context, "")
@@ -114,12 +114,26 @@ object RoastPage {
         root.addView(baselineDeltaCard)
         root.addView(UiKit.spacer(context))
 
+        val rorBehaviorCard = UiKit.cardAlt(context)
+        rorBehaviorCard.addView(UiKit.cardTitle(context, "ROR BEHAVIOR"))
+        rorBehaviorCard.addView(
+            UiKit.captionText(
+                context,
+                "Crash / Flick / slope / momentum analysis from the primary V3.6 prediction layer."
+            )
+        )
+        val rorBehaviorBody = UiKit.bodyText(context, "")
+        rorBehaviorCard.addView(UiKit.tinySpacer(context))
+        rorBehaviorCard.addView(rorBehaviorBody)
+        root.addView(rorBehaviorCard)
+        root.addView(UiKit.spacer(context))
+
         val forecastCard = UiKit.cardAlt(context)
         forecastCard.addView(UiKit.cardTitle(context, "FC / DROP / DEVELOPMENT FORECAST"))
         forecastCard.addView(
             UiKit.captionText(
                 context,
-                "Primary forecast layer from V3.5. Focus here first during roast."
+                "Primary forecast layer from V3.6. Focus here first during roast."
             )
         )
         val forecastBody = UiKit.bodyText(context, "")
@@ -133,7 +147,7 @@ object RoastPage {
         predictionV3Card.addView(
             UiKit.captionText(
                 context,
-                "V3.5 uses smoothed BT, smoothed ROR, predicted anchors, baseline deltas, and chain scoring."
+                "V3.6 uses smoothed BT, smoothed ROR, predicted anchors, baseline deltas, chain scoring, and ROR behavior analysis."
             )
         )
         val predictionV3Body = UiKit.bodyText(context, "")
@@ -217,6 +231,7 @@ ${buildBaselineReferenceText(baseline, time)}
 
             anchorChainBody.text = buildAnchorChain(predictionV3)
             baselineDeltaBody.text = buildBaselineDeltaChain(predictionV3)
+            rorBehaviorBody.text = buildRorBehavior(predictionV3)
             forecastBody.text = buildForecastHeadline(predictionV3)
             predictionV3Body.text = predictionV3.summary
             predictionV2Body.text = RoastCurveEngineV2.summary()
@@ -396,6 +411,33 @@ ${buildBaselineDeltaInterpretation(prediction)}
             turning != null && turning < -15.0 -> "Turning is trending earlier than baseline"
             else -> "Anchor chain is relatively close to baseline"
         }
+    }
+
+    private fun buildRorBehavior(prediction: RoastCurvePredictionV3): String {
+        val label = when {
+            prediction.crashRisk -> "ROR Crash Risk"
+            prediction.flickRisk -> "ROR Flick Risk"
+            prediction.rorSlope > 0.0 -> "ROR Rising"
+            prediction.rorSlope < 0.0 -> "ROR Falling"
+            else -> "Stable"
+        }
+
+        return """
+ROR Label
+$label
+
+Crash Risk
+${if (prediction.crashRisk) "Yes" else "No"}
+
+Flick Risk
+${if (prediction.flickRisk) "Yes" else "No"}
+
+ROR Slope
+${"%.2f".format(prediction.rorSlope)}
+
+ROR Momentum
+${"%.2f".format(prediction.rorMomentum)}
+        """.trimIndent()
     }
 
     private fun buildForecastHeadline(prediction: RoastCurvePredictionV3): String {
