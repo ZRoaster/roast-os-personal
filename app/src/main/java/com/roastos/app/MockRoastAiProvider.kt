@@ -8,22 +8,29 @@ class MockRoastAiProvider : RoastAiProvider {
 
         val ctx = request.context
 
-        val message = buildString {
+        val machine = ctx.machineProfile?.name ?: "Unknown machine"
+        val bt = ctx.machineState?.beanTemp ?: 0.0
+        val ror = ctx.machineState?.ror ?: 0.0
 
-            appendLine("AI Roast Assistant (Mock)")
-            appendLine()
-            appendLine("Machine: ${ctx.machineName}")
-            appendLine("BT: ${ctx.btC}")
-            appendLine("RoR: ${ctx.rorCPerMin}")
-            appendLine()
-            appendLine("Suggestion:")
-            appendLine("Maintain current power and monitor RoR stability.")
-        }
+        val text = """
+AI Roast Assistant (Mock)
 
-        return RoastAiResponse(
-            message = message,
-            confidence = 0.5,
-            actions = emptyList()
+Machine
+$machine
+
+BT
+$bt
+
+RoR
+$ror
+
+Suggestion
+Maintain current power and monitor RoR stability.
+""".trimIndent()
+
+        return RoastAiResponses.textExplanation(
+            text = text,
+            reasoning = "Mock provider response"
         )
     }
 }
