@@ -8,6 +8,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.RoastProfile
 import com.roastos.app.RoastProfileEngine
+import com.roastos.app.RoastProfilePlannerBridge
 
 object ProfilePage {
 
@@ -18,7 +19,12 @@ object ProfilePage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST PROFILE LIBRARY"))
-        root.addView(UiKit.pageSubtitle(context, "View saved roast profiles, delete single profiles, or clear all profiles"))
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "View saved roast profiles, inspect planner suggestions, delete single profiles, or clear all profiles"
+            )
+        )
         root.addView(UiKit.spacer(context))
 
         val actionCard = UiKit.card(context)
@@ -100,8 +106,30 @@ object ProfilePage {
         body.text = buildProfileBody(profile)
         body.setPadding(0, UiKit.INNER_GAP, 0, 0)
 
+        val openSuggestionBtn = Button(context)
+        openSuggestionBtn.text = "Open Plan Suggestion"
+
         val deleteBtn = Button(context)
         deleteBtn.text = "Delete This Profile"
+
+        val suggestionBody = TextView(context)
+        suggestionBody.textSize = 14f
+        suggestionBody.setPadding(0, UiKit.INNER_GAP, 0, 0)
+        suggestionBody.text = ""
+        suggestionBody.visibility = TextView.GONE
+
+        openSuggestionBtn.setOnClickListener {
+            if (suggestionBody.visibility == TextView.GONE) {
+                val suggestion = RoastProfilePlannerBridge.buildFromProfile(profile)
+                suggestionBody.visibility = TextView.VISIBLE
+                suggestionBody.text = suggestion.summary
+                openSuggestionBtn.text = "Hide Plan Suggestion"
+            } else {
+                suggestionBody.visibility = TextView.GONE
+                suggestionBody.text = ""
+                openSuggestionBtn.text = "Open Plan Suggestion"
+            }
+        }
 
         deleteBtn.setOnClickListener {
             RoastProfileEngine.delete(profile.profileId)
@@ -110,7 +138,9 @@ object ProfilePage {
 
         card.addView(title)
         card.addView(body)
+        card.addView(openSuggestionBtn)
         card.addView(deleteBtn)
+        card.addView(suggestionBody)
 
         return card
     }
