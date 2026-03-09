@@ -19,6 +19,10 @@ data class RoastCurvePredictionV3(
     val chainLabel: String,
     val phase: String,
     val confidence: Int,
+    val crashRisk: Boolean,
+    val flickRisk: Boolean,
+    val rorSlope: Double,
+    val rorMomentum: Double,
     val summary: String
 )
 
@@ -30,6 +34,7 @@ object RoastCurveEngineV3 {
     )
 
     private val history = mutableListOf<Sample>()
+    private val rorHistory = mutableListOf<Double>()
 
     private const val MAX_POINTS = 120
 
@@ -43,6 +48,7 @@ object RoastCurveEngineV3 {
 
     fun reset() {
         history.clear()
+        rorHistory.clear()
     }
 
     fun record(
@@ -65,6 +71,13 @@ object RoastCurveEngineV3 {
         val smoothedRor = computeSmoothedRor()
         val phase = detectPhase(smoothedBt)
         val confidence = estimateConfidence()
+
+        rorHistory.add(smoothedRor)
+        if (rorHistory.size > 20) {
+            rorHistory.removeAt(0)
+        }
+
+        val behavior = RorBehaviorAnalyzer.analyze(rorHistory)
 
         val predictedTurning = predictAnchorTime(
             currentBt = smoothedBt,
@@ -147,7 +160,8 @@ object RoastCurveEngineV3 {
             chainScore = chainScore,
             chainLabel = chainLabel,
             phase = phase,
-            confidence = confidence
+            confidence = confidence,
+            behavior = behavior
         )
 
         return RoastCurvePredictionV3(
@@ -167,6 +181,10 @@ object RoastCurveEngineV3 {
             chainLabel = chainLabel,
             phase = phase,
             confidence = confidence,
+            crashRisk = behavior.crashRisk,
+            flickRisk = behavior.flickRisk,
+            rorSlope = behavior.slope,
+            rorMomentum = behavior.momentum,
             summary = summary
         )
     }
@@ -363,10 +381,11 @@ object RoastCurveEngineV3 {
         chainScore: Int,
         chainLabel: String,
         phase: String,
-        confidence: Int
+        confidence: Int,
+        behavior: RorBehavior
     ): String {
         return """
-Curve Prediction V3.5
+Curve Prediction V3.6
 
 BT
 ${"%.1f".format(bt)}℃
@@ -415,6 +434,21 @@ $phase
 
 Confidence
 $confidence
+
+ROR Label
+${behavior.label}
+
+Crash Risk
+${if (behavior.crashRisk) "Yes" else "No"}
+
+Flick Risk
+${if (behavior.flickRisk) "Yes" else "No"}
+
+ROR Slope
+${"%.2f".format(behavior.slope)}
+
+ROR Momentum
+${"%.2f".format(behavior.momentum)}
         """.trimIndent()
     }
 
@@ -452,6 +486,10 @@ $confidence
             chainLabel = "Unknown",
             phase = "Unknown",
             confidence = 0,
+            crashRisk = false,
+            flickRisk = false,
+            rorSlope = 0.0,
+            rorMomentum = 0.0,
             summary = reason
         )
     }
