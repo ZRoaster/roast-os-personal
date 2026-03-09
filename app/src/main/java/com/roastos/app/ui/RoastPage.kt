@@ -85,12 +85,26 @@ object RoastPage {
         root.addView(curveCard)
         root.addView(UiKit.spacer(context))
 
+        val forecastCard = UiKit.cardAlt(context)
+        forecastCard.addView(UiKit.cardTitle(context, "FC / DROP / DEVELOPMENT FORECAST"))
+        forecastCard.addView(
+            UiKit.captionText(
+                context,
+                "Primary forecast layer from V3.2. Focus here first during roast."
+            )
+        )
+        val forecastBody = UiKit.bodyText(context, "")
+        forecastCard.addView(UiKit.tinySpacer(context))
+        forecastCard.addView(forecastBody)
+        root.addView(forecastCard)
+        root.addView(UiKit.spacer(context))
+
         val predictionV3Card = UiKit.cardAlt(context)
         predictionV3Card.addView(UiKit.cardTitle(context, "PRIMARY CURVE PREDICTION"))
         predictionV3Card.addView(
             UiKit.captionText(
                 context,
-                "V3.1 is the main prediction layer. It uses smoothed BT, smoothed ROR, stabilized FC estimation, phase detection, and confidence."
+                "V3.2 uses smoothed BT, smoothed ROR, stabilized FC estimation, phase detection, drop forecasting, development forecasting, and confidence."
             )
         )
         val predictionV3Body = UiKit.bodyText(context, "")
@@ -104,7 +118,7 @@ object RoastPage {
         predictionV2Card.addView(
             UiKit.captionText(
                 context,
-                "V2 is kept as a simple reference layer for comparison. Treat it as a lightweight check, not the main prediction."
+                "V2 is kept as a simple comparison layer. Use it only as a lightweight reference."
             )
         )
         val predictionV2Body = UiKit.bodyText(context, "")
@@ -144,6 +158,8 @@ object RoastPage {
                 timeMillis = nowMillis
             )
 
+            val predictionV3 = RoastCurveEngineV3.predict()
+
             telemetryBody.text = MachineTelemetryEngine.summary()
             baselineBody.text = buildBaselineText()
             cockpitBody.text = assist.summary
@@ -170,7 +186,8 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
-            predictionV3Body.text = RoastCurveEngineV3.summary()
+            forecastBody.text = buildForecastHeadline(predictionV3)
+            predictionV3Body.text = predictionV3.summary
             predictionV2Body.text = RoastCurveEngineV2.summary()
 
             statusBody.text = """
@@ -242,6 +259,51 @@ ${telemetry.mode}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildForecastHeadline(prediction: com.roastos.app.RoastCurvePredictionV3): String {
+        val fcText = when {
+            prediction.predictedFcTimeSec == null -> "-"
+            prediction.predictedFcTimeSec <= 0.0 -> "Now"
+            else -> "%.0f".format(prediction.predictedFcTimeSec) + "s"
+        }
+
+        val dropText = when {
+            prediction.predictedDropTimeSec == null -> "-"
+            prediction.predictedDropTimeSec <= 0.0 -> "Now"
+            else -> "%.0f".format(prediction.predictedDropTimeSec) + "s"
+        }
+
+        val devText = prediction.predictedDevelopmentSec?.let {
+            "%.0f".format(it) + "s"
+        } ?: "-"
+
+        val dtrText = prediction.predictedDtrPercent?.let {
+            "%.1f".format(it) + "%"
+        } ?: "-"
+
+        return """
+Predicted FC
+$fcText
+
+Predicted Drop
+$dropText
+
+Predicted Development
+$devText
+
+Predicted DTR
+$dtrText
+
+Phase
+${prediction.phase}
+
+Trend
+${prediction.trend}
+
+Confidence
+${prediction.confidence}
+        """.trimIndent()
     }
 
     private fun buildBaselineText(): String {
