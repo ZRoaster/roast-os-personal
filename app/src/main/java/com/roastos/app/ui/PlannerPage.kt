@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.AppState
+import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastEngine
 import com.roastos.app.RoastProfileEngine
 import com.roastos.app.RoastProfilePlanSuggestion
@@ -24,7 +25,7 @@ object PlannerPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Planner view with profile suggestion entry and apply action"
+                "Planner with profile suggestion entry and real baseline apply"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -49,6 +50,24 @@ object PlannerPage {
         profileCard.addView(profileSuggestionBody)
 
         root.addView(profileCard)
+        root.addView(UiKit.spacer(context))
+
+        val baselineCard = UiKit.card(context)
+        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
+
+        val captureCurrentPlannerBtn = Button(context)
+        captureCurrentPlannerBtn.text = "Capture Current Planner Result as Baseline"
+
+        val clearBaselineBtn = Button(context)
+        clearBaselineBtn.text = "Clear Planner Baseline"
+
+        val baselineBody = UiKit.bodyText(context, "")
+
+        baselineCard.addView(captureCurrentPlannerBtn)
+        baselineCard.addView(clearBaselineBtn)
+        baselineCard.addView(baselineBody)
+
+        root.addView(baselineCard)
         root.addView(UiKit.spacer(context))
 
         val plannerViewCard = UiKit.card(context)
@@ -93,9 +112,9 @@ Then return here and apply it
             }
 
             val appliedText = if (appliedSuggestion?.profileId == latestSuggestion.profileId) {
-                "Applied"
+                "Selected in this page"
             } else {
-                "Not applied"
+                "Not selected in this page"
             }
 
             return """
@@ -108,7 +127,7 @@ ${latestProfile.profileId}
 Source Batch
 ${latestProfile.sourceBatchId}
 
-Applied
+Selection State
 $appliedText
 
 ${latestSuggestion.summary}
@@ -116,36 +135,33 @@ ${latestSuggestion.summary}
         }
 
         fun buildPlannerViewText(): String {
-            val suggestion = appliedSuggestion
-            if (suggestion != null) {
+            val baseline = PlannerBaselineStore.current()
+            if (baseline != null) {
                 return """
 Planner Source
-Applied Profile Suggestion
+Active Planner Baseline
 
-Profile
-${suggestion.profileName}
+Source
+${baseline.source}
 
-Profile ID
-${suggestion.profileId}
+Label
+${baseline.label}
+
+Anchors
+Turning   ${baseline.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Yellow    ${baseline.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+FC        ${baseline.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+Drop      ${baseline.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Development
+Dev       ${baseline.devSec?.let { "${it}s" } ?: "-"}
+DTR       ${baseline.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+
+Source Profile
+${baseline.sourceProfileId ?: "-"}
 
 Source Batch
-${suggestion.sourceBatchId}
-
-Suggested Anchors
-Turning   ${suggestion.suggestedTurningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${suggestion.suggestedYellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${suggestion.suggestedFcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${suggestion.suggestedDropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-Suggested Development
-Dev       ${suggestion.suggestedDevSec?.let { "${it}s" } ?: "-"}
-DTR       ${suggestion.suggestedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
-
-Replayability
-${suggestion.replayability}
-
-Risk
-${suggestion.risk}
+${baseline.sourceBatchId ?: "-"}
                 """.trimIndent()
             }
 
@@ -153,12 +169,12 @@ ${suggestion.risk}
             if (planner == null) {
                 return """
 Planner Source
-No applied suggestion
+No active baseline
 No planner result available
 
 Next Step
 Run your normal planner flow
-or apply latest profile suggestion
+or apply latest profile suggestion as baseline
                 """.trimIndent()
             }
 
@@ -240,6 +256,7 @@ DTR       ${"%.1f".format(planner.dtrPercent)}%
 
         fun refreshAll() {
             profileSuggestionBody.text = buildProfileSuggestionText()
+            baselineBody.text = PlannerBaselineStore.summary()
             plannerViewBody.text = buildPlannerViewText()
             plannerInputBody.text = buildPlannerInputText()
             plannerResultBody.text = buildRawPlannerResultText()
@@ -250,12 +267,26 @@ DTR       ${"%.1f".format(planner.dtrPercent)}%
         }
 
         applySuggestionBtn.setOnClickListener {
-            appliedSuggestion = latestSuggestionOrNull()
+            val latest = latestSuggestionOrNull()
+            appliedSuggestion = latest
+            if (latest != null) {
+                PlannerBaselineStore.setFromSuggestion(latest)
+            }
             refreshAll()
         }
 
         clearAppliedBtn.setOnClickListener {
             appliedSuggestion = null
+            refreshAll()
+        }
+
+        captureCurrentPlannerBtn.setOnClickListener {
+            PlannerBaselineStore.setFromCurrentPlannerResult()
+            refreshAll()
+        }
+
+        clearBaselineBtn.setOnClickListener {
+            PlannerBaselineStore.clear()
             refreshAll()
         }
 
