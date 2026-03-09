@@ -22,6 +22,8 @@ object RoastReportEngine {
         val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
         val bridge = RoastCorrectionBridge.buildFromCurrentState()
         val liveAssist = RoastLiveAssistEngine.buildFromTelemetry()
+        val baseline = PlannerBaselineStore.current()
+        val baselineMatch = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
 
         val batchId = session?.batchId ?: "NO-BATCH"
 
@@ -44,16 +46,20 @@ Finish batch and save history, then unified correction can be generated from the
 
         val title = "Roast Report"
 
-        val predTurning = timeline.predicted.turningSec
+        val predTurning = baseline?.turningSec
+            ?: timeline.predicted.turningSec
             ?: planner?.let { (it.h1Sec - 60.0).toInt().coerceAtLeast(50) }
 
-        val predYellow = timeline.predicted.yellowSec
+        val predYellow = baseline?.yellowSec
+            ?: timeline.predicted.yellowSec
             ?: planner?.h2Sec?.toInt()
 
-        val predFc = timeline.predicted.fcSec
+        val predFc = baseline?.fcSec
+            ?: timeline.predicted.fcSec
             ?: planner?.fcPredSec?.toInt()
 
-        val predDrop = timeline.predicted.dropSec
+        val predDrop = baseline?.dropSec
+            ?: timeline.predicted.dropSec
             ?: planner?.dropSec?.toInt()
 
         val actualTurning = timeline.actual.turningSec
@@ -147,9 +153,51 @@ Batch No   ${plannerInput.batchNum}
             """.trimIndent()
         }
 
+        val baselineBody = if (baseline == null) {
+            """
+Status
+No active planner baseline
+
+Next Step
+Apply profile suggestion or capture current planner result as baseline
+            """.trimIndent()
+        } else {
+            """
+Source
+${baseline.source}
+
+Label
+${baseline.label}
+
+Turning
+${baseline.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Yellow
+${baseline.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+FC
+${baseline.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Drop
+${baseline.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
+
+Dev
+${baseline.devSec?.let { "${it}s" } ?: "-"}
+
+DTR
+${baseline.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
+
+Match Grade
+${baselineMatch?.grade?.name ?: "Unavailable"}
+
+Match Score
+${baselineMatch?.score?.toString() ?: "-"}
+            """.trimIndent()
+        }
+
         val predictedBody = """
-Charge
-${planner?.chargeBT?.toString()?.plus("℃") ?: "-"}
+Reference Source
+${if (baseline != null) "Planner Baseline" else "Planner Result / Predicted Timeline"}
 
 Predicted Anchors
 Turning   ${predTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
@@ -220,6 +268,10 @@ ${liveAssist.interpretation}
             RoastReportSection(
                 heading = "BEAN / ENVIRONMENT",
                 body = beanEnvBody
+            ),
+            RoastReportSection(
+                heading = "PLANNER BASELINE",
+                body = baselineBody
             ),
             RoastReportSection(
                 heading = "PREDICTED PLAN",
