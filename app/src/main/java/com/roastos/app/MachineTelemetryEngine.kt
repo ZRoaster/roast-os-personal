@@ -8,29 +8,6 @@ enum class TelemetrySourceMode {
     SIMULATOR,
     MACHINE
 }
-
-data class MachineTelemetryFrame(
-    val timestampMillis: Long = System.currentTimeMillis(),
-
-    val btC: Double? = null,
-    val etC: Double? = null,
-    val rorCPerMin: Double? = null,
-
-    val powerW: Int? = null,
-    val airflowPa: Int? = null,
-    val drumRpm: Int? = null,
-
-    val elapsedSec: Int? = null,
-
-    val turningSec: Int? = null,
-    val yellowSec: Int? = null,
-    val fcSec: Int? = null,
-    val dropSec: Int? = null,
-
-    val machineState: String = "Idle",
-    val sourceLabel: String = "unknown"
-)
-
 data class MachineTelemetryState(
     val mode: TelemetrySourceMode = TelemetrySourceMode.MANUAL,
     val isConnected: Boolean = false,
