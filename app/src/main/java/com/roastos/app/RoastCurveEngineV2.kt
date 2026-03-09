@@ -6,7 +6,7 @@ data class CurvePrediction(
     val predictedBt90: Double,
     val predictedFcTimeSec: Double?,
     val predictedRor: Double,
-    val deviation: String
+    val deviationText: String
 )
 
 object RoastCurveEngineV2 {
@@ -36,15 +36,15 @@ object RoastCurveEngineV2 {
                 predictedBt90 = 0.0,
                 predictedFcTimeSec = null,
                 predictedRor = 0.0,
-                deviation = "Not enough data"
+                deviationText = "Not enough data"
             )
         }
 
-        val last = btHistory.last()
-        val prev = btHistory[btHistory.size - 2]
+        val lastPoint = btHistory.last()
+        val prevPoint = btHistory[btHistory.size - 2]
 
-        val dtSec = (last.first - prev.first).toDouble() / 1000.0
-        val deltaBt = last.second - prev.second
+        val dtSec = (lastPoint.first - prevPoint.first).toDouble() / 1000.0
+        val deltaBt = lastPoint.second - prevPoint.second
 
         val rorPerMin = if (dtSec > 0.0) {
             deltaBt / dtSec * 60.0
@@ -52,7 +52,7 @@ object RoastCurveEngineV2 {
             0.0
         }
 
-        val btNow = last.second
+        val btNow = lastPoint.second
 
         val predictedBt30 = btNow + rorPerMin * 0.5
         val predictedBt60 = btNow + rorPerMin * 1.0
@@ -66,7 +66,7 @@ object RoastCurveEngineV2 {
             null
         }
 
-        val deviation = when {
+        val deviationText = when {
             rorPerMin < 3.0 -> "Crash Risk"
             rorPerMin < 5.0 -> "Low Momentum"
             rorPerMin > 18.0 -> "Runaway Heat"
@@ -80,33 +80,39 @@ object RoastCurveEngineV2 {
             predictedBt90 = predictedBt90,
             predictedFcTimeSec = predictedFcTimeSec,
             predictedRor = rorPerMin,
-            deviation = deviation
+            deviationText = deviationText
         )
     }
 
     fun summary(): String {
-        val p = predict()
+        val prediction = predict()
+
+        val fcText = if (prediction.predictedFcTimeSec != null) {
+            "%.0f".format(prediction.predictedFcTimeSec) + "s"
+        } else {
+            "-"
+        }
 
         return """
 Curve Prediction
 
 BT +30s
-${"%.1f".format(p.predictedBt30)}℃
+${"%.1f".format(prediction.predictedBt30)}℃
 
 BT +60s
-${"%.1f".format(p.predictedBt60)}℃
+${"%.1f".format(prediction.predictedBt60)}℃
 
 BT +90s
-${"%.1f".format(p.predictedBt90)}℃
+${"%.1f".format(prediction.predictedBt90)}℃
 
 Predicted ROR
-${"%.1f".format(p.predictedRor)}℃/min
+${"%.1f".format(prediction.predictedRor)}℃/min
 
 Predicted FC
-${p.predictedFcTimeSec?.let { "%.0f".format(it) + "s" } ?: "-"}
+$fcText
 
 Deviation
-${p.deviation}
+${prediction.deviationText}
         """.trimIndent()
     }
 }
