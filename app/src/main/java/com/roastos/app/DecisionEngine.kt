@@ -10,11 +10,9 @@ object DecisionEngine {
 
     fun evaluate(
         energy: EnergySnapshot,
-        stability: RoastStabilityState,
+        stability: RoastStabilityResult,
         ror: Double
     ): DecisionResult {
-
-        // ===== ENERGY DEFICIT =====
 
         if (energy.stateEnum == EnergyState.DEFICIT) {
             return DecisionResult(
@@ -24,8 +22,6 @@ object DecisionEngine {
             )
         }
 
-        // ===== LOW ENERGY =====
-
         if (energy.stateEnum == EnergyState.LOW) {
             return DecisionResult(
                 suggestion = "Increase heat",
@@ -34,9 +30,7 @@ object DecisionEngine {
             )
         }
 
-        // ===== TOO HIGH ENERGY =====
-
-        if (energy.stateEnum == EnergyState.HIGH && ror > 11) {
+        if (energy.stateEnum == EnergyState.HIGH && ror > 11.0) {
             return DecisionResult(
                 suggestion = "Reduce heat or increase airflow",
                 severity = "MEDIUM",
@@ -44,18 +38,13 @@ object DecisionEngine {
             )
         }
 
-        // ===== ROR COLLAPSE =====
-
-        if (ror < 1) {
+        if (ror < 1.0) {
             return DecisionResult(
                 suggestion = "Increase heat immediately",
                 severity = "HIGH",
                 reason = "ROR collapse risk"
             )
         }
-
-        // ===== STABILITY ISSUE =====
-        // 这里只检测 stability score，不用 enum
 
         if (stability.score < 40) {
             return DecisionResult(
@@ -64,8 +53,6 @@ object DecisionEngine {
                 reason = "Roast stability degraded"
             )
         }
-
-        // ===== GOOD STATE =====
 
         return DecisionResult(
             suggestion = "Maintain current settings",
