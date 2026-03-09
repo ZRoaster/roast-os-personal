@@ -10,6 +10,10 @@ data class RoastAiRequest(
 
     val context: RoastAiContext,
 
+    val systemInstruction: String? = null,
+
+    val userMessageOverride: String? = null,
+
     val enableVision: Boolean = false,
 
     val enableAudio: Boolean = false,
