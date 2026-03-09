@@ -9,6 +9,7 @@ import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastCurveEngineV2
 import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastCurvePredictionV3
+import com.roastos.app.RoastDrivingAdvisorEngine
 import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.RoastStabilityEngine
 import com.roastos.app.TelemetrySourceMode
@@ -28,7 +29,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, curve prediction engines, and RoastStabilityEngine"
+                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, curve prediction engines, RoastStabilityEngine, and RoastDrivingAdvisorEngine"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -85,6 +86,20 @@ object RoastPage {
         val curveBody = UiKit.bodyText(context, "")
         curveCard.addView(curveBody)
         root.addView(curveCard)
+        root.addView(UiKit.spacer(context))
+
+        val adviceCard = UiKit.cardAlt(context)
+        adviceCard.addView(UiKit.cardTitle(context, "DRIVING ADVICE"))
+        adviceCard.addView(
+            UiKit.captionText(
+                context,
+                "Primary driving guidance derived from prediction, stability, baseline drift, and ROR behavior."
+            )
+        )
+        val adviceBody = UiKit.bodyText(context, "")
+        adviceCard.addView(UiKit.tinySpacer(context))
+        adviceCard.addView(adviceBody)
+        root.addView(adviceCard)
         root.addView(UiKit.spacer(context))
 
         val stabilityCard = UiKit.cardAlt(context)
@@ -218,6 +233,10 @@ object RoastPage {
 
             val predictionV3 = RoastCurveEngineV3.predict()
             val stability = RoastStabilityEngine.evaluate(predictionV3)
+            val advice = RoastDrivingAdvisorEngine.evaluate(
+                prediction = predictionV3,
+                stability = stability
+            )
 
             telemetryBody.text = MachineTelemetryEngine.summary()
             baselineBody.text = buildBaselineText()
@@ -245,6 +264,7 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
+            adviceBody.text = advice.summary
             stabilityBody.text = stability.summary
             anchorChainBody.text = buildAnchorChain(predictionV3)
             baselineDeltaBody.text = buildBaselineDeltaChain(predictionV3)
