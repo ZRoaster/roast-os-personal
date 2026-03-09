@@ -9,7 +9,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.roastos.app.AiProviderRegistry
 import com.roastos.app.RoastAiProviderType
-import com.roastos.app.RoastAiService
 import com.roastos.app.RoastAiServiceConfig
 
 object AiSettingsPage {
@@ -67,9 +66,7 @@ object AiSettingsPage {
         configCard.addView(UiKit.cardTitle(context, "CONFIG"))
 
         val modelInput = textInput(context, "Model", currentConfig.modelName)
-
         val baseUrlInput = textInput(context, "API Base URL", currentConfig.apiBaseUrl)
-
         val apiKeyInput = textInput(context, "API Key", currentConfig.apiKeyHint)
 
         apiKeyInput.inputType =
@@ -85,14 +82,9 @@ object AiSettingsPage {
 
         fun refreshToggle() {
 
-            visionButton.text =
-                "Vision: " + if (vision) "ON" else "OFF"
-
-            audioButton.text =
-                "Audio: " + if (audio) "ON" else "OFF"
-
-            fileButton.text =
-                "File Context: " + if (file) "ON" else "OFF"
+            visionButton.text = "Vision: " + if (vision) "ON" else "OFF"
+            audioButton.text = "Audio: " + if (audio) "ON" else "OFF"
+            fileButton.text = "File Context: " + if (file) "ON" else "OFF"
         }
 
         visionButton.setOnClickListener {
@@ -119,7 +111,6 @@ object AiSettingsPage {
         resetButton.text = "Reset"
 
         val configSummary = UiKit.bodyText(context, "")
-        val serviceSummary = UiKit.bodyText(context, "")
 
         applyButton.setOnClickListener {
 
@@ -133,11 +124,8 @@ object AiSettingsPage {
                 enableFileContext = file
             )
 
-            RoastAiService.configure(currentConfig)
-
             refreshProvider(providerSummary)
             refreshConfig(configSummary)
-            refreshService(serviceSummary)
         }
 
         resetButton.setOnClickListener {
@@ -155,11 +143,8 @@ object AiSettingsPage {
 
             refreshToggle()
 
-            RoastAiService.configure(currentConfig)
-
             refreshProvider(providerSummary)
             refreshConfig(configSummary)
-            refreshService(serviceSummary)
         }
 
         configCard.addView(modelInput)
@@ -178,14 +163,6 @@ object AiSettingsPage {
         root.addView(configCard)
         root.addView(UiKit.spacer(context))
 
-        val serviceCard = UiKit.card(context)
-        serviceCard.addView(UiKit.cardTitle(context, "SERVICE"))
-        serviceCard.addView(serviceSummary)
-
-        root.addView(serviceCard)
-
-        root.addView(UiKit.spacer(context))
-
         val registryCard = UiKit.card(context)
         registryCard.addView(UiKit.cardTitle(context, "REGISTRY"))
 
@@ -199,7 +176,6 @@ object AiSettingsPage {
         fun refreshAll() {
             refreshProvider(providerSummary)
             refreshConfig(configSummary)
-            refreshService(serviceSummary)
         }
 
         refreshAll()
@@ -239,11 +215,6 @@ ${if (descriptor?.supportsRemoteApi == true) "Yes" else "No"}
     private fun refreshConfig(body: TextView) {
 
         body.text = currentConfig.summary()
-    }
-
-    private fun refreshService(body: TextView) {
-
-        body.text = RoastAiService.summary()
     }
 
     private fun textInput(
