@@ -2,7 +2,6 @@ package com.roastos.app
 
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 data class RoastCurvePredictionV3(
     val smoothedBt: Double,
@@ -15,6 +14,9 @@ data class RoastCurvePredictionV3(
     val predictedDropTimeSec: Double?,
     val predictedDevelopmentSec: Double?,
     val predictedDtrPercent: Double?,
+    val baselineYellowDeltaSec: Double?,
+    val baselineFcDeltaSec: Double?,
+    val baselineDropDeltaSec: Double?,
     val phase: String,
     val trend: String,
     val confidence: Int,
@@ -26,6 +28,12 @@ object RoastCurveEngineV3 {
     private data class Sample(
         val timeMillis: Long,
         val bt: Double
+    )
+
+    private data class ConstrainedAnchors(
+        val yellowSec: Double?,
+        val fcSec: Double?,
+        val developmentSec: Double?
     )
 
     private val history = mutableListOf<Sample>()
@@ -141,11 +149,31 @@ object RoastCurveEngineV3 {
             else -> (constrainedAnchors.developmentSec / predictedDropTimeSec) * 100.0
         }
 
+        val baseline = PlannerBaselineStore.current()
+
+        val baselineYellowDeltaSec = computeDeltaSec(
+            predicted = constrainedAnchors.yellowSec,
+            baseline = baseline?.yellowSec?.toDouble()
+        )
+
+        val baselineFcDeltaSec = computeDeltaSec(
+            predicted = constrainedAnchors.fcSec,
+            baseline = baseline?.fcSec?.toDouble()
+        )
+
+        val baselineDropDeltaSec = computeDeltaSec(
+            predicted = predictedDropTimeSec,
+            baseline = baseline?.dropSec?.toDouble()
+        )
+
         val trend = detectTrend(
             smoothedRor = smoothedRor,
             predictedYellowTimeSec = constrainedAnchors.yellowSec,
             predictedFcTimeSec = constrainedAnchors.fcSec,
-            predictedDropTimeSec = predictedDropTimeSec
+            predictedDropTimeSec = predictedDropTimeSec,
+            baselineYellowDeltaSec = baselineYellowDeltaSec,
+            baselineFcDeltaSec = baselineFcDeltaSec,
+            baselineDropDeltaSec = baselineDropDeltaSec
         )
 
         val summary = buildSummary(
@@ -159,6 +187,9 @@ object RoastCurveEngineV3 {
             predictedDropTimeSec = predictedDropTimeSec,
             predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
+            baselineYellowDeltaSec = baselineYellowDeltaSec,
+            baselineFcDeltaSec = baselineFcDeltaSec,
+            baselineDropDeltaSec = baselineDropDeltaSec,
             phase = phase,
             trend = trend,
             confidence = confidence
@@ -175,6 +206,9 @@ object RoastCurveEngineV3 {
             predictedDropTimeSec = predictedDropTimeSec,
             predictedDevelopmentSec = constrainedAnchors.developmentSec,
             predictedDtrPercent = predictedDtrPercent,
+            baselineYellowDeltaSec = baselineYellowDeltaSec,
+            baselineFcDeltaSec = baselineFcDeltaSec,
+            baselineDropDeltaSec = baselineDropDeltaSec,
             phase = phase,
             trend = trend,
             confidence = confidence,
@@ -186,15 +220,9 @@ object RoastCurveEngineV3 {
         return predict().summary
     }
 
-    private data class ConstrainedAnchors(
-        val yellowSec: Double?,
-        val fcSec: Double?,
-        val developmentSec: Double?
-    )
-
     private fun emptyPrediction(reason: String): RoastCurvePredictionV3 {
         val summary = """
-Curve Prediction V3.3
+Curve Prediction V3.4
 
 Status
 $reason
@@ -229,6 +257,15 @@ Predicted Development
 Predicted DTR
 -
 
+Baseline Yellow Δ
+-
+
+Baseline FC Δ
+-
+
+Baseline Drop Δ
+-
+
 Phase
 Unknown
 
@@ -250,6 +287,9 @@ Confidence
             predictedDropTimeSec = null,
             predictedDevelopmentSec = null,
             predictedDtrPercent = null,
+            baselineYellowDeltaSec = null,
+            baselineFcDeltaSec = null,
+            baselineDropDeltaSec = null,
             phase = "Unknown",
             trend = "Unknown",
             confidence = 0,
@@ -444,7 +484,6 @@ Confidence
         }
 
         if (y != null && fc == null && dev != null && y < 25.0) {
-            // Yellow 非常近但 FC 还没出来时，避免 development 过早主导整体
             dev = max(dev, 65.0)
         }
 
@@ -453,6 +492,14 @@ Confidence
             fcSec = fc,
             developmentSec = dev
         )
+    }
+
+    private fun computeDeltaSec(
+        predicted: Double?,
+        baseline: Double?
+    ): Double? {
+        if (predicted == null || baseline == null) return null
+        return predicted - baseline
     }
 
     private fun detectPhase(smoothedBt: Double): String {
@@ -469,17 +516,25 @@ Confidence
         smoothedRor: Double,
         predictedYellowTimeSec: Double?,
         predictedFcTimeSec: Double?,
-        predictedDropTimeSec: Double?
+        predictedDropTimeSec: Double?,
+        baselineYellowDeltaSec: Double?,
+        baselineFcDeltaSec: Double?,
+        baselineDropDeltaSec: Double?
     ): String {
         return when {
             smoothedRor < 3.0 -> "Crash Risk"
             smoothedRor < 5.5 -> "Low Momentum"
             smoothedRor > 16.0 -> "Runaway Heat"
             smoothedRor > 12.0 -> "Too Fast"
+            baselineFcDeltaSec != null && baselineFcDeltaSec > 20.0 -> "FC Later Than Baseline"
+            baselineFcDeltaSec != null && baselineFcDeltaSec < -20.0 -> "FC Earlier Than Baseline"
+            baselineDropDeltaSec != null && baselineDropDeltaSec > 25.0 -> "Drop Later Than Baseline"
+            baselineDropDeltaSec != null && baselineDropDeltaSec < -25.0 -> "Drop Earlier Than Baseline"
             predictedYellowTimeSec != null && predictedYellowTimeSec < 20.0 -> "Approaching Yellow"
             predictedFcTimeSec != null && predictedFcTimeSec < 15.0 -> "FC Imminent"
             predictedFcTimeSec != null && predictedFcTimeSec < 35.0 -> "Approaching FC"
             predictedDropTimeSec != null && predictedDropTimeSec < 45.0 -> "Approaching Drop"
+            baselineYellowDeltaSec != null && abs(baselineYellowDeltaSec) > 18.0 -> "Yellow Offset vs Baseline"
             else -> "Stable"
         }
     }
@@ -525,6 +580,9 @@ Confidence
         predictedDropTimeSec: Double?,
         predictedDevelopmentSec: Double?,
         predictedDtrPercent: Double?,
+        baselineYellowDeltaSec: Double?,
+        baselineFcDeltaSec: Double?,
+        baselineDropDeltaSec: Double?,
         phase: String,
         trend: String,
         confidence: Int
@@ -536,7 +594,7 @@ Confidence
         val dtrText = predictedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
 
         return """
-Curve Prediction V3.3
+Curve Prediction V3.4
 
 Smoothed BT
 ${"%.1f".format(smoothedBt)} ℃
@@ -568,6 +626,15 @@ $devText
 Predicted DTR
 $dtrText
 
+Baseline Yellow Δ
+${formatDelta(baselineYellowDeltaSec)}
+
+Baseline FC Δ
+${formatDelta(baselineFcDeltaSec)}
+
+Baseline Drop Δ
+${formatDelta(baselineDropDeltaSec)}
+
 Phase
 $phase
 
@@ -583,6 +650,14 @@ $confidence
         return when {
             value == null -> "-"
             value <= 0.0 -> "Now"
+            else -> "%.0f".format(value) + "s"
+        }
+    }
+
+    private fun formatDelta(value: Double?): String {
+        return when {
+            value == null -> "-"
+            value > 0.0 -> "+" + "%.0f".format(value) + "s"
             else -> "%.0f".format(value) + "s"
         }
     }
