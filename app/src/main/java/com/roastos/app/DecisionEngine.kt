@@ -55,8 +55,9 @@ object DecisionEngine {
         }
 
         // ===== STABILITY ISSUE =====
+        // 这里只检测 stability score，不用 enum
 
-        if (stability.state == StabilityState.UNSTABLE) {
+        if (stability.score < 40) {
             return DecisionResult(
                 suggestion = "Stabilize heat input",
                 severity = "MEDIUM",
