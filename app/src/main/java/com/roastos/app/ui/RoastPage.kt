@@ -22,7 +22,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Live roast monitoring driven by MachineTelemetryEngine"
+                "Cockpit view driven by MachineTelemetryEngine"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -32,6 +32,13 @@ object RoastPage {
         val telemetryBody = UiKit.bodyText(context, "")
         telemetryCard.addView(telemetryBody)
         root.addView(telemetryCard)
+        root.addView(UiKit.spacer(context))
+
+        val cockpitCard = UiKit.card(context)
+        cockpitCard.addView(UiKit.cardTitle(context, "COCKPIT"))
+        val cockpitBody = UiKit.bodyText(context, "")
+        cockpitCard.addView(cockpitBody)
+        root.addView(cockpitCard)
         root.addView(UiKit.spacer(context))
 
         val controlCard = UiKit.card(context)
@@ -91,6 +98,25 @@ object RoastPage {
             val drum = telemetry.liveDrumRpm
             val time = telemetry.liveElapsedSec
             val machineState = telemetry.machineState
+
+            val phase = buildPhase(bt = bt, elapsedSec = time)
+            val risk = buildRisk(ror = ror, elapsedSec = time)
+            val action = buildActionNow(bt = bt, ror = ror, elapsedSec = time)
+            val watchpoint = buildNextWatchpoint(bt = bt, ror = ror, elapsedSec = time)
+
+            cockpitBody.text = """
+PHASE
+$phase
+
+RISK
+$risk
+
+ACTION NOW
+$action
+
+NEXT WATCHPOINT
+$watchpoint
+            """.trimIndent()
 
             curveBody.text = """
 Curve Monitor
@@ -178,6 +204,87 @@ ${telemetry.mode}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildPhase(
+        bt: Double,
+        elapsedSec: Int
+    ): String {
+        return when {
+            elapsedSec <= 60 -> "Charge / Early Front-End"
+            bt <= 120.0 -> "Drying"
+            bt <= 160.0 -> "Drying → Maillard Transition"
+            bt <= 195.0 -> "Maillard / Pre-FC"
+            else -> "Development / Late Roast"
+        }
+    }
+
+    private fun buildRisk(
+        ror: Double,
+        elapsedSec: Int
+    ): String {
+        return when {
+            elapsedSec <= 60 -> "Low"
+            ror >= 10.8 -> "High"
+            ror <= 7.0 && elapsedSec >= 240 -> "High"
+            ror >= 9.5 || (ror <= 8.0 && elapsedSec >= 180) -> "Medium"
+            else -> "Low"
+        }
+    }
+
+    private fun buildActionNow(
+        bt: Double,
+        ror: Double,
+        elapsedSec: Int
+    ): String {
+        return when {
+            elapsedSec <= 60 ->
+                "Watch early momentum and avoid over-reacting too fast"
+
+            ror >= 10.8 ->
+                "Reduce heat earlier and watch late acceleration"
+
+            ror <= 7.0 && elapsedSec >= 240 ->
+                "Protect energy immediately and avoid crash into crack"
+
+            bt <= 120.0 ->
+                "Maintain stable drying and avoid unnecessary aggressive changes"
+
+            bt <= 160.0 ->
+                "Guide transition cleanly and keep momentum into Maillard"
+
+            bt <= 195.0 ->
+                "Monitor ROR carefully and prepare first-crack entry structure"
+
+            else ->
+                "Control development and prepare disciplined drop timing"
+        }
+    }
+
+    private fun buildNextWatchpoint(
+        bt: Double,
+        ror: Double,
+        elapsedSec: Int
+    ): String {
+        return when {
+            elapsedSec <= 60 ->
+                "First turning response and early front-end strength"
+
+            bt <= 120.0 ->
+                "Drying completion and momentum into Yellow"
+
+            bt <= 160.0 ->
+                "Yellow timing and middle-phase energy continuity"
+
+            bt <= 195.0 && ror >= 10.0 ->
+                "Spike risk before first crack"
+
+            bt <= 195.0 ->
+                "FC approach timing and pre-FC ROR stability"
+
+            else ->
+                "Development time, drop point, and finish cleanliness"
+        }
     }
 
     private fun buildCurveInterpretation(
