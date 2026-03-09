@@ -1,7 +1,6 @@
 package com.roastos.app.ui
 
 import android.content.Context
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
@@ -31,26 +30,14 @@ object DashboardPage {
         val actionCard = UiKit.card(context)
         actionCard.addView(UiKit.cardTitle(context, "DASHBOARD ACTIONS"))
 
-        val refreshBtn = Button(context)
-        refreshBtn.text = "Refresh Dashboard"
+        val refreshBtn = UiKit.primaryButton(context, "Refresh Dashboard")
 
-        val goPlannerBtn = Button(context)
-        goPlannerBtn.text = "Go Planner"
-
-        val goPreheatBtn = Button(context)
-        goPreheatBtn.text = "Go Preheat"
-
-        val goRoastBtn = Button(context)
-        goRoastBtn.text = "Go Roast"
-
-        val goCorrectionBtn = Button(context)
-        goCorrectionBtn.text = "Go Correction"
-
-        val goHistoryBtn = Button(context)
-        goHistoryBtn.text = "Go History"
-
-        val goProfileBtn = Button(context)
-        goProfileBtn.text = "Go Profile"
+        val goPlannerBtn = UiKit.secondaryButton(context, "Go Planner")
+        val goPreheatBtn = UiKit.secondaryButton(context, "Go Preheat")
+        val goRoastBtn = UiKit.secondaryButton(context, "Go Roast")
+        val goCorrectionBtn = UiKit.secondaryButton(context, "Go Correction")
+        val goHistoryBtn = UiKit.secondaryButton(context, "Go History")
+        val goProfileBtn = UiKit.secondaryButton(context, "Go Profile")
 
         actionCard.addView(refreshBtn)
         actionCard.addView(goPlannerBtn)
@@ -66,8 +53,7 @@ object DashboardPage {
         val telemetryCard = UiKit.card(context)
         telemetryCard.addView(UiKit.cardTitle(context, "MACHINE TELEMETRY"))
         val telemetryBody = UiKit.bodyText(context, "")
-        val telemetryJumpBtn = Button(context)
-        telemetryJumpBtn.text = "Open Roast"
+        val telemetryJumpBtn = UiKit.secondaryButton(context, "Open Roast")
         telemetryCard.addView(telemetryBody)
         telemetryCard.addView(telemetryJumpBtn)
         root.addView(telemetryCard)
@@ -76,8 +62,7 @@ object DashboardPage {
         val baselineCard = UiKit.card(context)
         baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
         val baselineBody = UiKit.bodyText(context, "")
-        val baselineJumpBtn = Button(context)
-        baselineJumpBtn.text = "Open Planner"
+        val baselineJumpBtn = UiKit.secondaryButton(context, "Open Planner")
         baselineCard.addView(baselineBody)
         baselineCard.addView(baselineJumpBtn)
         root.addView(baselineCard)
@@ -86,8 +71,7 @@ object DashboardPage {
         val preheatCard = UiKit.card(context)
         preheatCard.addView(UiKit.cardTitle(context, "PREHEAT TARGET"))
         val preheatBody = UiKit.bodyText(context, "")
-        val preheatJumpBtn = Button(context)
-        preheatJumpBtn.text = "Open Preheat"
+        val preheatJumpBtn = UiKit.secondaryButton(context, "Open Preheat")
         preheatCard.addView(preheatBody)
         preheatCard.addView(preheatJumpBtn)
         root.addView(preheatCard)
@@ -96,8 +80,7 @@ object DashboardPage {
         val historyCard = UiKit.card(context)
         historyCard.addView(UiKit.cardTitle(context, "LATEST HISTORY"))
         val historyBody = UiKit.bodyText(context, "")
-        val historyJumpBtn = Button(context)
-        historyJumpBtn.text = "Open History"
+        val historyJumpBtn = UiKit.secondaryButton(context, "Open History")
         historyCard.addView(historyBody)
         historyCard.addView(historyJumpBtn)
         root.addView(historyCard)
@@ -106,8 +89,7 @@ object DashboardPage {
         val profileCard = UiKit.card(context)
         profileCard.addView(UiKit.cardTitle(context, "LATEST PROFILE"))
         val profileBody = UiKit.bodyText(context, "")
-        val profileJumpBtn = Button(context)
-        profileJumpBtn.text = "Open Profile"
+        val profileJumpBtn = UiKit.secondaryButton(context, "Open Profile")
         profileCard.addView(profileBody)
         profileCard.addView(profileJumpBtn)
         root.addView(profileCard)
@@ -116,8 +98,7 @@ object DashboardPage {
         val correctionCard = UiKit.card(context)
         correctionCard.addView(UiKit.cardTitle(context, "LATEST UNIFIED CORRECTION"))
         val correctionBody = UiKit.bodyText(context, "")
-        val correctionJumpBtn = Button(context)
-        correctionJumpBtn.text = "Open Correction"
+        val correctionJumpBtn = UiKit.secondaryButton(context, "Open Correction")
         correctionCard.addView(correctionBody)
         correctionCard.addView(correctionJumpBtn)
         root.addView(correctionCard)
