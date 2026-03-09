@@ -8,6 +8,7 @@ import com.roastos.app.PlannerBaseline
 import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastCurveEngineV2
 import com.roastos.app.RoastCurveEngineV3
+import com.roastos.app.RoastCurvePredictionV3
 import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.TelemetrySourceMode
 
@@ -85,12 +86,26 @@ object RoastPage {
         root.addView(curveCard)
         root.addView(UiKit.spacer(context))
 
+        val anchorChainCard = UiKit.cardAlt(context)
+        anchorChainCard.addView(UiKit.cardTitle(context, "ANCHOR CHAIN"))
+        anchorChainCard.addView(
+            UiKit.captionText(
+                context,
+                "Yellow → FC → Drop anchor chain from the primary V3.3 prediction layer."
+            )
+        )
+        val anchorChainBody = UiKit.bodyText(context, "")
+        anchorChainCard.addView(UiKit.tinySpacer(context))
+        anchorChainCard.addView(anchorChainBody)
+        root.addView(anchorChainCard)
+        root.addView(UiKit.spacer(context))
+
         val forecastCard = UiKit.cardAlt(context)
         forecastCard.addView(UiKit.cardTitle(context, "FC / DROP / DEVELOPMENT FORECAST"))
         forecastCard.addView(
             UiKit.captionText(
                 context,
-                "Primary forecast layer from V3.2. Focus here first during roast."
+                "Primary forecast layer from V3.3. Focus here first during roast."
             )
         )
         val forecastBody = UiKit.bodyText(context, "")
@@ -104,7 +119,7 @@ object RoastPage {
         predictionV3Card.addView(
             UiKit.captionText(
                 context,
-                "V3.2 uses smoothed BT, smoothed ROR, stabilized FC estimation, phase detection, drop forecasting, development forecasting, and confidence."
+                "V3.3 uses smoothed BT, smoothed ROR, stabilized anchor estimation, anchor consistency constraints, and confidence."
             )
         )
         val predictionV3Body = UiKit.bodyText(context, "")
@@ -186,6 +201,7 @@ Baseline Reference
 ${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
+            anchorChainBody.text = buildAnchorChain(predictionV3)
             forecastBody.text = buildForecastHeadline(predictionV3)
             predictionV3Body.text = predictionV3.summary
             predictionV2Body.text = RoastCurveEngineV2.summary()
@@ -261,19 +277,60 @@ ${telemetry.mode}
         container.addView(scroll)
     }
 
-    private fun buildForecastHeadline(prediction: com.roastos.app.RoastCurvePredictionV3): String {
-        val fcText = when {
-            prediction.predictedFcTimeSec == null -> "-"
-            prediction.predictedFcTimeSec <= 0.0 -> "Now"
-            else -> "%.0f".format(prediction.predictedFcTimeSec) + "s"
+    private fun buildAnchorChain(prediction: RoastCurvePredictionV3): String {
+        val yellowText = formatPredictionTime(prediction.predictedYellowTimeSec)
+        val fcText = formatPredictionTime(prediction.predictedFcTimeSec)
+        val dropText = formatPredictionTime(prediction.predictedDropTimeSec)
+        val devText = prediction.predictedDevelopmentSec?.let { "%.0f".format(it) + "s" } ?: "-"
+        val dtrText = prediction.predictedDtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"
+
+        val yellowToFcText = if (
+            prediction.predictedYellowTimeSec != null &&
+            prediction.predictedFcTimeSec != null
+        ) {
+            val delta = prediction.predictedFcTimeSec - prediction.predictedYellowTimeSec
+            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
+        } else {
+            "-"
         }
 
-        val dropText = when {
-            prediction.predictedDropTimeSec == null -> "-"
-            prediction.predictedDropTimeSec <= 0.0 -> "Now"
-            else -> "%.0f".format(prediction.predictedDropTimeSec) + "s"
+        val fcToDropText = if (
+            prediction.predictedFcTimeSec != null &&
+            prediction.predictedDropTimeSec != null
+        ) {
+            val delta = prediction.predictedDropTimeSec - prediction.predictedFcTimeSec
+            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
+        } else {
+            "-"
         }
 
+        return """
+Predicted Yellow
+$yellowText
+
+Predicted FC
+$fcText
+
+Predicted Drop
+$dropText
+
+Yellow → FC
+$yellowToFcText
+
+FC → Drop
+$fcToDropText
+
+Predicted Development
+$devText
+
+Predicted DTR
+$dtrText
+        """.trimIndent()
+    }
+
+    private fun buildForecastHeadline(prediction: RoastCurvePredictionV3): String {
+        val fcText = formatPredictionTime(prediction.predictedFcTimeSec)
+        val dropText = formatPredictionTime(prediction.predictedDropTimeSec)
         val devText = prediction.predictedDevelopmentSec?.let {
             "%.0f".format(it) + "s"
         } ?: "-"
@@ -359,6 +416,14 @@ ${baseline.dropSec?.toString()?.plus("s") ?: "-"}
                 "Working toward Drop anchor"
             else ->
                 "Past or near final baseline anchors"
+        }
+    }
+
+    private fun formatPredictionTime(value: Double?): String {
+        return when {
+            value == null -> "-"
+            value <= 0.0 -> "Now"
+            else -> "%.0f".format(value) + "s"
         }
     }
 
