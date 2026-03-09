@@ -28,7 +28,7 @@ object BatchDetailPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Roast replay, diagnosis, correction, unified correction, report, evaluation, and profile save"
+                "Roast replay, diagnosis, correction, unified correction, report, evaluation, profile save, and baseline trace"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -94,6 +94,15 @@ object BatchDetailPage {
                 context,
                 "HEADER",
                 buildHeader(entry)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            UiKit.buildCard(
+                context,
+                "BASELINE TRACE",
+                buildBaselineTrace(entry)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -207,6 +216,28 @@ object BatchDetailPage {
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildBaselineTrace(entry: RoastHistoryEntry): String {
+        return """
+Status
+${if (entry.baselineLabel != null) "Recorded" else "Not recorded"}
+
+Source
+${entry.baselineSource ?: "-"}
+
+Label
+${entry.baselineLabel ?: "-"}
+
+Match Grade
+${formatBaselineMatch(entry.baselineMatchGrade)}
+
+Source Profile
+${entry.baselineSourceProfileId ?: "-"}
+
+Source Batch
+${entry.baselineSourceBatchId ?: "-"}
+        """.trimIndent()
     }
 
     private fun buildProfileStatus(entry: RoastHistoryEntry): String {
@@ -512,5 +543,14 @@ ${evaluation.notes.ifBlank { "-" }}
 
     private fun secOrDash(value: Int?): String {
         return value?.toString() ?: "-"
+    }
+
+    private fun formatBaselineMatch(raw: String?): String {
+        return when (raw) {
+            "EXACT_MATCH" -> "Exact Match"
+            "SIMILAR_MATCH" -> "Similar Match"
+            "REFERENCE_ONLY" -> "Reference Only"
+            else -> "-"
+        }
     }
 }
