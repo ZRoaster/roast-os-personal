@@ -27,12 +27,7 @@ object RoastCurveEngineV2 {
     fun predict(): CurvePrediction {
 
         if (btHistory.size < 2) {
-            return CurvePrediction(
-                0.0,
-                0.0,
-                0.0,
-                0.0
-            )
+            return CurvePrediction(0.0, 0.0, 0.0, 0.0)
         }
 
         val last = btHistory.last()
@@ -41,29 +36,29 @@ object RoastCurveEngineV2 {
         val dt = (last.first - prev.first) / 1000.0
         val dBt = last.second - prev.second
 
-        val ror = if (dt > 0) (dBt / dt) * 60 else 0.0
+        val rorValue = if (dt > 0) (dBt / dt) * 60 else 0.0
 
         val btNow = last.second
 
-        val bt30 = btNow + ror * 0.5
-        val bt60 = btNow + ror * 1.0
-        val bt90 = btNow + ror * 1.5
+        val bt30 = btNow + rorValue * 0.5
+        val bt60 = btNow + rorValue * 1.0
+        val bt90 = btNow + rorValue * 1.5
 
         return CurvePrediction(
             bt30,
             bt60,
             bt90,
-            ror
+            rorValue
         )
     }
 
     fun summary(): String {
 
-        val p = predict()
+        val prediction = predict()
 
-        return "BT+30 ${"%.1f".format(p.bt30)}°C  |  " +
-               "BT+60 ${"%.1f".format(p.bt60)}°C  |  " +
-               "BT+90 ${"%.1f".format(p.bt90)}°C  |  " +
-               "ROR ${"%.1f".format(p.ror)}°C/min"
+        return "BT+30 ${"%.1f".format(prediction.bt30)}°C  |  " +
+               "BT+60 ${"%.1f".format(prediction.bt60)}°C  |  " +
+               "BT+90 ${"%.1f".format(prediction.bt90)}°C  |  " +
+               "ROR ${"%.1f".format(prediction.ror)}°C/min"
     }
 }
