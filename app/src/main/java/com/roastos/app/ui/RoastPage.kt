@@ -1,25 +1,26 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.text.InputType
+import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.DecisionEngine
+import com.roastos.app.EnergyEngine
+import com.roastos.app.EnergyState
+import com.roastos.app.MachineControlCapabilities
+import com.roastos.app.MachineControlPlanner
+import com.roastos.app.MachineProfiles
+import com.roastos.app.MachineStateEngine
 import com.roastos.app.MachineTelemetryEngine
-import com.roastos.app.PlannerBaseline
-import com.roastos.app.PlannerBaselineStore
-import com.roastos.app.RoastCurveEngineV2
-import com.roastos.app.RoastCurveEngineV3
-import com.roastos.app.RoastCurvePredictionV3
-import com.roastos.app.RoastDrivingAdvisorEngine
-import com.roastos.app.RoastLiveAssistEngine
-import com.roastos.app.RoastStabilityEngine
 import com.roastos.app.TelemetrySourceMode
 
 object RoastPage {
 
-    private var simulatorElapsed = 0
+    private var simulatorElapsedSec = 0
 
     fun show(context: Context, container: LinearLayout) {
-
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -29,570 +30,348 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, PlannerBaselineStore, curve prediction engines, RoastStabilityEngine, and RoastDrivingAdvisorEngine"
+                "Telemetry, energy state, control capability, decision, and control planner cockpit"
             )
         )
         root.addView(UiKit.spacer(context))
 
         val telemetryCard = UiKit.card(context)
-        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
+        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY MODE"))
+
+        val manualBtn = Button(context)
+        manualBtn.text = "Use MANUAL"
+
+        val simulatorBtn = Button(context)
+        simulatorBtn.text = "Use SIMULATOR"
+
+        val machineBtn = Button(context)
+        machineBtn.text = "Use MACHINE"
+
         val telemetryBody = UiKit.bodyText(context, "")
+
+        telemetryCard.addView(manualBtn)
+        telemetryCard.addView(simulatorBtn)
+        telemetryCard.addView(machineBtn)
         telemetryCard.addView(telemetryBody)
+
         root.addView(telemetryCard)
         root.addView(UiKit.spacer(context))
 
-        val baselineCard = UiKit.card(context)
-        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
-        val baselineBody = UiKit.bodyText(context, "")
-        baselineCard.addView(baselineBody)
-        root.addView(baselineCard)
+        val inputCard = UiKit.card(context)
+        inputCard.addView(UiKit.cardTitle(context, "LIVE INPUT"))
+
+        val btInput = decimalInput(context, "BT ℃", "165.0")
+        val rorInput = decimalInput(context, "RoR ℃/s", "0.12")
+        val powerInput = intInput(context, "Power W", "680")
+        val airflowInput = intInput(context, "Airflow Pa", "10")
+        val drumInput = intInput(context, "Drum RPM", "60")
+        val elapsedInput = intInput(context, "Elapsed Sec", "240")
+        val envTempInput = decimalInput(context, "Env Temp ℃", "25.0")
+        val envRhInput = decimalInput(context, "Env RH %", "50.0")
+
+        val pushManualBtn = Button(context)
+        pushManualBtn.text = "Push Manual Frame"
+
+        val sim10Btn = Button(context)
+        sim10Btn.text = "Simulator +10s"
+
+        val sim30Btn = Button(context)
+        sim30Btn.text = "Simulator +30s"
+
+        val simResetBtn = Button(context)
+        simResetBtn.text = "Reset Simulator"
+
+        val refreshBtn = Button(context)
+        refreshBtn.text = "Refresh Cockpit"
+
+        inputCard.addView(btInput)
+        inputCard.addView(rorInput)
+        inputCard.addView(powerInput)
+        inputCard.addView(airflowInput)
+        inputCard.addView(drumInput)
+        inputCard.addView(elapsedInput)
+        inputCard.addView(envTempInput)
+        inputCard.addView(envRhInput)
+        inputCard.addView(pushManualBtn)
+        inputCard.addView(sim10Btn)
+        inputCard.addView(sim30Btn)
+        inputCard.addView(simResetBtn)
+        inputCard.addView(refreshBtn)
+
+        root.addView(inputCard)
         root.addView(UiKit.spacer(context))
 
-        val cockpitCard = UiKit.card(context)
-        cockpitCard.addView(UiKit.cardTitle(context, "COCKPIT"))
-        val cockpitBody = UiKit.bodyText(context, "")
-        cockpitCard.addView(cockpitBody)
-        root.addView(cockpitCard)
+        val capabilityCard = UiKit.card(context)
+        capabilityCard.addView(UiKit.cardTitle(context, "CONTROL CAPABILITY"))
+        val capabilityBody = UiKit.bodyText(context, "")
+        capabilityCard.addView(capabilityBody)
+
+        root.addView(capabilityCard)
         root.addView(UiKit.spacer(context))
 
-        val controlCard = UiKit.card(context)
-        controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
-        controlCard.addView(
-            UiKit.captionText(
-                context,
-                "Use simulator or machine mode to drive live roast state."
-            )
-        )
+        val energyCard = UiKit.card(context)
+        energyCard.addView(UiKit.cardTitle(context, "ENERGY ENGINE"))
+        val energyBody = UiKit.bodyText(context, "")
+        energyCard.addView(energyBody)
 
-        val manualBtn = UiKit.secondaryButton(context, "Manual Mode")
-        val simBtn = UiKit.secondaryButton(context, "Simulator Mode")
-        val simStep10 = UiKit.primaryButton(context, "Sim +10s")
-        val simStep30 = UiKit.primaryButton(context, "Sim +30s")
-        val simReset = UiKit.dangerButton(context, "Reset Simulator")
-        val machineBtn = UiKit.secondaryButton(context, "Machine Mode")
-
-        controlCard.addView(manualBtn)
-        controlCard.addView(simBtn)
-        controlCard.addView(simStep10)
-        controlCard.addView(simStep30)
-        controlCard.addView(simReset)
-        controlCard.addView(machineBtn)
-
-        root.addView(controlCard)
+        root.addView(energyCard)
         root.addView(UiKit.spacer(context))
 
-        val curveCard = UiKit.card(context)
-        curveCard.addView(UiKit.cardTitle(context, "ROAST CURVE"))
-        val curveBody = UiKit.bodyText(context, "")
-        curveCard.addView(curveBody)
-        root.addView(curveCard)
+        val decisionCard = UiKit.card(context)
+        decisionCard.addView(UiKit.cardTitle(context, "DECISION"))
+        val decisionBody = UiKit.bodyText(context, "")
+        decisionCard.addView(decisionBody)
+
+        root.addView(decisionCard)
         root.addView(UiKit.spacer(context))
 
-        val adviceCard = UiKit.cardAlt(context)
-        adviceCard.addView(UiKit.cardTitle(context, "DRIVING ADVICE"))
-        adviceCard.addView(
-            UiKit.captionText(
-                context,
-                "Primary driving guidance derived from prediction, stability, baseline drift, and ROR behavior."
-            )
-        )
-        val adviceBody = UiKit.bodyText(context, "")
-        adviceCard.addView(UiKit.tinySpacer(context))
-        adviceCard.addView(adviceBody)
-        root.addView(adviceCard)
-        root.addView(UiKit.spacer(context))
+        val plannerCard = UiKit.card(context)
+        plannerCard.addView(UiKit.cardTitle(context, "CONTROL PLANNER"))
+        val plannerBody = UiKit.bodyText(context, "")
+        plannerCard.addView(plannerBody)
 
-        val stabilityCard = UiKit.cardAlt(context)
-        stabilityCard.addView(UiKit.cardTitle(context, "ROAST STABILITY"))
-        stabilityCard.addView(
-            UiKit.captionText(
-                context,
-                "Overall roast stability derived from crash/flick behavior, anchor chain score, baseline deltas, and prediction confidence."
-            )
-        )
-        val stabilityBody = UiKit.bodyText(context, "")
-        stabilityCard.addView(UiKit.tinySpacer(context))
-        stabilityCard.addView(stabilityBody)
-        root.addView(stabilityCard)
-        root.addView(UiKit.spacer(context))
-
-        val anchorChainCard = UiKit.cardAlt(context)
-        anchorChainCard.addView(UiKit.cardTitle(context, "ANCHOR CHAIN"))
-        anchorChainCard.addView(
-            UiKit.captionText(
-                context,
-                "Turning → Yellow → FC → Drop anchor chain from the primary V3.6 prediction layer."
-            )
-        )
-        val anchorChainBody = UiKit.bodyText(context, "")
-        anchorChainCard.addView(UiKit.tinySpacer(context))
-        anchorChainCard.addView(anchorChainBody)
-        root.addView(anchorChainCard)
-        root.addView(UiKit.spacer(context))
-
-        val baselineDeltaCard = UiKit.cardAlt(context)
-        baselineDeltaCard.addView(UiKit.cardTitle(context, "BASELINE DELTA CHAIN"))
-        baselineDeltaCard.addView(
-            UiKit.captionText(
-                context,
-                "Predicted anchor offsets versus the active baseline."
-            )
-        )
-        val baselineDeltaBody = UiKit.bodyText(context, "")
-        baselineDeltaCard.addView(UiKit.tinySpacer(context))
-        baselineDeltaCard.addView(baselineDeltaBody)
-        root.addView(baselineDeltaCard)
-        root.addView(UiKit.spacer(context))
-
-        val rorBehaviorCard = UiKit.cardAlt(context)
-        rorBehaviorCard.addView(UiKit.cardTitle(context, "ROR BEHAVIOR"))
-        rorBehaviorCard.addView(
-            UiKit.captionText(
-                context,
-                "Crash / Flick / slope / momentum analysis from the primary V3.6 prediction layer."
-            )
-        )
-        val rorBehaviorBody = UiKit.bodyText(context, "")
-        rorBehaviorCard.addView(UiKit.tinySpacer(context))
-        rorBehaviorCard.addView(rorBehaviorBody)
-        root.addView(rorBehaviorCard)
-        root.addView(UiKit.spacer(context))
-
-        val forecastCard = UiKit.cardAlt(context)
-        forecastCard.addView(UiKit.cardTitle(context, "FC / DROP / DEVELOPMENT FORECAST"))
-        forecastCard.addView(
-            UiKit.captionText(
-                context,
-                "Primary forecast layer from V3.6. Focus here first during roast."
-            )
-        )
-        val forecastBody = UiKit.bodyText(context, "")
-        forecastCard.addView(UiKit.tinySpacer(context))
-        forecastCard.addView(forecastBody)
-        root.addView(forecastCard)
-        root.addView(UiKit.spacer(context))
-
-        val predictionV3Card = UiKit.cardAlt(context)
-        predictionV3Card.addView(UiKit.cardTitle(context, "PRIMARY CURVE PREDICTION"))
-        predictionV3Card.addView(
-            UiKit.captionText(
-                context,
-                "V3.6 uses smoothed BT, smoothed ROR, predicted anchors, baseline deltas, chain scoring, and ROR behavior analysis."
-            )
-        )
-        val predictionV3Body = UiKit.bodyText(context, "")
-        predictionV3Card.addView(UiKit.tinySpacer(context))
-        predictionV3Card.addView(predictionV3Body)
-        root.addView(predictionV3Card)
-        root.addView(UiKit.spacer(context))
-
-        val predictionV2Card = UiKit.card(context)
-        predictionV2Card.addView(UiKit.cardTitle(context, "REFERENCE PREDICTION V2"))
-        predictionV2Card.addView(
-            UiKit.captionText(
-                context,
-                "V2 is kept as a simple comparison layer. Use it only as a lightweight reference."
-            )
-        )
-        val predictionV2Body = UiKit.bodyText(context, "")
-        predictionV2Card.addView(UiKit.tinySpacer(context))
-        predictionV2Card.addView(predictionV2Body)
-        root.addView(predictionV2Card)
+        root.addView(plannerCard)
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
-        statusCard.addView(UiKit.cardTitle(context, "ROAST STATUS"))
+        statusCard.addView(UiKit.cardTitle(context, "STATUS"))
         val statusBody = UiKit.bodyText(context, "")
         statusCard.addView(statusBody)
+
         root.addView(statusCard)
 
-        fun refresh() {
+        fun currentMachineState() = MachineStateEngine.buildState(
+            powerW = MachineTelemetryEngine.currentState().livePowerW,
+            airflowPa = MachineTelemetryEngine.currentState().liveAirflowPa,
+            drumRpm = MachineTelemetryEngine.currentState().liveDrumRpm,
+            beanTemp = MachineTelemetryEngine.currentState().liveBtC
+                ?: btInput.text.toString().toDoubleOrNull()
+                ?: 0.0,
+            ror = MachineTelemetryEngine.currentState().liveRorCPerMin
+                ?: ((rorInput.text.toString().toDoubleOrNull() ?: 0.0) * 60.0),
+            elapsedSec = MachineTelemetryEngine.currentState().liveElapsedSec,
+            environmentTemp = envTempInput.text.toString().toDoubleOrNull() ?: 25.0,
+            environmentHumidity = envRhInput.text.toString().toDoubleOrNull() ?: 50.0
+        )
+
+        fun buildDecision(
+            energyState: EnergyState,
+            ror: Double
+        ): DecisionEngine.DecisionResult {
+            return when {
+                energyState == EnergyState.DEFICIT || ror < 2.0 -> {
+                    DecisionEngine.DecisionResult(
+                        suggestion = "Increase heat",
+                        severity = "HIGH",
+                        reason = "Low energy or collapsing ROR"
+                    )
+                }
+
+                energyState == EnergyState.LOW || ror < 4.5 -> {
+                    DecisionEngine.DecisionResult(
+                        suggestion = "Increase heat slightly",
+                        severity = "MEDIUM",
+                        reason = "Momentum is softer than desired"
+                    )
+                }
+
+                energyState == EnergyState.HIGH && ror > 10.0 -> {
+                    DecisionEngine.DecisionResult(
+                        suggestion = "Reduce heat or increase airflow",
+                        severity = "MEDIUM",
+                        reason = "Energy is excessive and ROR is aggressive"
+                    )
+                }
+
+                ror > 12.0 -> {
+                    DecisionEngine.DecisionResult(
+                        suggestion = "Reduce heat",
+                        severity = "HIGH",
+                        reason = "ROR is too aggressive"
+                    )
+                }
+
+                else -> {
+                    DecisionEngine.DecisionResult(
+                        suggestion = "Maintain current settings",
+                        severity = "LOW",
+                        reason = "Roast progressing normally"
+                    )
+                }
+            }
+        }
+
+        fun refreshAll() {
+            val profile = MachineProfiles.HB_M2SE
+            val capability = MachineControlCapabilities.defaultFor(profile)
             val telemetry = MachineTelemetryEngine.currentState()
-            val assist = RoastLiveAssistEngine.buildFromTelemetry()
-            val baseline = PlannerBaselineStore.current()
-
-            val bt = telemetry.liveBtC ?: 0.0
-            val et = telemetry.liveEtC
-            val ror = telemetry.liveRorCPerMin ?: 0.0
-            val power = telemetry.livePowerW
-            val air = telemetry.liveAirflowPa
-            val drum = telemetry.liveDrumRpm
-            val time = telemetry.liveElapsedSec
-            val machineState = telemetry.machineState
-            val nowMillis = System.currentTimeMillis()
-
-            RoastCurveEngineV2.record(
-                bt = bt,
-                timeMillis = nowMillis
-            )
-
-            RoastCurveEngineV3.record(
-                bt = bt,
-                timeMillis = nowMillis
-            )
-
-            val predictionV3 = RoastCurveEngineV3.predict()
-            val stability = RoastStabilityEngine.evaluate(predictionV3)
-            val advice = RoastDrivingAdvisorEngine.evaluate(
-                prediction = predictionV3,
-                stability = stability
+            val machineState = currentMachineState()
+            val energy = EnergyEngine.evaluate(profile, machineState)
+            val decision = buildDecision(energy.stateEnum, machineState.ror)
+            val plan = MachineControlPlanner.buildPlan(
+                profile = profile,
+                capability = capability,
+                machineState = machineState,
+                energy = energy,
+                decision = decision
             )
 
             telemetryBody.text = MachineTelemetryEngine.summary()
-            baselineBody.text = buildBaselineText()
-            cockpitBody.text = assist.summary
+            capabilityBody.text = capability.summary()
+            energyBody.text = energy.summary
 
-            curveBody.text = """
-Curve Monitor
+            decisionBody.text = """
+Decision
 
-BT
-${"%.1f".format(bt)}℃
+Suggestion
+${decision.suggestion}
 
-ET
-${et?.let { "%.1f".format(it) + "℃" } ?: "-"}
+Severity
+${decision.severity}
 
-ROR
-${"%.1f".format(ror)}℃/min
-
-Elapsed
-${time}s
-
-Interpretation
-${assist.interpretation}
-
-Baseline Reference
-${buildBaselineReferenceText(baseline, time)}
+Reason
+${decision.reason}
             """.trimIndent()
 
-            adviceBody.text = advice.summary
-            stabilityBody.text = stability.summary
-            anchorChainBody.text = buildAnchorChain(predictionV3)
-            baselineDeltaBody.text = buildBaselineDeltaChain(predictionV3)
-            rorBehaviorBody.text = buildRorBehavior(predictionV3)
-            forecastBody.text = buildForecastHeadline(predictionV3)
-            predictionV3Body.text = predictionV3.summary
-            predictionV2Body.text = RoastCurveEngineV2.summary()
+            plannerBody.text = plan.summary
 
             statusBody.text = """
-Machine State
-$machineState
+Cockpit Status
+
+Profile
+${profile.name}
+
+Telemetry Mode
+${telemetry.mode}
+
+Connected
+${if (telemetry.isConnected) "Yes" else "No"}
 
 BT
-${"%.1f".format(bt)}℃
+${"%.1f".format(machineState.beanTemp)}℃
 
-ROR
-${"%.1f".format(ror)}℃/min
+RoR
+${"%.1f".format(machineState.ror)}℃/min
 
 Power
-${power}W
+${machineState.powerW}W
 
-Air
-${air}Pa
+Airflow
+${machineState.airflowPa}Pa
 
 Drum
-${drum}rpm
+${machineState.drumRpm}rpm
 
-Elapsed
-${time}s
+Primary Command
+${plan.primaryCommand.type} / ${plan.primaryCommand.status}
 
-Source Mode
-${telemetry.mode}
+Secondary Command
+${plan.secondaryCommand?.type ?: "-"}
             """.trimIndent()
+
+            if (telemetry.liveBtC != null) {
+                btInput.setText("%.1f".format(telemetry.liveBtC))
+            }
+
+            if (telemetry.liveRorCPerMin != null) {
+                rorInput.setText("%.2f".format(telemetry.liveRorCPerMin / 60.0))
+            }
+
+            powerInput.setText(telemetry.livePowerW.toString())
+            airflowInput.setText(telemetry.liveAirflowPa.toString())
+            drumInput.setText(telemetry.liveDrumRpm.toString())
+            elapsedInput.setText(telemetry.liveElapsedSec.toString())
         }
 
         manualBtn.setOnClickListener {
             MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
-            refresh()
+            refreshAll()
         }
 
-        simBtn.setOnClickListener {
+        simulatorBtn.setOnClickListener {
             MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            refresh()
-        }
-
-        simStep10.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 10
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refresh()
-        }
-
-        simStep30.setOnClickListener {
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            simulatorElapsed += 30
-            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
-            refresh()
-        }
-
-        simReset.setOnClickListener {
-            simulatorElapsed = 0
-            RoastCurveEngineV2.reset()
-            RoastCurveEngineV3.reset()
-            MachineTelemetryEngine.reset()
-            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
-            refresh()
+            refreshAll()
         }
 
         machineBtn.setOnClickListener {
             MachineTelemetryEngine.connectMachine()
-            refresh()
+            refreshAll()
         }
 
-        refresh()
+        pushManualBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+            MachineTelemetryEngine.pushManualFrame(
+                bt = btInput.text.toString().toDoubleOrNull() ?: 0.0,
+                et = null,
+                ror = (rorInput.text.toString().toDoubleOrNull()?.times(60.0)) ?: 0.0,
+                powerW = powerInput.text.toString().toIntOrNull() ?: 680,
+                airflowPa = airflowInput.text.toString().toIntOrNull() ?: 10,
+                drumRpm = drumInput.text.toString().toIntOrNull() ?: 60,
+                elapsedSec = elapsedInput.text.toString().toIntOrNull() ?: 0,
+                machineStateLabel = "Roasting",
+                environmentTemp = envTempInput.text.toString().toDoubleOrNull() ?: 25.0,
+                environmentHumidity = envRhInput.text.toString().toDoubleOrNull() ?: 50.0
+            )
+            refreshAll()
+        }
+
+        sim10Btn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 10
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refreshAll()
+        }
+
+        sim30Btn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsedSec += 30
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsedSec)
+            refreshAll()
+        }
+
+        simResetBtn.setOnClickListener {
+            simulatorElapsedSec = 0
+            MachineTelemetryEngine.reset()
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refreshAll()
+        }
+
+        refreshBtn.setOnClickListener {
+            refreshAll()
+        }
+
+        refreshAll()
 
         scroll.addView(root)
         container.addView(scroll)
     }
 
-    private fun buildAnchorChain(prediction: RoastCurvePredictionV3): String {
-        val turningText = formatPredictionTime(prediction.predictedTurning)
-        val yellowText = formatPredictionTime(prediction.predictedYellow)
-        val fcText = formatPredictionTime(prediction.predictedFc)
-        val dropText = formatPredictionTime(prediction.predictedDrop)
-        val devText = prediction.predictedDevelopment?.let { "%.0f".format(it) + "s" } ?: "-"
-        val dtrText = prediction.predictedDtr?.let { "%.1f".format(it) + "%" } ?: "-"
-
-        val turningToYellowText = if (
-            prediction.predictedTurning != null &&
-            prediction.predictedYellow != null
-        ) {
-            val delta = prediction.predictedYellow - prediction.predictedTurning
-            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
-        } else {
-            "-"
-        }
-
-        val yellowToFcText = if (
-            prediction.predictedYellow != null &&
-            prediction.predictedFc != null
-        ) {
-            val delta = prediction.predictedFc - prediction.predictedYellow
-            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
-        } else {
-            "-"
-        }
-
-        val fcToDropText = if (
-            prediction.predictedFc != null &&
-            prediction.predictedDrop != null
-        ) {
-            val delta = prediction.predictedDrop - prediction.predictedFc
-            if (delta >= 0.0) "%.0f".format(delta) + "s" else "-"
-        } else {
-            "-"
-        }
-
-        return """
-Predicted Turning
-$turningText
-
-Predicted Yellow
-$yellowText
-
-Predicted FC
-$fcText
-
-Predicted Drop
-$dropText
-
-Turning → Yellow
-$turningToYellowText
-
-Yellow → FC
-$yellowToFcText
-
-FC → Drop
-$fcToDropText
-
-Predicted Development
-$devText
-
-Predicted DTR
-$dtrText
-        """.trimIndent()
+    private fun decimalInput(
+        context: Context,
+        hint: String,
+        defaultText: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_DECIMAL or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.setText(defaultText)
+        return input
     }
 
-    private fun buildBaselineDeltaChain(prediction: RoastCurvePredictionV3): String {
-        return """
-Turning Δ
-${formatDelta(prediction.turningDelta)}
-
-Yellow Δ
-${formatDelta(prediction.yellowDelta)}
-
-FC Δ
-${formatDelta(prediction.fcDelta)}
-
-Drop Δ
-${formatDelta(prediction.dropDelta)}
-
-Interpretation
-${buildBaselineDeltaInterpretation(prediction)}
-        """.trimIndent()
-    }
-
-    private fun buildBaselineDeltaInterpretation(prediction: RoastCurvePredictionV3): String {
-        val turning = prediction.turningDelta
-        val yellow = prediction.yellowDelta
-        val fc = prediction.fcDelta
-        val drop = prediction.dropDelta
-
-        return when {
-            fc != null && fc > 20.0 -> "FC is trending later than baseline"
-            fc != null && fc < -20.0 -> "FC is trending earlier than baseline"
-            drop != null && drop > 25.0 -> "Drop is trending later than baseline"
-            drop != null && drop < -25.0 -> "Drop is trending earlier than baseline"
-            yellow != null && yellow > 18.0 -> "Yellow is trending later than baseline"
-            yellow != null && yellow < -18.0 -> "Yellow is trending earlier than baseline"
-            turning != null && turning > 15.0 -> "Turning is trending later than baseline"
-            turning != null && turning < -15.0 -> "Turning is trending earlier than baseline"
-            else -> "Anchor chain is relatively close to baseline"
-        }
-    }
-
-    private fun buildRorBehavior(prediction: RoastCurvePredictionV3): String {
-        val label = when {
-            prediction.crashRisk -> "ROR Crash Risk"
-            prediction.flickRisk -> "ROR Flick Risk"
-            prediction.rorSlope > 0.0 -> "ROR Rising"
-            prediction.rorSlope < 0.0 -> "ROR Falling"
-            else -> "Stable"
-        }
-
-        return """
-ROR Label
-$label
-
-Crash Risk
-${if (prediction.crashRisk) "Yes" else "No"}
-
-Flick Risk
-${if (prediction.flickRisk) "Yes" else "No"}
-
-ROR Slope
-${"%.2f".format(prediction.rorSlope)}
-
-ROR Momentum
-${"%.2f".format(prediction.rorMomentum)}
-        """.trimIndent()
-    }
-
-    private fun buildForecastHeadline(prediction: RoastCurvePredictionV3): String {
-        val fcText = formatPredictionTime(prediction.predictedFc)
-        val dropText = formatPredictionTime(prediction.predictedDrop)
-        val devText = prediction.predictedDevelopment?.let {
-            "%.0f".format(it) + "s"
-        } ?: "-"
-
-        val dtrText = prediction.predictedDtr?.let {
-            "%.1f".format(it) + "%"
-        } ?: "-"
-
-        return """
-Predicted FC
-$fcText
-
-Predicted Drop
-$dropText
-
-Predicted Development
-$devText
-
-Predicted DTR
-$dtrText
-
-Phase
-${prediction.phase}
-
-Trend
-${prediction.chainLabel}
-
-Chain Score
-${prediction.chainScore}
-
-Confidence
-${prediction.confidence}
-        """.trimIndent()
-    }
-
-    private fun buildBaselineText(): String {
-        val baseline = PlannerBaselineStore.current()
-            ?: return """
-Status
-No active planner baseline
-
-Next Step
-Apply profile suggestion or capture current planner result as baseline
-            """.trimIndent()
-
-        val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
-
-        return """
-Source
-${baseline.source}
-
-Label
-${baseline.label}
-
-Match Grade
-${formatBaselineMatch(match?.grade?.name)}
-
-Turning
-${baseline.turningSec?.toString()?.plus("s") ?: "-"}
-
-Yellow
-${baseline.yellowSec?.toString()?.plus("s") ?: "-"}
-
-FC
-${baseline.fcSec?.toString()?.plus("s") ?: "-"}
-
-Drop
-${baseline.dropSec?.toString()?.plus("s") ?: "-"}
-        """.trimIndent()
-    }
-
-    private fun buildBaselineReferenceText(
-        baseline: PlannerBaseline?,
-        elapsedSec: Int
-    ): String {
-        baseline ?: return "No baseline active"
-
-        return when {
-            baseline.turningSec != null && elapsedSec < baseline.turningSec ->
-                "Approaching Turning anchor"
-            baseline.yellowSec != null && elapsedSec < baseline.yellowSec ->
-                "Working toward Yellow anchor"
-            baseline.fcSec != null && elapsedSec < baseline.fcSec ->
-                "Working toward FC anchor"
-            baseline.dropSec != null && elapsedSec < baseline.dropSec ->
-                "Working toward Drop anchor"
-            else ->
-                "Past or near final baseline anchors"
-        }
-    }
-
-    private fun formatPredictionTime(value: Double?): String {
-        return when {
-            value == null -> "-"
-            value <= 0.0 -> "Now"
-            else -> "%.0f".format(value) + "s"
-        }
-    }
-
-    private fun formatDelta(value: Double?): String {
-        return when {
-            value == null -> "-"
-            value > 0.0 -> "+" + "%.0f".format(value) + "s"
-            else -> "%.0f".format(value) + "s"
-        }
-    }
-
-    private fun formatBaselineMatch(raw: String?): String {
-        return when (raw) {
-            "EXACT_MATCH" -> "Exact Match"
-            "SIMILAR_MATCH" -> "Similar Match"
-            "REFERENCE_ONLY" -> "Reference Only"
-            else -> "-"
-        }
+    private fun intInput(
+        context: Context,
+        hint: String,
+        defaultText: String
+    ): EditText {
+        val input = EditText(context)
+        input.hint = hint
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.setText(defaultText)
+        return input
     }
 }
