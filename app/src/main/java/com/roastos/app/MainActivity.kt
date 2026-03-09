@@ -42,40 +42,48 @@ class MainActivity : Activity() {
             1f
         )
 
-        dashboardBtn = Button(this)
-        dashboardBtn.text = "Dashboard"
-        dashboardBtn.layoutParams = navParams
+        dashboardBtn = Button(this).apply {
+            text = "Dashboard"
+            layoutParams = navParams
+        }
 
-        plannerBtn = Button(this)
-        plannerBtn.text = "Planner"
-        plannerBtn.layoutParams = navParams
+        plannerBtn = Button(this).apply {
+            text = "Planner"
+            layoutParams = navParams
+        }
 
-        preheatBtn = Button(this)
-        preheatBtn.text = "Preheat"
-        preheatBtn.layoutParams = navParams
+        preheatBtn = Button(this).apply {
+            text = "Preheat"
+            layoutParams = navParams
+        }
 
-        roastBtn = Button(this)
-        roastBtn.text = "Roast"
-        roastBtn.layoutParams = navParams
+        roastBtn = Button(this).apply {
+            text = "Roast"
+            layoutParams = navParams
+        }
 
-        correctionBtn = Button(this)
-        correctionBtn.text = "Correction"
-        correctionBtn.layoutParams = navParams
+        correctionBtn = Button(this).apply {
+            text = "Correction"
+            layoutParams = navParams
+        }
 
-        historyBtn = Button(this)
-        historyBtn.text = "History"
-        historyBtn.layoutParams = navParams
+        historyBtn = Button(this).apply {
+            text = "History"
+            layoutParams = navParams
+        }
 
-        profileBtn = Button(this)
-        profileBtn.text = "Profile"
-        profileBtn.layoutParams = navParams
+        profileBtn = Button(this).apply {
+            text = "Profile"
+            layoutParams = navParams
+        }
 
-        pageContainer = LinearLayout(this)
-        pageContainer.orientation = LinearLayout.VERTICAL
-        pageContainer.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.MATCH_PARENT
-        )
+        pageContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
 
         navBar.addView(dashboardBtn)
         navBar.addView(plannerBtn)
