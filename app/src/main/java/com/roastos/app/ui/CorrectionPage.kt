@@ -76,12 +76,6 @@ ${assist.interpretation}
 
 Action
 ${assist.actionNow}
-
-Heat Suggestion
-${assist.heatCommand}
-
-Air Suggestion
-${assist.airCommand}
 """.trimIndent()
         }
 
@@ -118,9 +112,6 @@ ${latest.batchId}
 
 Process
 ${latest.process}
-
-Replayability
-${latest.replayability}
 
 Evaluation
 ${if (latest.evaluation != null) "Saved" else "Not saved"}
