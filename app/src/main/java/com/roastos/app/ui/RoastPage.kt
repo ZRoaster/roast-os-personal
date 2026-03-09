@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.PlannerBaselineStore
 import com.roastos.app.RoastLiveAssistEngine
 import com.roastos.app.TelemetrySourceMode
 
@@ -23,7 +24,7 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Cockpit view driven by MachineTelemetryEngine and RoastLiveAssistEngine"
+                "Cockpit view driven by MachineTelemetryEngine, RoastLiveAssistEngine, and PlannerBaselineStore"
             )
         )
         root.addView(UiKit.spacer(context))
@@ -33,6 +34,13 @@ object RoastPage {
         val telemetryBody = UiKit.bodyText(context, "")
         telemetryCard.addView(telemetryBody)
         root.addView(telemetryCard)
+        root.addView(UiKit.spacer(context))
+
+        val baselineCard = UiKit.card(context)
+        baselineCard.addView(UiKit.cardTitle(context, "PLANNER BASELINE"))
+        val baselineBody = UiKit.bodyText(context, "")
+        baselineCard.addView(baselineBody)
+        root.addView(baselineCard)
         root.addView(UiKit.spacer(context))
 
         val cockpitCard = UiKit.card(context)
@@ -89,8 +97,10 @@ object RoastPage {
         fun refresh() {
             val telemetry = MachineTelemetryEngine.currentState()
             val assist = RoastLiveAssistEngine.buildFromTelemetry()
+            val baseline = PlannerBaselineStore.current()
 
             telemetryBody.text = MachineTelemetryEngine.summary()
+            baselineBody.text = buildBaselineText()
             cockpitBody.text = assist.summary
 
             val bt = telemetry.liveBtC ?: 0.0
@@ -119,6 +129,9 @@ ${time}s
 
 Interpretation
 ${assist.interpretation}
+
+Baseline Reference
+${buildBaselineReferenceText(baseline, time)}
             """.trimIndent()
 
             statusBody.text = """
@@ -188,5 +201,61 @@ ${telemetry.mode}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildBaselineText(): String {
+        val baseline = PlannerBaselineStore.current()
+            ?: return """
+Status
+No active planner baseline
+
+Next Step
+Apply profile suggestion or capture current planner result as baseline
+            """.trimIndent()
+
+        val match = PlannerBaselineStore.evaluateMatchAgainstCurrentInput()
+
+        return """
+Source
+${baseline.source}
+
+Label
+${baseline.label}
+
+Match Grade
+${match?.grade?.name ?: "Unavailable"}
+
+Turning
+${baseline.turningSec?.toString()?.plus("s") ?: "-"}
+
+Yellow
+${baseline.yellowSec?.toString()?.plus("s") ?: "-"}
+
+FC
+${baseline.fcSec?.toString()?.plus("s") ?: "-"}
+
+Drop
+${baseline.dropSec?.toString()?.plus("s") ?: "-"}
+        """.trimIndent()
+    }
+
+    private fun buildBaselineReferenceText(
+        baseline: com.roastos.app.PlannerBaseline?,
+        elapsedSec: Int
+    ): String {
+        baseline ?: return "No baseline active"
+
+        return when {
+            baseline.turningSec != null && elapsedSec < baseline.turningSec ->
+                "Approaching Turning anchor"
+            baseline.yellowSec != null && elapsedSec < baseline.yellowSec ->
+                "Working toward Yellow anchor"
+            baseline.fcSec != null && elapsedSec < baseline.fcSec ->
+                "Working toward FC anchor"
+            baseline.dropSec != null && elapsedSec < baseline.dropSec ->
+                "Working toward Drop anchor"
+            else ->
+                "Past or near final baseline anchors"
+        }
     }
 }
