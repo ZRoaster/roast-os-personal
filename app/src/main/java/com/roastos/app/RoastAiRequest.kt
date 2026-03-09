@@ -2,7 +2,7 @@ package com.roastos.app
 
 data class RoastAiRequest(
 
-    val provider: RoastAiProviderType,
+    val provider: RoastAiProviderType = RoastAiProviderType.MOCK,
 
     val apiKey: String? = null,
 
