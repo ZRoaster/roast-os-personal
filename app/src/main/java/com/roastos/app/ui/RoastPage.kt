@@ -4,22 +4,17 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.AppState
-import com.roastos.app.BatchSessionEngine
-import com.roastos.app.DecisionEngine
-import com.roastos.app.RoastCorrectionBridge
+import com.roastos.app.MachineTelemetryEngine
 import com.roastos.app.RoastCurveEngine
-import com.roastos.app.RoastDeviationEngine
-import com.roastos.app.RoastHistoryEngine
-import com.roastos.app.RoastStateModel
-import com.roastos.app.RoastTimelineStore
+import com.roastos.app.TelemetrySourceMode
+import com.roastos.app.UiKit
 
 object RoastPage {
 
-    private var autoRefreshEnabled = false
-    private var autoRefreshRunnable: Runnable? = null
+    private var simulatorElapsed = 0
 
     fun show(context: Context, container: LinearLayout) {
+
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -29,278 +24,184 @@ object RoastPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Live assist, workflow, diagnosis, correction bridge, history, timeline tracking, roast curve, and actual input"
+                "Live roast monitoring driven by MachineTelemetryEngine"
             )
         )
+
         root.addView(UiKit.spacer(context))
 
-        val statusCard = UiKit.card(context)
-        statusCard.addView(UiKit.cardTitle(context, "STATUS BAR"))
-        val statusBody = UiKit.bodyText(context, "")
-        statusCard.addView(statusBody)
-        root.addView(statusCard)
+        /* ---------------- TELEMETRY STATUS ---------------- */
+
+        val telemetryCard = UiKit.card(context)
+        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
+
+        val telemetryBody = UiKit.bodyText(context, "")
+
+        telemetryCard.addView(telemetryBody)
+
+        root.addView(telemetryCard)
+
         root.addView(UiKit.spacer(context))
 
-        val workflowCard = UiKit.card(context)
-        workflowCard.addView(UiKit.cardTitle(context, "WORKFLOW GUIDE"))
-        val workflowBody = UiKit.bodyText(context, "")
-        workflowCard.addView(workflowBody)
-        root.addView(workflowCard)
+        /* ---------------- TELEMETRY CONTROL ---------------- */
+
+        val controlCard = UiKit.card(context)
+        controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
+
+        val manualBtn = Button(context)
+        manualBtn.text = "Manual Mode"
+
+        val simBtn = Button(context)
+        simBtn.text = "Simulator Mode"
+
+        val simStep10 = Button(context)
+        simStep10.text = "Sim +10s"
+
+        val simStep30 = Button(context)
+        simStep30.text = "Sim +30s"
+
+        val simReset = Button(context)
+        simReset.text = "Reset Simulator"
+
+        val machineBtn = Button(context)
+        machineBtn.text = "Machine Mode"
+
+        controlCard.addView(manualBtn)
+        controlCard.addView(simBtn)
+        controlCard.addView(simStep10)
+        controlCard.addView(simStep30)
+        controlCard.addView(simReset)
+        controlCard.addView(machineBtn)
+
+        root.addView(controlCard)
+
         root.addView(UiKit.spacer(context))
 
-        val actionCard = UiKit.card(context)
-        actionCard.addView(UiKit.cardTitle(context, "ACTIONS"))
-
-        val startBtn = Button(context)
-        startBtn.text = "Start Batch"
-
-        val finishBtn = Button(context)
-        finishBtn.text = "Finish Batch"
-
-        val resetBtn = Button(context)
-        resetBtn.text = "Reset Batch"
-
-        val refreshBtn = Button(context)
-        refreshBtn.text = "Refresh Curve"
-
-        val autoRefreshBtn = Button(context)
-        autoRefreshBtn.text = "Auto Refresh OFF"
-
-        actionCard.addView(startBtn)
-        actionCard.addView(finishBtn)
-        actionCard.addView(resetBtn)
-        actionCard.addView(refreshBtn)
-        actionCard.addView(autoRefreshBtn)
-
-        root.addView(actionCard)
-        root.addView(UiKit.spacer(context))
-
-        val historyCard = UiKit.card(context)
-        historyCard.addView(UiKit.cardTitle(context, "ROAST HISTORY"))
-        val historyBody = UiKit.bodyText(context, "")
-        historyCard.addView(historyBody)
-        root.addView(historyCard)
-        root.addView(UiKit.spacer(context))
-
-        val sessionCard = UiKit.card(context)
-        sessionCard.addView(UiKit.cardTitle(context, "BATCH SESSION"))
-        val sessionBody = UiKit.bodyText(context, "")
-        sessionCard.addView(sessionBody)
-        root.addView(sessionCard)
-        root.addView(UiKit.spacer(context))
-
-        val diagnosisCard = UiKit.card(context)
-        diagnosisCard.addView(UiKit.cardTitle(context, "DEVIATION DIAGNOSIS"))
-        val diagnosisBody = UiKit.bodyText(context, "")
-        diagnosisCard.addView(diagnosisBody)
-        root.addView(diagnosisCard)
-        root.addView(UiKit.spacer(context))
-
-        val bridgeCard = UiKit.card(context)
-        bridgeCard.addView(UiKit.cardTitle(context, "CORRECTION BRIDGE"))
-        val bridgeBody = UiKit.bodyText(context, "")
-        bridgeCard.addView(bridgeBody)
-        root.addView(bridgeCard)
-        root.addView(UiKit.spacer(context))
-
-        val summaryCard = UiKit.card(context)
-        summaryCard.addView(UiKit.cardTitle(context, "CURVE ENGINE SUMMARY"))
-        val summaryBody = UiKit.bodyText(context, "")
-        summaryCard.addView(summaryBody)
+        /* ---------------- CURVE CARD ---------------- */
 
         val curveCard = UiKit.card(context)
         curveCard.addView(UiKit.cardTitle(context, "ROAST CURVE"))
-        val curveView = RoastCurveView(context)
-        curveCard.addView(curveView)
 
-        val liveAssistCard = UiKit.card(context)
-        liveAssistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
-        val liveAssistBody = UiKit.bodyText(context, "")
-        liveAssistCard.addView(liveAssistBody)
+        val curveBody = UiKit.bodyText(context, "")
 
-        fun refreshAll() {
-            val curve = RoastCurveEngine.buildFromCurrentState()
-            val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
-            val bridge = RoastCorrectionBridge.buildFromCurrentState()
+        curveCard.addView(curveBody)
 
-            summaryBody.text = curve.summary
-            sessionBody.text = BatchSessionEngine.summary()
-            historyBody.text = RoastHistoryEngine.summary()
-            statusBody.text = buildTopStatus()
-            workflowBody.text = RoastWorkflowGuide.buildText()
-            diagnosisBody.text = diagnosis.summary
-            bridgeBody.text = bridge.summary
-            curveView.setCurve(curve)
-            liveAssistBody.text = LiveAssistPage.buildLiveAssist()
-        }
-
-        LiveAssistPage.attachLiveInputPanel(
-            context = context,
-            parent = root,
-            onDataChanged = {
-                refreshAll()
-            }
-        )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(summaryCard)
-        root.addView(UiKit.spacer(context))
         root.addView(curveCard)
+
         root.addView(UiKit.spacer(context))
-        root.addView(liveAssistCard)
 
-        fun stopAutoRefresh() {
-            autoRefreshRunnable?.let { root.removeCallbacks(it) }
-            autoRefreshRunnable = null
-            autoRefreshEnabled = false
-            autoRefreshBtn.text = "Auto Refresh OFF"
-        }
+        /* ---------------- ROAST STATUS ---------------- */
 
-        fun startAutoRefresh() {
-            stopAutoRefresh()
-            autoRefreshEnabled = true
-            autoRefreshBtn.text = "Auto Refresh ON"
+        val statusCard = UiKit.card(context)
+        statusCard.addView(UiKit.cardTitle(context, "ROAST STATUS"))
 
-            val runnable = object : Runnable {
-                override fun run() {
-                    if (!autoRefreshEnabled) return
-                    refreshAll()
-                    root.postDelayed(this, 2000)
-                }
-            }
+        val statusBody = UiKit.bodyText(context, "")
 
-            autoRefreshRunnable = runnable
-            root.post(runnable)
-        }
+        statusCard.addView(statusBody)
 
-        startBtn.setOnClickListener {
-            BatchSessionEngine.resetCurrentSession()
-            BatchSessionEngine.startFromPlanner()
-            refreshAll()
-        }
+        root.addView(statusCard)
 
-        finishBtn.setOnClickListener {
-            BatchSessionEngine.finish("Finished from RoastPage")
-            RoastHistoryEngine.saveCurrentState()
-            refreshAll()
-        }
+        /* ---------------- REFRESH ---------------- */
 
-        resetBtn.setOnClickListener {
-            stopAutoRefresh()
+        fun refresh() {
 
-            AppState.liveActualTurningSec = null
-            AppState.liveActualYellowSec = null
-            AppState.liveActualFcSec = null
-            AppState.liveActualDropSec = null
-            AppState.liveActualPreFcRor = null
+            val telemetry = MachineTelemetryEngine.currentState()
 
-            RoastTimelineStore.syncActual(
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                ror = null
+            telemetryBody.text = MachineTelemetryEngine.summary()
+
+            val bt = telemetry.liveBtC ?: 0.0
+            val ror = telemetry.liveRorCPerMin ?: 0.0
+            val power = telemetry.livePowerW
+            val air = telemetry.liveAirflowPa
+            val drum = telemetry.liveDrumRpm
+            val time = telemetry.liveElapsedSec
+
+            val curve = RoastCurveEngine.buildCurveSummary(
+                bt = bt,
+                ror = ror,
+                elapsedSec = time
             )
 
-            BatchSessionEngine.resetCurrentSession()
+            curveBody.text = curve
 
-            RoastStateModel.syncLiveState(
-                phase = "Idle",
-                ror = 12.0,
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                powerW = 540,
-                airflowPa = 10,
-                drumRpm = 60
-            )
+            statusBody.text = """
+BT
+${"%.1f".format(bt)}℃
 
-            refreshAll()
+ROR
+${"%.1f".format(ror)}℃/min
+
+Power
+$power W
+
+Air
+$air Pa
+
+Drum
+$drum rpm
+
+Elapsed
+$time s
+""".trimIndent()
         }
 
-        refreshBtn.setOnClickListener {
-            refreshAll()
+        /* ---------------- BUTTON ACTIONS ---------------- */
+
+        manualBtn.setOnClickListener {
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+            refresh()
         }
 
-        autoRefreshBtn.setOnClickListener {
-            if (autoRefreshEnabled) {
-                stopAutoRefresh()
-            } else {
-                startAutoRefresh()
-            }
+        simBtn.setOnClickListener {
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refresh()
         }
 
-        refreshAll()
+        simStep10.setOnClickListener {
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+
+            simulatorElapsed += 10
+
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
+
+            refresh()
+        }
+
+        simStep30.setOnClickListener {
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+
+            simulatorElapsed += 30
+
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
+
+            refresh()
+        }
+
+        simReset.setOnClickListener {
+
+            simulatorElapsed = 0
+
+            MachineTelemetryEngine.reset()
+
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+
+            refresh()
+        }
+
+        machineBtn.setOnClickListener {
+
+            MachineTelemetryEngine.connectMachine()
+
+            refresh()
+        }
+
+        refresh()
 
         scroll.addView(root)
         container.addView(scroll)
-    }
-
-    private fun buildTopStatus(): String {
-        val session = BatchSessionEngine.current()
-        val batchStatus = session?.status ?: "Idle"
-
-        val elapsedSec = BatchSessionEngine.currentElapsedSec()
-        val elapsedText = if (elapsedSec != null) {
-            "${elapsedSec / 60}:${(elapsedSec % 60).toString().padStart(2, '0')}"
-        } else {
-            "-"
-        }
-
-        val planner = AppState.lastPlannerResult
-        val plannerInput = AppState.lastPlannerInput
-
-        val currentPhase = when {
-            AppState.liveActualDropSec != null -> "Finished"
-            AppState.liveActualFcSec != null -> "Development"
-            AppState.liveActualYellowSec != null -> "Maillard / Pre-FC"
-            AppState.liveActualTurningSec != null -> "Drying"
-            else -> "Idle"
-        }
-
-        if (planner == null || plannerInput == null) {
-            return """
-Batch Status   $batchStatus
-Current Phase  $currentPhase
-Elapsed        $elapsedText
-Risk           -
-Action         Run Planner first
-            """.trimIndent()
-        }
-
-        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-        val predYellow = planner.h2Sec.toInt()
-        val predFc = planner.fcPredSec.toInt()
-        val predDrop = planner.dropSec.toInt()
-
-        val decision = DecisionEngine.decide(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop,
-            actualTurning = AppState.liveActualTurningSec,
-            actualYellow = AppState.liveActualYellowSec,
-            actualFc = AppState.liveActualFcSec,
-            actualDrop = AppState.liveActualDropSec,
-            currentRor = AppState.liveActualPreFcRor,
-            envTemp = plannerInput.envTemp,
-            humidity = plannerInput.envRH,
-            pressureKpa = 1013.0,
-            density = plannerInput.density,
-            moisture = plannerInput.moisture,
-            aw = plannerInput.aw,
-            heatLevelW = if (RoastStateModel.control.powerW > 0) RoastStateModel.control.powerW else 540,
-            airflowPa = if (RoastStateModel.control.airflowPa > 0) RoastStateModel.control.airflowPa else 10,
-            drumRpm = if (RoastStateModel.control.drumRpm > 0) RoastStateModel.control.drumRpm else 60
-        )
-
-        return """
-Batch Status   $batchStatus
-Current Phase  ${decision.currentPhase}
-Elapsed        $elapsedText
-Risk           ${decision.riskLevel}
-Action         ${decision.actionNow}
-        """.trimIndent()
     }
 }
