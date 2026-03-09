@@ -2,62 +2,162 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.text.InputType
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import com.roastos.app.AppState
-import com.roastos.app.BatchSessionEngine
-import com.roastos.app.DecisionEngine
-import com.roastos.app.RoastEngine
-import com.roastos.app.RoastStateModel
-import com.roastos.app.RoastTimelineStore
+import android.widget.ScrollView
+import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.RoastLiveAssistEngine
+import com.roastos.app.TelemetrySourceMode
 
 object LiveAssistPage {
 
-    private const val DEFAULT_POWER_W = 540
-    private const val DEFAULT_AIRFLOW_PA = 10
-    private const val DEFAULT_DRUM_RPM = 60
+    private var simulatorElapsed = 0
+
+    fun show(context: Context, container: LinearLayout) {
+        container.removeAllViews()
+
+        val scroll = ScrollView(context)
+        val root = UiKit.pageRoot(context)
+
+        root.addView(UiKit.pageTitle(context, "LIVE ASSIST"))
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "Live driving assist powered by MachineTelemetryEngine and RoastLiveAssistEngine"
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        val telemetryCard = UiKit.card(context)
+        telemetryCard.addView(UiKit.cardTitle(context, "TELEMETRY STATUS"))
+        val telemetryBody = UiKit.bodyText(context, "")
+        telemetryCard.addView(telemetryBody)
+        root.addView(telemetryCard)
+        root.addView(UiKit.spacer(context))
+
+        val assistCard = UiKit.card(context)
+        assistCard.addView(UiKit.cardTitle(context, "LIVE ASSIST"))
+        val assistBody = UiKit.bodyText(context, "")
+        assistCard.addView(assistBody)
+        root.addView(assistCard)
+        root.addView(UiKit.spacer(context))
+
+        val controlCard = UiKit.card(context)
+        controlCard.addView(UiKit.cardTitle(context, "TELEMETRY CONTROL"))
+
+        val manualBtn = Button(context)
+        manualBtn.text = "Manual Mode"
+
+        val simBtn = Button(context)
+        simBtn.text = "Simulator Mode"
+
+        val simStep10 = Button(context)
+        simStep10.text = "Sim +10s"
+
+        val simStep30 = Button(context)
+        simStep30.text = "Sim +30s"
+
+        val simReset = Button(context)
+        simReset.text = "Reset Simulator"
+
+        val machineBtn = Button(context)
+        machineBtn.text = "Machine Mode"
+
+        controlCard.addView(manualBtn)
+        controlCard.addView(simBtn)
+        controlCard.addView(simStep10)
+        controlCard.addView(simStep30)
+        controlCard.addView(simReset)
+        controlCard.addView(machineBtn)
+
+        root.addView(controlCard)
+        root.addView(UiKit.spacer(context))
+
+        attachLiveInputPanel(
+            context = context,
+            parent = root,
+            onDataChanged = {}
+        )
+        root.addView(UiKit.spacer(context))
+
+        fun refresh() {
+            telemetryBody.text = MachineTelemetryEngine.summary()
+            assistBody.text = buildLiveAssist()
+        }
+
+        manualBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
+            refresh()
+        }
+
+        simBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refresh()
+        }
+
+        simStep10.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsed += 10
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
+            refresh()
+        }
+
+        simStep30.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            simulatorElapsed += 30
+            MachineTelemetryEngine.pushSimulatorFrame(simulatorElapsed)
+            refresh()
+        }
+
+        simReset.setOnClickListener {
+            simulatorElapsed = 0
+            MachineTelemetryEngine.reset()
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.SIMULATOR)
+            refresh()
+        }
+
+        machineBtn.setOnClickListener {
+            MachineTelemetryEngine.connectMachine()
+            refresh()
+        }
+
+        refresh()
+
+        scroll.addView(root)
+        container.addView(scroll)
+    }
 
     fun buildLiveAssist(): String {
-        val planner = AppState.lastPlannerResult ?: return """
-LIVE ASSIST
+        val telemetry = MachineTelemetryEngine.currentState()
+        val assist = RoastLiveAssistEngine.buildFromTelemetry()
 
-No planner result available
-Go to Planner first.
-        """.trimIndent()
-
-        val plannerInput = AppState.lastPlannerInput ?: return """
-LIVE ASSIST
-
-No planner input available
-Go to Planner first.
-        """.trimIndent()
-
-        val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-        val predYellow = planner.h2Sec.toInt()
-        val predFc = planner.fcPredSec.toInt()
-        val predDrop = planner.dropSec.toInt()
-
-        syncStateAndTimeline(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop
-        )
+        val bt = telemetry.liveBtC?.let { "%.1f".format(it) + "℃" } ?: "-"
+        val et = telemetry.liveEtC?.let { "%.1f".format(it) + "℃" } ?: "-"
+        val ror = telemetry.liveRorCPerMin?.let { "%.1f".format(it) + "℃/min" } ?: "-"
+        val elapsed = "${telemetry.liveElapsedSec}s"
 
         return """
-LIVE EXECUTION OVERVIEW
+${assist.summary}
 
-${buildPlannerBaselineCard(predTurning, predYellow, predFc, predDrop)}
+LIVE INPUT SNAPSHOT
+BT
+$bt
 
-${buildTimelineCard()}
+ET
+$et
 
-${buildDecisionCard(predTurning, predYellow, predFc, predDrop)}
+ROR
+$ror
 
-${buildControlCard(predTurning, predYellow, predFc, predDrop)}
+Elapsed
+$elapsed
 
-${buildSessionCard()}
+Machine State
+${telemetry.machineState}
+
+Source Mode
+${telemetry.mode}
         """.trimIndent()
     }
 
@@ -66,446 +166,108 @@ ${buildSessionCard()}
         parent: LinearLayout,
         onDataChanged: () -> Unit
     ) {
-        val card = UiKit.card(context)
-        card.addView(UiKit.cardTitle(context, "LIVE INPUT"))
+        val inputCard = UiKit.card(context)
+        inputCard.addView(UiKit.cardTitle(context, "MANUAL TELEMETRY INPUT"))
 
-        val turningInput = makeIntInput(
-            context = context,
-            hint = "Actual Turning sec",
-            value = AppState.liveActualTurningSec?.toString() ?: ""
-        )
+        val btInput = decimalInput(context, "BT ℃", "")
+        val etInput = decimalInput(context, "ET ℃", "")
+        val rorInput = decimalInput(context, "ROR ℃/min", "")
+        val powerInput = intInput(context, "Power W", "540")
+        val airInput = intInput(context, "Airflow Pa", "10")
+        val drumInput = intInput(context, "Drum RPM", "60")
+        val elapsedInput = intInput(context, "Elapsed Sec", "0")
 
-        val yellowInput = makeIntInput(
-            context = context,
-            hint = "Actual Yellow sec",
-            value = AppState.liveActualYellowSec?.toString() ?: ""
-        )
+        val turningInput = intInput(context, "Turning Sec", "")
+        val yellowInput = intInput(context, "Yellow Sec", "")
+        val fcInput = intInput(context, "FC Sec", "")
+        val dropInput = intInput(context, "Drop Sec", "")
 
-        val fcInput = makeIntInput(
-            context = context,
-            hint = "Actual FC sec",
-            value = AppState.liveActualFcSec?.toString() ?: ""
-        )
+        val pushBtn = Button(context)
+        pushBtn.text = "Push Manual Frame"
 
-        val dropInput = makeIntInput(
-            context = context,
-            hint = "Actual Drop sec",
-            value = AppState.liveActualDropSec?.toString() ?: ""
-        )
+        val statusBody = UiKit.bodyText(context, "")
 
-        val rorInput = makeDecimalInput(
-            context = context,
-            hint = "Pre-FC ROR",
-            value = AppState.liveActualPreFcRor?.toString() ?: ""
-        )
+        inputCard.addView(btInput)
+        inputCard.addView(etInput)
+        inputCard.addView(rorInput)
+        inputCard.addView(powerInput)
+        inputCard.addView(airInput)
+        inputCard.addView(drumInput)
+        inputCard.addView(elapsedInput)
+        inputCard.addView(turningInput)
+        inputCard.addView(yellowInput)
+        inputCard.addView(fcInput)
+        inputCard.addView(dropInput)
+        inputCard.addView(pushBtn)
+        inputCard.addView(statusBody)
 
-        val saveBtn = Button(context)
-        saveBtn.text = "Save Actual Input"
+        pushBtn.setOnClickListener {
+            MachineTelemetryEngine.setMode(TelemetrySourceMode.MANUAL)
 
-        val clearBtn = Button(context)
-        clearBtn.text = "Clear Actual Input"
+            MachineTelemetryEngine.pushManualFrame(
+                btC = btInput.text.toString().toDoubleOrNull(),
+                etC = etInput.text.toString().toDoubleOrNull(),
+                rorCPerMin = rorInput.text.toString().toDoubleOrNull(),
+                powerW = powerInput.text.toString().toIntOrNull(),
+                airflowPa = airInput.text.toString().toIntOrNull(),
+                drumRpm = drumInput.text.toString().toIntOrNull(),
+                elapsedSec = elapsedInput.text.toString().toIntOrNull(),
+                turningSec = turningInput.text.toString().toIntOrNull(),
+                yellowSec = yellowInput.text.toString().toIntOrNull(),
+                fcSec = fcInput.text.toString().toIntOrNull(),
+                dropSec = dropInput.text.toString().toIntOrNull(),
+                machineState = "Running"
+            )
 
-        val helpText = UiKit.bodyText(
-            context,
-            """
-Fill any anchor you already know.
-Leave unknown fields blank.
-Save will update timeline, session, decision, and curve.
+            val assist = RoastLiveAssistEngine.buildFromTelemetry()
+            statusBody.text = """
+Manual frame pushed
+
+PHASE
+${assist.phase}
+
+RISK
+${assist.risk}
+
+ACTION NOW
+${assist.actionNow}
+
+NEXT WATCHPOINT
+${assist.nextWatchpoint}
             """.trimIndent()
-        )
-
-        card.addView(turningInput)
-        card.addView(yellowInput)
-        card.addView(fcInput)
-        card.addView(dropInput)
-        card.addView(rorInput)
-        card.addView(saveBtn)
-        card.addView(clearBtn)
-        card.addView(helpText)
-
-        saveBtn.setOnClickListener {
-            AppState.liveActualTurningSec = turningInput.text.toString().toIntOrNull()
-            AppState.liveActualYellowSec = yellowInput.text.toString().toIntOrNull()
-            AppState.liveActualFcSec = fcInput.text.toString().toIntOrNull()
-            AppState.liveActualDropSec = dropInput.text.toString().toIntOrNull()
-            AppState.liveActualPreFcRor = rorInput.text.toString().toDoubleOrNull()
-
-            val planner = AppState.lastPlannerResult
-            if (planner != null) {
-                val predTurning = (planner.h1Sec - 60.0).toInt().coerceAtLeast(50)
-                val predYellow = planner.h2Sec.toInt()
-                val predFc = planner.fcPredSec.toInt()
-                val predDrop = planner.dropSec.toInt()
-
-                syncStateAndTimeline(
-                    predTurning = predTurning,
-                    predYellow = predYellow,
-                    predFc = predFc,
-                    predDrop = predDrop
-                )
-            }
 
             onDataChanged()
         }
 
-        clearBtn.setOnClickListener {
-            AppState.liveActualTurningSec = null
-            AppState.liveActualYellowSec = null
-            AppState.liveActualFcSec = null
-            AppState.liveActualDropSec = null
-            AppState.liveActualPreFcRor = null
-
-            RoastTimelineStore.syncActual(
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                ror = null
-            )
-
-            BatchSessionEngine.syncLiveData(
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                ror = null
-            )
-
-            RoastStateModel.syncLiveState(
-                phase = "Idle",
-                ror = defaultRorForPhase("Idle"),
-                turningSec = null,
-                yellowSec = null,
-                fcSec = null,
-                dropSec = null,
-                powerW = DEFAULT_POWER_W,
-                airflowPa = DEFAULT_AIRFLOW_PA,
-                drumRpm = DEFAULT_DRUM_RPM
-            )
-
-            turningInput.setText("")
-            yellowInput.setText("")
-            fcInput.setText("")
-            dropInput.setText("")
-            rorInput.setText("")
-
-            onDataChanged()
-        }
-
-        parent.addView(card)
+        parent.addView(inputCard)
     }
 
-    private fun syncStateAndTimeline(
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ) {
-        val plannerInput = AppState.lastPlannerInput ?: return
-
-        RoastStateModel.syncPlannerInput(plannerInput)
-
-        val phase = currentPhase()
-
-        RoastStateModel.syncLiveState(
-            phase = phase,
-            ror = AppState.liveActualPreFcRor ?: defaultRorForPhase(phase),
-            turningSec = AppState.liveActualTurningSec,
-            yellowSec = AppState.liveActualYellowSec,
-            fcSec = AppState.liveActualFcSec,
-            dropSec = AppState.liveActualDropSec,
-            powerW = DEFAULT_POWER_W,
-            airflowPa = DEFAULT_AIRFLOW_PA,
-            drumRpm = DEFAULT_DRUM_RPM
-        )
-
-        RoastTimelineStore.syncPredicted(
-            turningSec = predTurning,
-            yellowSec = predYellow,
-            fcSec = predFc,
-            dropSec = predDrop
-        )
-
-        RoastTimelineStore.syncActual(
-            turningSec = AppState.liveActualTurningSec,
-            yellowSec = AppState.liveActualYellowSec,
-            fcSec = AppState.liveActualFcSec,
-            dropSec = AppState.liveActualDropSec,
-            ror = AppState.liveActualPreFcRor
-        )
-
-        BatchSessionEngine.syncLiveData(
-            turningSec = AppState.liveActualTurningSec,
-            yellowSec = AppState.liveActualYellowSec,
-            fcSec = AppState.liveActualFcSec,
-            dropSec = AppState.liveActualDropSec,
-            ror = AppState.liveActualPreFcRor
-        )
-    }
-
-    private fun buildPlannerBaselineCard(
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ): String {
-        return """
-━━━━━━━━━━━━━━━━━━
-PLANNER BASELINE
-━━━━━━━━━━━━━━━━━━
-Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC        ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
-        """.trimIndent()
-    }
-
-    private fun buildTimelineCard(): String {
-        val tl = RoastTimelineStore.current
-
-        return """
-━━━━━━━━━━━━━━━━━━
-ROAST TIMELINE
-━━━━━━━━━━━━━━━━━━
-Predicted
-Turning   ${tl.predicted.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${tl.predicted.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${tl.predicted.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${tl.predicted.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-Actual
-Turning   ${tl.actual.turningSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${tl.actual.yellowSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${tl.actual.fcSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${tl.actual.dropSec?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-
-Current
-Phase     ${tl.currentPhase}
-ROR       ${tl.currentRor?.let { "%.1f".format(it) } ?: "-"}
-Dev       ${tl.devSec?.toString() ?: "-"}
-DTR       ${tl.dtrPercent?.let { "%.1f".format(it) + "%" } ?: "-"}
-        """.trimIndent()
-    }
-
-    private fun buildDecisionCard(
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ): String {
-        val plannerInput = AppState.lastPlannerInput ?: return """
-━━━━━━━━━━━━━━━━━━
-DECISION CENTER
-━━━━━━━━━━━━━━━━━━
-Planner not initialized
-        """.trimIndent()
-
-        val decision = DecisionEngine.decide(
-            predTurning = predTurning,
-            predYellow = predYellow,
-            predFc = predFc,
-            predDrop = predDrop,
-            actualTurning = AppState.liveActualTurningSec,
-            actualYellow = AppState.liveActualYellowSec,
-            actualFc = AppState.liveActualFcSec,
-            actualDrop = AppState.liveActualDropSec,
-            currentRor = AppState.liveActualPreFcRor,
-            envTemp = plannerInput.envTemp,
-            humidity = plannerInput.envRH,
-            pressureKpa = 1013.0,
-            density = plannerInput.density,
-            moisture = plannerInput.moisture,
-            aw = plannerInput.aw,
-            heatLevelW = DEFAULT_POWER_W,
-            airflowPa = DEFAULT_AIRFLOW_PA,
-            drumRpm = DEFAULT_DRUM_RPM
-        )
-
-        return """
-━━━━━━━━━━━━━━━━━━
-DECISION CENTER
-━━━━━━━━━━━━━━━━━━
-Current Phase
-${decision.currentPhase}
-
-Action Now
-${decision.actionNow}
-
-Heat Command
-${decision.heatCommand}
-
-Air Command
-${decision.airCommand}
-
-Target Window
-${decision.targetWindow}
-
-Risk Level
-${decision.riskLevel}
-
-Reason
-${decision.reason}
-
-Physics / Energy
-${decision.physicsSummary}
-        """.trimIndent()
-    }
-
-    private fun buildControlCard(
-        predTurning: Int,
-        predYellow: Int,
-        predFc: Int,
-        predDrop: Int
-    ): String {
-        val actualTurning = AppState.liveActualTurningSec
-        val actualYellow = AppState.liveActualYellowSec
-        val actualFc = AppState.liveActualFcSec
-        val actualDrop = AppState.liveActualDropSec
-        val actualRor = AppState.liveActualPreFcRor
-
-        val currentStage = when {
-            actualDrop != null -> "Finished"
-            actualFc != null -> "Development"
-            actualYellow != null -> "Maillard"
-            actualTurning != null -> "Drying"
-            else -> "Pre Turning"
-        }
-
-        val nextAction = when {
-            actualDrop != null -> "Roast complete"
-            actualFc != null && actualRor != null && actualRor > 10.0 ->
-                "Reduce heat slightly"
-            actualFc != null && actualRor != null && actualRor < 7.0 ->
-                "Maintain energy"
-            actualYellow != null ->
-                "Manage Maillard energy"
-            actualTurning != null ->
-                "Guide drying phase"
-            else ->
-                "Watch turning point"
-        }
-
-        val biggestRisk = when {
-            actualFc != null && actualRor != null && actualRor > 10.0 ->
-                "Flick risk"
-            actualFc != null && actualRor != null && actualRor < 7.0 ->
-                "Crash risk"
-            actualYellow != null && actualYellow - predYellow > 15 ->
-                "Late development"
-            actualYellow != null && actualYellow - predYellow < -15 ->
-                "Early spike"
-            actualTurning != null && actualTurning - predTurning > 8 ->
-                "Front energy low"
-            actualTurning != null && actualTurning - predTurning < -8 ->
-                "Front energy high"
-            else ->
-                "No dominant risk yet"
-        }
-
-        return """
-━━━━━━━━━━━━━━━━━━
-CONTROL ANALYSIS
-━━━━━━━━━━━━━━━━━━
-Current Stage
-$currentStage
-
-Predicted Anchors
-Turning   ${RoastEngine.toMMSS(predTurning.toDouble())}
-Yellow    ${RoastEngine.toMMSS(predYellow.toDouble())}
-FC        ${RoastEngine.toMMSS(predFc.toDouble())}
-Drop      ${RoastEngine.toMMSS(predDrop.toDouble())}
-
-Actual Anchors
-Turning   ${actualTurning?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Yellow    ${actualYellow?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-FC        ${actualFc?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Drop      ${actualDrop?.let { RoastEngine.toMMSS(it.toDouble()) } ?: "-"}
-Pre-FC ROR ${actualRor?.let { "%.1f".format(it) } ?: "-"}
-
-Next Action
-$nextAction
-
-Biggest Risk
-$biggestRisk
-        """.trimIndent()
-    }
-
-    private fun buildSessionCard(): String {
-        val session = BatchSessionEngine.current()
-        return if (session == null) {
-            """
-━━━━━━━━━━━━━━━━━━
-BATCH SESSION
-━━━━━━━━━━━━━━━━━━
-No active session
-            """.trimIndent()
-        } else {
-            """
-━━━━━━━━━━━━━━━━━━
-BATCH SESSION
-━━━━━━━━━━━━━━━━━━
-Batch ID
-${session.batchId}
-
-Status
-${session.status}
-
-Bean Snapshot
-Process   ${session.beanSnapshot.process}
-Density   ${"%.1f".format(session.beanSnapshot.density)}
-Moisture  ${"%.1f".format(session.beanSnapshot.moisture)}
-aw        ${"%.2f".format(session.beanSnapshot.aw)}
-
-Environment
-Temp      ${"%.1f".format(session.envSnapshot.tempC)}℃
-RH        ${"%.1f".format(session.envSnapshot.humidityRh)}%
-
-Planner Snapshot
-Charge    ${session.plannerSnapshot.chargeTemp}℃
-            """.trimIndent()
-        }
-    }
-
-    private fun currentPhase(): String {
-        return when {
-            AppState.liveActualDropSec != null -> "Finished"
-            AppState.liveActualFcSec != null -> "Development"
-            AppState.liveActualYellowSec != null -> "Maillard / Pre-FC"
-            AppState.liveActualTurningSec != null -> "Drying"
-            else -> "Idle"
-        }
-    }
-
-    private fun defaultRorForPhase(phase: String): Double {
-        return when (phase) {
-            "Drying" -> 16.0
-            "Maillard / Pre-FC" -> 12.0
-            "Development" -> 7.0
-            else -> 12.0
-        }
-    }
-
-    private fun makeIntInput(
+    private fun decimalInput(
         context: Context,
         hint: String,
-        value: String
+        defaultText: String
     ): EditText {
         val input = EditText(context)
         input.hint = hint
-        input.inputType = InputType.TYPE_CLASS_NUMBER
-        input.setText(value)
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_DECIMAL or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.setText(defaultText)
         return input
     }
 
-    private fun makeDecimalInput(
+    private fun intInput(
         context: Context,
         hint: String,
-        value: String
+        defaultText: String
     ): EditText {
         val input = EditText(context)
         input.hint = hint
-        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        input.setText(value)
+        input.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_FLAG_SIGNED
+        input.setText(defaultText)
         return input
     }
 }
