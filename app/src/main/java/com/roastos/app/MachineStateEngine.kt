@@ -19,7 +19,7 @@ object MachineStateEngine {
 
     fun buildState(): MachineState {
 
-        val telemetry = MachineTelemetryEngine.getTelemetry()
+        val telemetry = MachineTelemetryEngine.currentTelemetry
 
         val profile = MachineProfiles.HB_M2SE
 
