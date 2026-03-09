@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import com.roastos.app.AiProviderRegistry
 import com.roastos.app.RoastAiProviderType
 import com.roastos.app.RoastAiService
@@ -13,9 +14,11 @@ import com.roastos.app.RoastAiServiceConfig
 
 object AiSettingsPage {
 
-    private var selectedProvider: RoastAiProviderType = AiProviderRegistry.defaultProvider()
+    private var selectedProvider: RoastAiProviderType =
+        AiProviderRegistry.defaultProvider()
 
     fun show(context: Context, container: LinearLayout) {
+
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -25,164 +28,192 @@ object AiSettingsPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Configure AI provider, model, API key, and multimodal capabilities."
+                "Configure AI provider and runtime capabilities."
             )
         )
+
         root.addView(UiKit.spacer(context))
 
-        val currentConfig = RoastAiService.currentConfig()
+        val currentConfig = RoastAiService.config
 
         selectedProvider = currentConfig.providerType
 
         val providerCard = UiKit.card(context)
         providerCard.addView(UiKit.cardTitle(context, "PROVIDER"))
-        val providerBody = UiKit.bodyText(context, "")
-        providerCard.addView(providerBody)
 
-        val providerButtonsWrap = LinearLayout(context)
-        providerButtonsWrap.orientation = LinearLayout.VERTICAL
+        val providerSummary = UiKit.bodyText(context, "")
+        providerCard.addView(providerSummary)
+
+        val providerButtons = LinearLayout(context)
+        providerButtons.orientation = LinearLayout.VERTICAL
 
         AiProviderRegistry.enabled().forEach { descriptor ->
+
             val btn = Button(context)
             btn.text = "Use ${descriptor.displayName}"
+
             btn.setOnClickListener {
                 selectedProvider = descriptor.type
-                refreshProviderSummary(providerBody)
+                refreshProvider(providerSummary)
             }
-            providerButtonsWrap.addView(btn)
+
+            providerButtons.addView(btn)
         }
 
-        providerCard.addView(providerButtonsWrap)
+        providerCard.addView(providerButtons)
+
         root.addView(providerCard)
         root.addView(UiKit.spacer(context))
 
         val configCard = UiKit.card(context)
-        configCard.addView(UiKit.cardTitle(context, "CONFIGURATION"))
+        configCard.addView(UiKit.cardTitle(context, "CONFIG"))
 
         val modelInput = textInput(
-            context = context,
-            hint = "Model Name",
-            defaultText = currentConfig.modelName
+            context,
+            "Model",
+            currentConfig.modelName
         )
 
         val baseUrlInput = textInput(
-            context = context,
-            hint = "API Base URL",
-            defaultText = currentConfig.apiBaseUrl
+            context,
+            "API Base URL",
+            currentConfig.apiBaseUrl
         )
 
         val apiKeyInput = textInput(
-            context = context,
-            hint = "API Key",
-            defaultText = currentConfig.apiKeyHint
+            context,
+            "API Key",
+            currentConfig.apiKeyHint
         )
+
         apiKeyInput.inputType =
-            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_VARIATION_PASSWORD
 
-        val visionBtn = Button(context)
-        val audioBtn = Button(context)
-        val fileBtn = Button(context)
+        val visionButton = Button(context)
+        val audioButton = Button(context)
+        val fileButton = Button(context)
 
-        var visionEnabled = currentConfig.enableVision
-        var audioEnabled = currentConfig.enableAudio
-        var fileEnabled = currentConfig.enableFileContext
+        var vision = currentConfig.enableVision
+        var audio = currentConfig.enableAudio
+        var file = currentConfig.enableFileContext
 
-        fun refreshToggleButtons() {
-            visionBtn.text = "Vision: " + if (visionEnabled) "ON" else "OFF"
-            audioBtn.text = "Audio: " + if (audioEnabled) "ON" else "OFF"
-            fileBtn.text = "File Context: " + if (fileEnabled) "ON" else "OFF"
+        fun refreshToggle() {
+
+            visionButton.text =
+                "Vision: " + if (vision) "ON" else "OFF"
+
+            audioButton.text =
+                "Audio: " + if (audio) "ON" else "OFF"
+
+            fileButton.text =
+                "File Context: " + if (file) "ON" else "OFF"
         }
 
-        visionBtn.setOnClickListener {
-            visionEnabled = !visionEnabled
-            refreshToggleButtons()
+        visionButton.setOnClickListener {
+            vision = !vision
+            refreshToggle()
         }
 
-        audioBtn.setOnClickListener {
-            audioEnabled = !audioEnabled
-            refreshToggleButtons()
+        audioButton.setOnClickListener {
+            audio = !audio
+            refreshToggle()
         }
 
-        fileBtn.setOnClickListener {
-            fileEnabled = !fileEnabled
-            refreshToggleButtons()
+        fileButton.setOnClickListener {
+            file = !file
+            refreshToggle()
         }
 
-        refreshToggleButtons()
+        refreshToggle()
 
-        val applyBtn = Button(context)
-        applyBtn.text = "Apply AI Config"
+        val applyButton = Button(context)
+        applyButton.text = "Apply"
 
-        val resetBtn = Button(context)
-        resetBtn.text = "Reset To Defaults"
+        val resetButton = Button(context)
+        resetButton.text = "Reset"
 
-        val configBody = UiKit.bodyText(context, "")
-        val serviceBody = UiKit.bodyText(context, "")
+        val configSummary = UiKit.bodyText(context, "")
+        val serviceSummary = UiKit.bodyText(context, "")
 
-        applyBtn.setOnClickListener {
+        applyButton.setOnClickListener {
+
             val newConfig = RoastAiServiceConfig(
                 providerType = selectedProvider,
-                modelName = modelInput.text.toString().ifBlank { "default" },
+                modelName = modelInput.text.toString(),
                 apiBaseUrl = baseUrlInput.text.toString(),
                 apiKeyHint = apiKeyInput.text.toString(),
-                enableVision = visionEnabled,
-                enableAudio = audioEnabled,
-                enableFileContext = fileEnabled
+                enableVision = vision,
+                enableAudio = audio,
+                enableFileContext = file
             )
 
             RoastAiService.configure(newConfig)
-            refreshProviderSummary(providerBody)
-            refreshConfigSummary(configBody)
-            refreshServiceSummary(serviceBody)
+
+            refreshProvider(providerSummary)
+            refreshConfig(configSummary)
+            refreshService(serviceSummary)
         }
 
-        resetBtn.setOnClickListener {
+        resetButton.setOnClickListener {
+
             selectedProvider = AiProviderRegistry.defaultProvider()
-            modelInput.setText("default")
+
+            modelInput.setText("")
             baseUrlInput.setText("")
             apiKeyInput.setText("")
-            visionEnabled = false
-            audioEnabled = false
-            fileEnabled = false
-            refreshToggleButtons()
+
+            vision = false
+            audio = false
+            file = false
+
+            refreshToggle()
 
             RoastAiService.configure(RoastAiServiceConfig())
-            refreshProviderSummary(providerBody)
-            refreshConfigSummary(configBody)
-            refreshServiceSummary(serviceBody)
+
+            refreshProvider(providerSummary)
+            refreshConfig(configSummary)
+            refreshService(serviceSummary)
         }
 
         configCard.addView(modelInput)
         configCard.addView(baseUrlInput)
         configCard.addView(apiKeyInput)
-        configCard.addView(visionBtn)
-        configCard.addView(audioBtn)
-        configCard.addView(fileBtn)
-        configCard.addView(applyBtn)
-        configCard.addView(resetBtn)
-        configCard.addView(configBody)
+
+        configCard.addView(visionButton)
+        configCard.addView(audioButton)
+        configCard.addView(fileButton)
+
+        configCard.addView(applyButton)
+        configCard.addView(resetButton)
+
+        configCard.addView(configSummary)
 
         root.addView(configCard)
         root.addView(UiKit.spacer(context))
 
         val serviceCard = UiKit.card(context)
-        serviceCard.addView(UiKit.cardTitle(context, "SERVICE STATUS"))
-        serviceCard.addView(serviceBody)
+        serviceCard.addView(UiKit.cardTitle(context, "SERVICE"))
+        serviceCard.addView(serviceSummary)
 
         root.addView(serviceCard)
+
         root.addView(UiKit.spacer(context))
 
         val registryCard = UiKit.card(context)
         registryCard.addView(UiKit.cardTitle(context, "REGISTRY"))
-        val registryBody = UiKit.bodyText(context, AiProviderRegistry.summary())
-        registryCard.addView(registryBody)
+
+        val registrySummary =
+            UiKit.bodyText(context, AiProviderRegistry.summary())
+
+        registryCard.addView(registrySummary)
 
         root.addView(registryCard)
 
         fun refreshAll() {
-            refreshProviderSummary(providerBody)
-            refreshConfigSummary(configBody)
-            refreshServiceSummary(serviceBody)
+            refreshProvider(providerSummary)
+            refreshConfig(configSummary)
+            refreshService(serviceSummary)
         }
 
         refreshAll()
@@ -191,11 +222,15 @@ object AiSettingsPage {
         container.addView(scroll)
     }
 
-    private fun refreshProviderSummary(body: android.widget.TextView) {
-        val descriptor = AiProviderRegistry.get(selectedProvider)
+    private fun refreshProvider(body: TextView) {
 
-        body.text = """
+        val descriptor =
+            AiProviderRegistry.get(selectedProvider)
+
+        body.text =
+            """
 Selected Provider
+
 ${descriptor?.displayName ?: selectedProvider.name}
 
 Type
@@ -204,22 +239,24 @@ $selectedProvider
 Description
 ${descriptor?.description ?: "-"}
 
-Vision Support
+Vision
 ${if (descriptor?.supportsVision == true) "Yes" else "No"}
 
-Audio Support
+Audio
 ${if (descriptor?.supportsAudio == true) "Yes" else "No"}
 
 Remote API
 ${if (descriptor?.supportsRemoteApi == true) "Yes" else "No"}
-        """.trimIndent()
+            """.trimIndent()
     }
 
-    private fun refreshConfigSummary(body: android.widget.TextView) {
-        body.text = RoastAiService.currentConfig().summary()
+    private fun refreshConfig(body: TextView) {
+
+        body.text = RoastAiService.config.summary()
     }
 
-    private fun refreshServiceSummary(body: android.widget.TextView) {
+    private fun refreshService(body: TextView) {
+
         body.text = RoastAiService.summary()
     }
 
@@ -228,10 +265,13 @@ ${if (descriptor?.supportsRemoteApi == true) "Yes" else "No"}
         hint: String,
         defaultText: String
     ): EditText {
+
         val input = EditText(context)
+
         input.hint = hint
         input.inputType = InputType.TYPE_CLASS_TEXT
         input.setText(defaultText)
+
         return input
     }
 }
