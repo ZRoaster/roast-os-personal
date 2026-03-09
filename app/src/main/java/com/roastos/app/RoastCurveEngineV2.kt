@@ -1,12 +1,10 @@
 package com.roastos.app
 
 data class CurvePrediction(
-    val predictedBt30: Double,
-    val predictedBt60: Double,
-    val predictedBt90: Double,
-    val predictedFcTimeSec: Double?,
-    val predictedRor: Double,
-    val deviation: String
+    val bt30: Double,
+    val bt60: Double,
+    val bt90: Double,
+    val ror: Double
 )
 
 object RoastCurveEngineV2 {
@@ -17,10 +15,7 @@ object RoastCurveEngineV2 {
         btHistory.clear()
     }
 
-    fun record(
-        bt: Double,
-        timeMillis: Long
-    ) {
+    fun record(bt: Double, timeMillis: Long) {
         btHistory.add(timeMillis to bt)
 
         if (btHistory.size > 30) {
@@ -32,54 +27,32 @@ object RoastCurveEngineV2 {
 
         if (btHistory.size < 2) {
             return CurvePrediction(
-                predictedBt30 = 0.0,
-                predictedBt60 = 0.0,
-                predictedBt90 = 0.0,
-                predictedFcTimeSec = null,
-                predictedRor = 0.0,
-                deviation = "Not enough data"
+                bt30 = 0.0,
+                bt60 = 0.0,
+                bt90 = 0.0,
+                ror = 0.0
             )
         }
 
         val last = btHistory.last()
         val prev = btHistory[btHistory.size - 2]
 
-        val dtSec = (last.first - prev.first).toDouble() / 1000.0
-        val deltaBt = last.second - prev.second
+        val dt = (last.first - prev.first).toDouble() / 1000.0
+        val dBt = last.second - prev.second
 
-        val rorPerMin =
-            if (dtSec > 0.0) deltaBt / dtSec * 60.0
-            else 0.0
+        val ror = if (dt > 0) dBt / dt * 60 else 0.0
 
         val btNow = last.second
 
-        val predictedBt30 = btNow + rorPerMin * 0.5
-        val predictedBt60 = btNow + rorPerMin * 1.0
-        val predictedBt90 = btNow + rorPerMin * 1.5
-
-        val fcTarget = 198.0
-
-        val predictedFcTimeSec =
-            if (rorPerMin > 0.0 && btNow < fcTarget)
-                ((fcTarget - btNow) / rorPerMin) * 60.0
-            else
-                null
-
-        val deviation = when {
-            rorPerMin < 3.0 -> "Crash Risk"
-            rorPerMin < 5.0 -> "Low Momentum"
-            rorPerMin > 18.0 -> "Runaway Heat"
-            rorPerMin > 14.0 -> "Too Fast"
-            else -> "Normal"
-        }
+        val bt30 = btNow + ror * 0.5
+        val bt60 = btNow + ror * 1.0
+        val bt90 = btNow + ror * 1.5
 
         return CurvePrediction(
-            predictedBt30 = predictedBt30,
-            predictedBt60 = predictedBt60,
-            predictedBt90 = predictedBt90,
-            predictedFcTimeSec = predictedFcTimeSec,
-            predictedRor = rorPerMin,
-            deviation = deviation
+            bt30 = bt30,
+            bt60 = bt60,
+            bt90 = bt90,
+            ror = ror
         )
     }
 
@@ -87,32 +60,20 @@ object RoastCurveEngineV2 {
 
         val p = predict()
 
-        val fcText =
-            if (p.predictedFcTimeSec != null)
-                "%.0f".format(p.predictedFcTimeSec) + "s"
-            else
-                "-"
-
         return """
 Curve Prediction
 
 BT +30s
-${"%.1f".format(p.predictedBt30)}℃
+${"%.1f".format(p.bt30)}℃
 
 BT +60s
-${"%.1f".format(p.predictedBt60)}℃
+${"%.1f".format(p.bt60)}℃
 
 BT +90s
-${"%.1f".format(p.predictedBt90)}℃
+${"%.1f".format(p.bt90)}℃
 
-Predicted ROR
-${"%.1f".format(p.predictedRor)}℃/min
-
-Predicted FC
-$fcText
-
-Deviation
-${p.deviation}
-        """.trimIndent()
+ROR
+${"%.1f".format(p.ror)}℃/min
+""".trimIndent()
     }
 }
