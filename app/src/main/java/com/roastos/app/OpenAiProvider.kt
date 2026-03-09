@@ -36,8 +36,7 @@ Maintain RoR stability and avoid late-stage stall.
         return RoastAiResponse(
             message = message,
             responseType = RoastAiResponseType.TEXT,
-            confidence = 0.7,
-            actions = emptyList()
+            confidence = 0.7
         )
     }
 }
