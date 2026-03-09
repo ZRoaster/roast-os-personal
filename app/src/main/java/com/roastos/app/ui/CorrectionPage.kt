@@ -112,15 +112,6 @@ ${assist.interpretation}
 
 Action
 ${assist.actionNow}
-
-Heat Suggestion
-${assist.heatCommand}
-
-Air Suggestion
-${assist.airCommand}
-
-Target Window
-${assist.targetWindow}
             """.trimIndent()
         }
 
@@ -164,18 +155,20 @@ Process
 ${latest.process}
 
 Replayability
-${latest.replayability}
-
-Risk
-${latest.risk}
+${buildReplayability(latest.actualPreFcRor)}
 
 Evaluation
 ${if (latest.evaluation != null) "Saved" else "Not saved"}
+
+Baseline
+${latest.baselineLabel ?: "Not recorded"}
+
+Baseline Match
+${formatBaselineMatch(latest.baselineMatchGrade)}
             """.trimIndent()
         }
 
         fun refreshAll() {
-
             deviationBody.text = buildDeviation()
             assistBody.text = buildAssist()
             correctionBody.text = buildUnifiedCorrection()
@@ -183,9 +176,7 @@ ${if (latest.evaluation != null) "Saved" else "Not saved"}
         }
 
         deviationRefresh.setOnClickListener { refreshAll() }
-
         assistRefresh.setOnClickListener { refreshAll() }
-
         correctionRefresh.setOnClickListener { refreshAll() }
 
         openHistoryBtn.setOnClickListener {
@@ -196,5 +187,23 @@ ${if (latest.evaluation != null) "Saved" else "Not saved"}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildReplayability(ror: Double?): String {
+        val value = ror ?: return "Medium"
+        return when {
+            value in 8.0..9.5 -> "High"
+            value in 7.0..10.8 -> "Medium"
+            else -> "Low"
+        }
+    }
+
+    private fun formatBaselineMatch(raw: String?): String {
+        return when (raw) {
+            "EXACT_MATCH" -> "Exact Match"
+            "SIMILAR_MATCH" -> "Similar Match"
+            "REFERENCE_ONLY" -> "Reference Only"
+            else -> "-"
+        }
     }
 }
