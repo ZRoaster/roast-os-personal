@@ -1,195 +1,233 @@
 package com.roastos.app
 
-data class EnergyState(
-    val targetRor: Double,
-    val predictedRor: Double,
-    val energyError: Double,
-    val beanLoad: Double,
-    val envLoad: Double,
-    val machineEffect: Double,
-    val controlEffect: Double,
-    val phaseEffect: Double,
-    val calibrationEffect: Double,
+import kotlin.math.abs
+
+data class EnergySnapshot(
+    val energyState: String,
+    val score: Int,
+    val heatLevel: String,
+    val airflowLevel: String,
+    val thermalMomentum: String,
+    val rorTrend: String,
+    val reason: String,
     val summary: String
 )
 
 object EnergyEngine {
 
-    fun evaluate(): EnergyState {
+    fun evaluate(
+        machineProfile: MachineProfile,
+        machineState: MachineState
+    ): EnergySnapshot {
 
-        val bean = RoastStateModel.bean
-        val machine = RoastStateModel.machine
-        val environment = RoastStateModel.environment
-        val control = RoastStateModel.control
-        val roast = RoastStateModel.roast
-        val calibration = RoastStateModel.calibration
+        val powerRatio = safeRatio(
+            value = machineState.powerW - machineProfile.minPowerW,
+            max = machineProfile.maxPowerW - machineProfile.minPowerW
+        )
 
-        val baseTargetRor = when (roast.phase) {
-            "Drying" -> 16.0
-            "Maillard / Pre-FC" -> 12.0
-            "Development" -> 7.0
-            else -> 12.0
+        val airflowRatio = safeRatio(
+            value = machineState.airflowPa - machineProfile.minAirflowPa,
+            max = machineProfile.maxAirflowPa - machineProfile.minAirflowPa
+        )
+
+        val rpmRatio = safeRatio(
+            value = machineState.drumRpm - machineProfile.minDrumRpm,
+            max = machineProfile.maxDrumRpm - machineProfile.minDrumRpm
+        )
+
+        val environmentLoad =
+            (machineProfile.environmentSensitivity * buildEnvironmentPenalty(machineState))
+                .coerceIn(0.0, 1.0)
+
+        val heatContribution = powerRatio * 48.0
+        val airflowPenalty = airflowRatio * 24.0
+        val drumAssist = rpmRatio * 6.0
+        val inertiaAssist = machineProfile.thermalInertia * 18.0
+        val rorAssist = buildRorAssist(machineState.ror)
+
+        var score = (
+            heatContribution
+                - airflowPenalty
+                + drumAssist
+                + inertiaAssist
+                + rorAssist
+                - environmentLoad * 12.0
+            ).toInt()
+
+        score = score.coerceIn(0, 100)
+
+        val heatLevel = when {
+            powerRatio >= 0.82 -> "Very High"
+            powerRatio >= 0.62 -> "High"
+            powerRatio >= 0.42 -> "Moderate"
+            powerRatio >= 0.22 -> "Low"
+            else -> "Very Low"
         }
 
-        val beanLoad = calculateBeanLoad(
-            density = bean.density,
-            moisture = bean.moisture,
-            aw = bean.aw,
-            beanBias = calibration.beanBias
-        )
-
-        val envLoad = calculateEnvironmentLoad(
-            ambientTemp = environment.ambientTemp,
-            ambientHumidity = environment.ambientHumidity,
-            ambientPressure = environment.ambientPressure
-        )
-
-        val machineEffect = calculateMachineEffect(
-            thermalMass = machine.thermalMass,
-            drumMass = machine.drumMass,
-            heatRetention = machine.heatRetention,
-            machineResponseFactor = calibration.machineResponseFactor
-        )
-
-        val controlEffect = calculateControlEffect(
-            powerW = control.powerW,
-            airflowPa = control.airflowPa,
-            drumRpm = control.drumRpm,
-            maxPowerW = machine.maxPowerW,
-            maxAirPa = machine.maxAirPa,
-            maxRpm = machine.maxRpm,
-            heatBias = calibration.heatBias,
-            airBias = calibration.airBias
-        )
-
-        val phaseEffect = calculatePhaseEffect(roast.phase)
-
-        val calibrationEffect =
-            calibration.rorBias +
-            calibration.heatBias * 0.35 -
-            calibration.airBias * 0.20 -
-            calibration.beanBias * 0.25
-
-        val targetRor =
-            baseTargetRor +
-            machineEffect -
-            beanLoad -
-            envLoad +
-            calibration.rorBias
-
-        val predictedRor =
-            roast.ror +
-            controlEffect +
-            machineEffect -
-            beanLoad -
-            envLoad -
-            phaseEffect +
-            calibrationEffect
-
-        val boundedTargetRor = targetRor.coerceIn(4.0, 22.0)
-        val boundedPredictedRor = predictedRor.coerceIn(0.0, 25.0)
-
-        val energyError = boundedTargetRor - boundedPredictedRor
-
-        val summary = when {
-            energyError > 2.0 ->
-                "Energy below target. Learned model indicates more support is needed."
-            energyError < -2.0 ->
-                "Energy above target. Learned model indicates trimming is needed."
-            else ->
-                "Energy near target window after calibration."
+        val airflowLevel = when {
+            airflowRatio >= 0.78 -> "Very Strong"
+            airflowRatio >= 0.58 -> "Strong"
+            airflowRatio >= 0.36 -> "Moderate"
+            airflowRatio >= 0.18 -> "Light"
+            else -> "Minimal"
         }
 
-        return EnergyState(
-            targetRor = boundedTargetRor,
-            predictedRor = boundedPredictedRor,
-            energyError = energyError,
-            beanLoad = beanLoad,
-            envLoad = envLoad,
-            machineEffect = machineEffect,
-            controlEffect = controlEffect,
-            phaseEffect = phaseEffect,
-            calibrationEffect = calibrationEffect,
+        val thermalMomentum = when {
+            machineProfile.thermalInertia >= 0.80 -> "Heavy Inertia"
+            machineProfile.thermalInertia >= 0.60 -> "Moderate Inertia"
+            else -> "Light Inertia"
+        }
+
+        val rorTrend = when {
+            machineState.ror >= 12.0 -> "ROR Very Aggressive"
+            machineState.ror >= 9.0 -> "ROR Strong"
+            machineState.ror >= 6.0 -> "ROR Healthy"
+            machineState.ror >= 3.5 -> "ROR Soft"
+            machineState.ror > 0.0 -> "ROR Weak"
+            else -> "ROR Falling"
+        }
+
+        val energyState = when {
+            score >= 80 && machineState.ror >= 8.0 -> "High Energy"
+            score >= 65 && machineState.ror >= 5.0 -> "Balanced Energy"
+            score >= 50 -> "Moderate Energy"
+            score >= 35 -> "Low Energy"
+            else -> "Energy Deficit"
+        }
+
+        val reasons = mutableListOf<String>()
+
+        when {
+            powerRatio >= 0.75 -> reasons.add("heat input is high")
+            powerRatio <= 0.20 -> reasons.add("heat input is low")
+            else -> reasons.add("heat input is moderate")
+        }
+
+        when {
+            airflowRatio >= 0.70 -> reasons.add("airflow is strongly extracting heat")
+            airflowRatio <= 0.15 -> reasons.add("airflow is preserving heat")
+            else -> reasons.add("airflow impact is moderate")
+        }
+
+        when {
+            machineState.ror >= 9.0 -> reasons.add("ROR indicates strong momentum")
+            machineState.ror in 4.0..8.999 -> reasons.add("ROR indicates workable momentum")
+            machineState.ror > 0.0 -> reasons.add("ROR indicates soft momentum")
+            else -> reasons.add("ROR indicates falling momentum")
+        }
+
+        if (environmentLoad > 0.45) {
+            reasons.add("environmental conditions are adding drag")
+        }
+
+        if (machineProfile.thermalInertia >= 0.60) {
+            reasons.add("machine inertia is buffering changes")
+        }
+
+        val reason = reasons.joinToString(" | ")
+
+        val summary = """
+Energy Engine v2
+
+Machine
+${machineProfile.name}
+
+Energy State
+$energyState
+
+Score
+$score
+
+Heat Level
+$heatLevel
+
+Airflow Level
+$airflowLevel
+
+Thermal Momentum
+$thermalMomentum
+
+ROR Trend
+$rorTrend
+
+Reason
+$reason
+        """.trimIndent()
+
+        return EnergySnapshot(
+            energyState = energyState,
+            score = score,
+            heatLevel = heatLevel,
+            airflowLevel = airflowLevel,
+            thermalMomentum = thermalMomentum,
+            rorTrend = rorTrend,
+            reason = reason,
             summary = summary
         )
     }
 
-    private fun calculateBeanLoad(
-        density: Double,
-        moisture: Double,
-        aw: Double,
-        beanBias: Double
+    private fun safeRatio(
+        value: Int,
+        max: Int
     ): Double {
-
-        val densityTerm = ((density - 800.0) / 100.0) * 0.8
-        val moistureTerm = (moisture - 10.5) * 0.7
-        val awTerm = (aw - 0.55) * 5.0
-
-        val baseLoad = densityTerm + moistureTerm + awTerm
-        return baseLoad + beanBias
+        if (max <= 0) return 0.0
+        return value.toDouble().div(max.toDouble()).coerceIn(0.0, 1.0)
     }
 
-    private fun calculateEnvironmentLoad(
-        ambientTemp: Double,
-        ambientHumidity: Double,
-        ambientPressure: Double
+    private fun buildEnvironmentPenalty(
+        machineState: MachineState
     ): Double {
+        val tempPenalty = when {
+            machineState.environmentTemp <= 10.0 -> 1.0
+            machineState.environmentTemp <= 16.0 -> 0.7
+            machineState.environmentTemp <= 22.0 -> 0.35
+            else -> 0.15
+        }
 
-        val tempTerm = (20.0 - ambientTemp) * 0.08
-        val humidityTerm = (ambientHumidity - 50.0) * 0.015
-        val pressureTerm = (1013.0 - ambientPressure) * 0.002
+        val humidityPenalty = when {
+            machineState.environmentHumidity >= 80.0 -> 0.55
+            machineState.environmentHumidity >= 65.0 -> 0.35
+            machineState.environmentHumidity >= 45.0 -> 0.18
+            else -> 0.08
+        }
 
-        return tempTerm + humidityTerm + pressureTerm
+        return (tempPenalty + humidityPenalty).coerceIn(0.0, 1.2)
     }
 
-    private fun calculateMachineEffect(
-        thermalMass: Double,
-        drumMass: Double,
-        heatRetention: Double,
-        machineResponseFactor: Double
+    private fun buildRorAssist(
+        ror: Double
     ): Double {
-
-        val thermalTerm = (thermalMass - 1.0) * 0.8
-        val drumTerm = (drumMass - 1.0) * 0.4
-        val retentionTerm = (heatRetention - 1.0) * 0.8
-        val responseTerm = (machineResponseFactor - 1.0) * 0.6
-
-        return thermalTerm + drumTerm + retentionTerm + responseTerm
+        return when {
+            ror >= 12.0 -> 20.0
+            ror >= 9.0 -> 15.0
+            ror >= 6.0 -> 10.0
+            ror >= 3.5 -> 4.0
+            ror > 0.0 -> -4.0
+            else -> -12.0
+        }
     }
 
-    private fun calculateControlEffect(
-        powerW: Int,
-        airflowPa: Int,
-        drumRpm: Int,
-        maxPowerW: Int,
-        maxAirPa: Int,
-        maxRpm: Int,
-        heatBias: Double,
-        airBias: Double
-    ): Double {
+    fun thermalCorrectionHint(
+        machineProfile: MachineProfile,
+        machineState: MachineState
+    ): String {
+        val energy = evaluate(machineProfile, machineState)
 
-        val powerRatio =
-            if (maxPowerW > 0) powerW.toDouble() / maxPowerW.toDouble() else 0.0
+        return when {
+            energy.energyState == "Energy Deficit" && machineState.ror < 3.5 ->
+                "Add heat earlier and avoid excessive airflow"
 
-        val airRatio =
-            if (maxAirPa > 0) airflowPa.toDouble() / maxAirPa.toDouble() else 0.0
+            energy.energyState == "High Energy" && machineState.ror > 10.0 ->
+                "Reduce heat slightly and prepare to widen airflow"
 
-        val rpmRatio =
-            if (maxRpm > 0) drumRpm.toDouble() / maxRpm.toDouble() else 0.0
+            energy.airflowLevel == "Very Strong" && machineState.ror < 5.0 ->
+                "Airflow may be stripping too much heat"
 
-        val powerTerm = powerRatio * 8.0
-        val airTerm = airRatio * 3.5
-        val rpmTerm = rpmRatio * 1.2
+            energy.thermalMomentum == "Heavy Inertia" && abs(machineState.ror) < 4.0 ->
+                "Make smaller earlier corrections because inertia is high"
 
-        return powerTerm - airTerm + rpmTerm + heatBias - airBias
-    }
-
-    private fun calculatePhaseEffect(phase: String): Double {
-        return when (phase) {
-            "Drying" -> 1.0
-            "Maillard / Pre-FC" -> 1.8
-            "Development" -> 2.5
-            else -> 1.5
+            else ->
+                "Energy condition is acceptable"
         }
     }
 }
