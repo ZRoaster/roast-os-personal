@@ -19,85 +19,72 @@ object RoastStudioPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        val title = UiKit.pageTitle(context, "ROAST STUDIO")
-        val subtitle = UiKit.pageSubtitle(context, "Live Roast Session")
-
-        root.addView(title)
-        root.addView(subtitle)
+        root.addView(UiKit.pageTitle(context, "ROAST STUDIO"))
+        root.addView(UiKit.pageSubtitle(context, "Live Roast Session"))
         root.addView(UiKit.spacer(context))
 
         val controlCard = UiKit.card(context)
-        val controlTitle = UiKit.cardTitle(context, "CONTROL")
-
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
-        val latestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
 
-        controlCard.addView(controlTitle)
+        controlCard.addView(UiKit.cardTitle(context, "CONTROL"))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
-        controlCard.addView(latestHistoryBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
 
         val stateCard = UiKit.card(context)
-        val stateTitle = UiKit.cardTitle(context, "SESSION STATE")
         val stateBody = UiKit.bodyText(context, "")
 
-        stateCard.addView(stateTitle)
+        stateCard.addView(UiKit.cardTitle(context, "SESSION STATE"))
         stateCard.addView(stateBody)
 
         root.addView(stateCard)
         root.addView(UiKit.spacer(context))
 
         val phaseCard = UiKit.card(context)
-        val phaseTitle = UiKit.cardTitle(context, "PHASE")
         val phaseBody = UiKit.bodyText(context, "")
 
-        phaseCard.addView(phaseTitle)
+        phaseCard.addView(UiKit.cardTitle(context, "PHASE"))
         phaseCard.addView(phaseBody)
 
         root.addView(phaseCard)
         root.addView(UiKit.spacer(context))
 
         val companionCard = UiKit.card(context)
-        val companionTitle = UiKit.cardTitle(context, "COMPANION")
         val companionBody = UiKit.bodyText(context, "")
 
-        companionCard.addView(companionTitle)
+        companionCard.addView(UiKit.cardTitle(context, "COMPANION"))
         companionCard.addView(companionBody)
 
         root.addView(companionCard)
         root.addView(UiKit.spacer(context))
 
         val healthCard = UiKit.card(context)
-        val healthTitle = UiKit.cardTitle(context, "ROAST HEALTH")
         val healthBody = UiKit.bodyText(context, "")
 
-        healthCard.addView(healthTitle)
+        healthCard.addView(UiKit.cardTitle(context, "ROAST HEALTH"))
         healthCard.addView(healthBody)
 
         root.addView(healthCard)
         root.addView(UiKit.spacer(context))
 
         val logCard = UiKit.card(context)
-        val logTitle = UiKit.cardTitle(context, "ROAST LOG")
         val logBody = UiKit.bodyText(context, "")
 
-        logCard.addView(logTitle)
+        logCard.addView(UiKit.cardTitle(context, "ROAST LOG"))
         logCard.addView(logBody)
 
         root.addView(logCard)
         root.addView(UiKit.spacer(context))
 
         val historyCard = UiKit.card(context)
-        val historyTitle = UiKit.cardTitle(context, "ROAST HISTORY")
         val historyBody = UiKit.bodyText(context, "")
 
-        historyCard.addView(historyTitle)
+        historyCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
         historyCard.addView(historyBody)
 
         root.addView(historyCard)
@@ -134,13 +121,14 @@ Phase
 ${snapshot.companion.phaseLabel}
 
 Risk
-${formatRisk(snapshot.companion.riskLevel)}
+${snapshot.companion.riskLevel}
                 """.trimIndent()
 
             healthBody.text = buildHealthText(snapshot.validation)
 
             logBody.text = snapshot.logText
-            historyBody.text = RoastHistoryEngine.summary()
+
+            historyBody.text = buildRecentRoasts()
         }
 
         startBtn.setOnClickListener {
@@ -157,14 +145,6 @@ ${formatRisk(snapshot.companion.riskLevel)}
 
         refreshBtn.setOnClickListener {
             render()
-        }
-
-        latestHistoryBtn.setOnClickListener {
-            HistoryDetailPage.show(
-                context = context,
-                container = container,
-                entry = RoastHistoryEngine.latest()
-            )
         }
 
         handler.post(object : Runnable {
@@ -184,39 +164,54 @@ ${formatRisk(snapshot.companion.riskLevel)}
         container.addView(scroll)
     }
 
-    private fun buildHealthText(
-        validation: RoastValidationResult
-    ): String {
+    private fun buildRecentRoasts(): String {
+
+        val list = RoastHistoryEngine.all().take(3)
+
+        if (list.isEmpty()) {
+            return "No roast history yet."
+        }
+
+        return list.joinToString("\n\n") {
+
+            """
+Batch
+${it.batchId}
+
+Status
+${it.batchStatus}
+
+Health
+${it.roastHealthHeadline}
+
+Time
+${formatTime(it.createdAtMillis)}
+            """.trimIndent()
+        }
+    }
+
+    private fun buildHealthText(validation: RoastValidationResult): String {
+
         if (!validation.hasIssues()) {
             return """
 状态
 稳定
-
-等级
-无
 
 说明
 当前未检测到明显风险。
             """.trimIndent()
         }
 
-        val issues = validation.issues.joinToString("\n\n") { issue ->
-            """
-${issue.title}
-${issue.detail}
-等级：${formatRisk(issue.severity)}
-            """.trimIndent()
-        }
+        return validation.issues.joinToString("\n\n") {
 
-        return """
-状态
-存在风险
+            """
+${it.title}
+${it.detail}
 
 等级
-${formatRisk(validation.highestSeverity())}
-
-$issues
-        """.trimIndent()
+${it.severity}
+            """.trimIndent()
+        }
     }
 
     private fun formatElapsed(sec: Int): String {
@@ -227,14 +222,12 @@ $issues
         return "%d:%02d".format(minutes, seconds)
     }
 
-    private fun formatRisk(risk: String): String {
-        return when (risk) {
-            "none" -> "无"
-            "low" -> "低"
-            "watch" -> "留意"
-            "medium" -> "中"
-            "high" -> "高"
-            else -> risk
-        }
+    private fun formatTime(ms: Long): String {
+
+        val seconds = ms / 1000
+        val minutes = seconds / 60
+        val remain = seconds % 60
+
+        return "%d:%02d".format(minutes, remain)
     }
 }
