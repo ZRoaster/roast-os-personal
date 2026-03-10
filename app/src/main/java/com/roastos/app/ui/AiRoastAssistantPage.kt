@@ -4,12 +4,17 @@ import android.content.Context
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.*
+import com.roastos.app.MachineProfiles
+import com.roastos.app.MachineStateEngine
+import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastStabilityResult
+import com.roastos.app.EnergySnapshot
+import com.roastos.app.UiKit
 
 object AiRoastAssistantPage {
 
     fun show(context: Context, container: LinearLayout) {
-
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -44,11 +49,10 @@ object AiRoastAssistantPage {
                 "SYSTEM STATE"
             )
         )
-
         val summaryBody = UiKit.bodyText(context, "")
         summaryCard.addView(summaryBody)
-
         root.addView(summaryCard)
+
         root.addView(UiKit.spacer(context))
 
         val primaryCard = UiKit.card(context)
@@ -58,11 +62,10 @@ object AiRoastAssistantPage {
                 "PRIMARY INSIGHT"
             )
         )
-
         val primaryBody = UiKit.bodyText(context, "")
         primaryCard.addView(primaryBody)
-
         root.addView(primaryCard)
+
         root.addView(UiKit.spacer(context))
 
         val observationCard = UiKit.card(context)
@@ -72,11 +75,10 @@ object AiRoastAssistantPage {
                 "OBSERVATIONS"
             )
         )
-
         val observationBody = UiKit.bodyText(context, "")
         observationCard.addView(observationBody)
-
         root.addView(observationCard)
+
         root.addView(UiKit.spacer(context))
 
         val possibilityCard = UiKit.card(context)
@@ -86,73 +88,59 @@ object AiRoastAssistantPage {
                 "POSSIBLE DIRECTIONS"
             )
         )
-
         val possibilityBody = UiKit.bodyText(context, "")
         possibilityCard.addView(possibilityBody)
-
         root.addView(possibilityCard)
 
         fun refresh() {
+            val profile = MachineProfiles.HB_M2SE
+            val telemetry = MachineTelemetryEngine.currentState()
 
-            val profile =
-                MachineProfileStore.currentProfile()
-                    ?: MachineProfileStore.defaultProfile()
+            val machineState = MachineStateEngine.buildState(
+                powerW = telemetry.livePowerW,
+                airflowPa = telemetry.liveAirflowPa,
+                drumRpm = telemetry.liveDrumRpm,
+                beanTemp = telemetry.liveBtC ?: 0.0,
+                ror = telemetry.liveRorCPerMin ?: 0.0,
+                elapsedSec = telemetry.liveElapsedSec,
+                environmentTemp = 25.0,
+                environmentHumidity = 50.0
+            )
 
-            val machineState =
-                MachineStateEngine.currentState()
-
-            // 如果没有EnergyEngine snapshot接口就传null
             val energy: EnergySnapshot? = null
-
-            // 如果没有Stability结果接口就传null
             val stability: RoastStabilityResult? = null
 
-            val report =
-                RoastInsightEngine.analyze(
-                    profile = profile,
-                    machineState = machineState,
-                    energy = energy,
-                    stability = stability,
-                    styleGoal = null
-                )
+            val report = RoastInsightEngine.analyze(
+                profile = profile,
+                machineState = machineState,
+                energy = energy,
+                stability = stability,
+                styleGoal = null
+            )
 
-            summaryBody.text =
-                report.quietSummary
+            summaryBody.text = buildString {
+                append(report.quietSummary)
+                append("\n\n")
+                append("Telemetry\n")
+                append(MachineTelemetryEngine.summary())
+            }
 
-            val primary =
-                RoastInsightEngine.primaryInsight(report)
+            val primary = RoastInsightEngine.primaryInsight(report)
+            primaryBody.text = primary?.summary() ?: "System calm."
 
-            primaryBody.text =
-                primary?.summary()
-                    ?: "System calm."
-
-            val obsText =
+            observationBody.text =
                 if (report.observations.isEmpty()) {
                     "-"
                 } else {
-                    report.observations.joinToString(
-                        "\n\n"
-                    ) {
-                        it.summary()
-                    }
-                }
-
-            observationBody.text =
-                obsText
-
-            val posText =
-                if (report.possibilities.isEmpty()) {
-                    "-"
-                } else {
-                    report.possibilities.joinToString(
-                        "\n\n"
-                    ) {
-                        it.summary()
-                    }
+                    report.observations.joinToString("\n\n") { it.summary() }
                 }
 
             possibilityBody.text =
-                posText
+                if (report.possibilities.isEmpty()) {
+                    "-"
+                } else {
+                    report.possibilities.joinToString("\n\n") { it.summary() }
+                }
         }
 
         refreshBtn.setOnClickListener {
