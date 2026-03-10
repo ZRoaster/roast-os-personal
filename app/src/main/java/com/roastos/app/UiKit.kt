@@ -2,6 +2,7 @@ package com.roastos.app
 
 import android.content.Context
 import android.graphics.Typeface
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -68,6 +69,25 @@ object UiKit {
         view.textSize = 14f
 
         return view
+    }
+
+    fun primaryButton(context: Context, text: String): Button {
+
+        val button = Button(context)
+
+        button.text = text
+
+        return button
+    }
+
+    fun secondaryButton(context: Context, text: String): Button {
+
+        val button = Button(context)
+
+        button.text = text
+        button.alpha = 0.85f
+
+        return button
     }
 
     fun spacer(context: Context): TextView {
