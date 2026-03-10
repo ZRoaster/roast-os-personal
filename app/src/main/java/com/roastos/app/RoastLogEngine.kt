@@ -116,8 +116,6 @@ object RoastLogEngine {
         val log = buildLog(session, machineName)
 
         return buildString {
-            appendLine("ROAST LOG")
-            appendLine()
             appendLine("Batch ID")
             appendLine(log.batchId)
             appendLine()
