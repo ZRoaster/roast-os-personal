@@ -15,7 +15,6 @@ object RoastCompanionEngine {
 
         val temp = session.lastBeanTemp
         val ror = session.lastRor
-        val elapsed = session.lastElapsedSec
 
         val phase = detectPhase(temp)
 
@@ -48,43 +47,42 @@ $suggestion
         )
     }
 
+    fun buildDisplayText(
+        session: RoastSessionState
+    ): String {
+        val message = buildMessage(session)
+
+        return """
+${message.title}
+
+${message.body}
+
+阶段
+${message.phaseLabel}
+
+风险
+${formatRisk(message.riskLevel)}
+        """.trimIndent()
+    }
+
     private fun detectPhase(temp: Double): String {
-
         return when {
-
             temp < 110 -> "Charge"
-
             temp < 150 -> "Drying"
-
             temp < 175 -> "Maillard"
-
             temp < 200 -> "First Crack"
-
             else -> "Development"
         }
     }
 
     private fun phaseObservation(phase: String): String {
-
         return when (phase) {
-
-            "Charge" ->
-                "豆子吸热阶段"
-
-            "Drying" ->
-                "水分蒸发进行中"
-
-            "Maillard" ->
-                "结构与香气正在形成"
-
-            "First Crack" ->
-                "进入爆裂区间"
-
-            "Development" ->
-                "发展阶段"
-
-            else ->
-                "观察曲线变化"
+            "Charge" -> "豆子吸热阶段"
+            "Drying" -> "水分蒸发进行中"
+            "Maillard" -> "结构与香气正在形成"
+            "First Crack" -> "进入爆裂区间"
+            "Development" -> "发展阶段"
+            else -> "观察曲线变化"
         }
     }
 
@@ -92,23 +90,15 @@ $suggestion
         phase: String,
         ror: Double
     ): String {
-
         return when (phase) {
-
             "Charge" ->
                 "等待回温点"
 
             "Drying" ->
-                if (ror < 4)
-                    "轻微增加能量"
-                else
-                    "保持当前能量"
+                if (ror < 4) "轻微增加能量" else "保持当前能量"
 
             "Maillard" ->
-                if (ror < 4)
-                    "避免能量下降"
-                else
-                    "维持稳定下降"
+                if (ror < 4) "避免能量下降" else "维持稳定下降"
 
             "First Crack" ->
                 "准备进入发展段"
@@ -124,14 +114,21 @@ $suggestion
     private fun riskLevel(
         ror: Double
     ): String {
-
         return when {
-
             ror < 1.5 -> "medium"
-
             ror > 12 -> "watch"
-
             else -> "low"
+        }
+    }
+
+    private fun formatRisk(risk: String): String {
+        return when (risk) {
+            "none" -> "无"
+            "low" -> "低"
+            "watch" -> "留意"
+            "medium" -> "中"
+            "high" -> "高"
+            else -> risk
         }
     }
 }
