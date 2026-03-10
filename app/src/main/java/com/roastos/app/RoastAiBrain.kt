@@ -25,20 +25,15 @@ data class RoastAiBrainState(
     val machineName: String,
     val phase: RoastAiPhase,
     val phaseReason: String,
-
     val energyState: String,
     val energyTrend: RoastAiTrend,
-
     val stabilityState: String,
     val stabilityRisk: RoastAiRiskLevel,
-
     val rorTrend: RoastAiTrend,
     val heatPressure: String,
     val airflowPressure: String,
-
     val controlLevel: MachineControlLevel,
     val canActDirectly: Boolean,
-
     val operatorSummary: String,
     val aiSummary: String
 ) {
@@ -162,7 +157,7 @@ object RoastAiBrain {
         machineState: MachineState,
         telemetryFrame: MachineTelemetryFrame?,
         controlCapability: MachineControlCapability,
-        energySnapshot: EnergySnapshot?,
+        energySnapshot: EnergySnapshot,
         stabilityResult: RoastStabilityResult?,
         drivingAdvice: RoastDrivingAdvice?,
         decisionResult: DecisionEngine.DecisionResult?,
