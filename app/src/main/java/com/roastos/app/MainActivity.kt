@@ -12,6 +12,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 启动 RoastOS 数据引擎
         MachineBridge.start()
 
         rootContainer = LinearLayout(this).apply {
@@ -21,10 +22,5 @@ class MainActivity : AppCompatActivity() {
         setContentView(rootContainer)
 
         DashboardPage.show(this, rootContainer)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        MachineBridge.stop()
     }
 }
