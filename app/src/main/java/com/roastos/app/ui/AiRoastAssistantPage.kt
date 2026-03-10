@@ -1,82 +1,239 @@
-package com.roastos.app
+package com.roastos.app.ui
 
 import android.content.Context
-import android.graphics.Typeface
-import android.view.Gravity
+import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.ScrollView
+import com.roastos.app.EnergySnapshot
+import com.roastos.app.MachineProfiles
+import com.roastos.app.MachineStateEngine
+import com.roastos.app.MachineTelemetryEngine
+import com.roastos.app.RoastCompanionLayer
+import com.roastos.app.RoastCompanionMode
+import com.roastos.app.RoastCompanionPresence
+import com.roastos.app.RoastCompanionState
+import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastStabilityResult
+import com.roastos.app.UiKit
 
-object UiKit {
+object AiRoastAssistantPage {
 
-    fun pageRoot(context: Context): LinearLayout {
+    private var companionState =
+        RoastCompanionState.initial(
+            mode = RoastCompanionMode.QUIET
+        )
 
-        val layout = LinearLayout(context)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(40, 40, 40, 40)
+    fun show(context: Context, container: LinearLayout) {
+        container.removeAllViews()
 
-        return layout
-    }
+        val scroll = ScrollView(context)
+        val root = UiKit.pageRoot(context)
 
-    fun pageTitle(context: Context, text: String): TextView {
+        root.addView(
+            UiKit.pageTitle(
+                context,
+                "ROAST COMPANION"
+            )
+        )
 
-        val view = TextView(context)
+        root.addView(
+            UiKit.pageSubtitle(
+                context,
+                "Quiet observation, clear insight, possible directions"
+            )
+        )
 
-        view.text = text
-        view.textSize = 22f
-        view.setTypeface(null, Typeface.BOLD)
+        root.addView(UiKit.spacer(context))
 
-        return view
-    }
+        val quietModeBtn = Button(context)
+        quietModeBtn.text = "Quiet"
 
-    fun pageSubtitle(context: Context, text: String): TextView {
+        val supportiveModeBtn = Button(context)
+        supportiveModeBtn.text = "Supportive"
 
-        val view = TextView(context)
+        val explorationModeBtn = Button(context)
+        explorationModeBtn.text = "Exploration"
 
-        view.text = text
-        view.textSize = 14f
-        view.alpha = 0.7f
+        val refreshBtn = Button(context)
+        refreshBtn.text = "Refresh"
 
-        return view
-    }
+        val askCompanionBtn = Button(context)
+        askCompanionBtn.text = "Ask Companion"
 
-    fun card(context: Context): LinearLayout {
+        val exploreBtn = Button(context)
+        exploreBtn.text = "Explore"
 
-        val layout = LinearLayout(context)
+        root.addView(quietModeBtn)
+        root.addView(supportiveModeBtn)
+        root.addView(explorationModeBtn)
+        root.addView(refreshBtn)
+        root.addView(askCompanionBtn)
+        root.addView(exploreBtn)
 
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(30, 30, 30, 30)
+        root.addView(UiKit.spacer(context))
 
-        return layout
-    }
+        val stateCard = UiKit.card(context)
+        stateCard.addView(
+            UiKit.cardTitle(
+                context,
+                "SYSTEM STATE"
+            )
+        )
+        val stateBody = UiKit.bodyText(context, "")
+        stateCard.addView(stateBody)
+        root.addView(stateCard)
 
-    fun cardTitle(context: Context, text: String): TextView {
+        root.addView(UiKit.spacer(context))
 
-        val view = TextView(context)
+        val companionCard = UiKit.card(context)
+        companionCard.addView(
+            UiKit.cardTitle(
+                context,
+                "COMPANION"
+            )
+        )
+        val companionBody = UiKit.bodyText(context, "")
+        companionCard.addView(companionBody)
+        root.addView(companionCard)
 
-        view.text = text
-        view.textSize = 16f
-        view.setTypeface(null, Typeface.BOLD)
+        root.addView(UiKit.spacer(context))
 
-        return view
-    }
+        val observationCard = UiKit.card(context)
+        observationCard.addView(
+            UiKit.cardTitle(
+                context,
+                "OBSERVATIONS"
+            )
+        )
+        val observationBody = UiKit.bodyText(context, "")
+        observationCard.addView(observationBody)
+        root.addView(observationCard)
 
-    fun bodyText(context: Context, text: String): TextView {
+        root.addView(UiKit.spacer(context))
 
-        val view = TextView(context)
+        val possibilityCard = UiKit.card(context)
+        possibilityCard.addView(
+            UiKit.cardTitle(
+                context,
+                "POSSIBLE DIRECTIONS"
+            )
+        )
+        val possibilityBody = UiKit.bodyText(context, "")
+        possibilityCard.addView(possibilityBody)
+        root.addView(possibilityCard)
 
-        view.text = text
-        view.textSize = 14f
+        fun render(
+            userRequested: Boolean = false,
+            explorationRequested: Boolean = false
+        ) {
+            val profile = MachineProfiles.HB_M2SE
+            val telemetry = MachineTelemetryEngine.currentState()
 
-        return view
-    }
+            val machineState = MachineStateEngine.buildState(
+                powerW = telemetry.livePowerW,
+                airflowPa = telemetry.liveAirflowPa,
+                drumRpm = telemetry.liveDrumRpm,
+                beanTemp = telemetry.liveBtC ?: 0.0,
+                ror = telemetry.liveRorCPerMin ?: 0.0,
+                elapsedSec = telemetry.liveElapsedSec,
+                environmentTemp = 25.0,
+                environmentHumidity = 50.0
+            )
 
-    fun spacer(context: Context): TextView {
+            val energy: EnergySnapshot? = null
+            val stability: RoastStabilityResult? = null
 
-        val view = TextView(context)
+            val report = RoastInsightEngine.analyze(
+                profile = profile,
+                machineState = machineState,
+                energy = energy,
+                stability = stability,
+                styleGoal = null
+            )
 
-        view.text = ""
-        view.height = 40
+            val decision = RoastCompanionLayer.evaluate(
+                currentState = companionState,
+                report = report,
+                machineState = machineState,
+                userRequested = userRequested,
+                explorationRequested = explorationRequested
+            )
 
-        return view
+            companionState = decision.nextState
+
+            stateBody.text = buildString {
+                append("Mode\n")
+                append(companionState.mode)
+                append("\n\n")
+                append("Presence\n")
+                append(decision.presence)
+                append("\n\n")
+                append("Quiet Summary\n")
+                append(report.quietSummary)
+                append("\n\n")
+                append("Telemetry\n")
+                append(MachineTelemetryEngine.summary())
+            }
+
+            companionBody.text = when (decision.presence) {
+                RoastCompanionPresence.SILENT ->
+                    "System quiet."
+
+                else ->
+                    RoastCompanionLayer.renderForUi(decision)
+            }
+
+            observationBody.text =
+                if (report.observations.isEmpty()) {
+                    "-"
+                } else {
+                    report.observations.joinToString("\n\n") { it.summary() }
+                }
+
+            possibilityBody.text =
+                if (report.possibilities.isEmpty()) {
+                    "-"
+                } else {
+                    report.possibilities.joinToString("\n\n") { it.summary() }
+                }
+        }
+
+        quietModeBtn.setOnClickListener {
+            companionState = companionState.copy(
+                mode = RoastCompanionMode.QUIET
+            )
+            render()
+        }
+
+        supportiveModeBtn.setOnClickListener {
+            companionState = companionState.copy(
+                mode = RoastCompanionMode.SUPPORTIVE
+            )
+            render()
+        }
+
+        explorationModeBtn.setOnClickListener {
+            companionState = companionState.copy(
+                mode = RoastCompanionMode.EXPLORATION
+            )
+            render()
+        }
+
+        refreshBtn.setOnClickListener {
+            render()
+        }
+
+        askCompanionBtn.setOnClickListener {
+            render(userRequested = true)
+        }
+
+        exploreBtn.setOnClickListener {
+            render(explorationRequested = true)
+        }
+
+        render()
+
+        scroll.addView(root)
+        container.addView(scroll)
     }
 }
