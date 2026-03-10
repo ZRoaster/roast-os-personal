@@ -2,7 +2,8 @@
     package="com.roastos.app">
 
     <application
-        android:label="Roast OS">
+        android:label="Roast OS"
+        android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
 
         <activity
             android:name=".MainActivity"
