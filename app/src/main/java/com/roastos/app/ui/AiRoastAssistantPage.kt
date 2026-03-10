@@ -15,10 +15,11 @@ import com.roastos.app.RoastAiAttachment
 import com.roastos.app.RoastAiBrain
 import com.roastos.app.RoastAiDecisionEngine
 import com.roastos.app.RoastAiInputModality
+import com.roastos.app.RoastAiProviderType
 import com.roastos.app.RoastAiService
 import com.roastos.app.RoastAiStyleGoal
-import com.roastos.app.RoastAiProviderType
 import com.roastos.app.TelemetrySourceMode
+import kotlinx.coroutines.runBlocking
 
 object AiRoastAssistantPage {
 
@@ -339,27 +340,27 @@ ${styleGoal.styleName}
             )
 
             try {
-                kotlinx.coroutines.runBlocking {
-                    val aiResponse = RoastAiService.generateRealtimeCoaching(
+                val aiResponse = runBlocking {
+                    RoastAiService.generateRealtimeCoaching(
                         context = contextPayload,
                         providerType = RoastAiProviderType.MOCK,
                         apiKey = null,
                         model = null
                     )
-
-                    val aiDecision = RoastAiDecisionEngine.decide(
-                        context = contextPayload,
-                        aiResponse = aiResponse,
-                        profile = profile,
-                        capability = capability,
-                        machineState = machineState,
-                        energy = energy,
-                        stability = null
-                    )
-
-                    latestAiResponseText = aiResponse.summary()
-                    latestAiDecisionText = aiDecision.detail()
                 }
+
+                val aiDecision = RoastAiDecisionEngine.decide(
+                    context = contextPayload,
+                    aiResponse = aiResponse,
+                    profile = profile,
+                    capability = capability,
+                    machineState = machineState,
+                    energy = energy,
+                    stability = null
+                )
+
+                latestAiResponseText = aiResponse.summary()
+                latestAiDecisionText = aiDecision.detail()
             } catch (e: Exception) {
                 latestAiResponseText = "AI request failed: ${e.message ?: "Unknown error"}"
                 latestAiDecisionText = "No AI decision due to request failure."
