@@ -75,6 +75,8 @@ object RoastLogEngine {
                 null
             }
 
+        val validation = buildValidation(session, machineName)
+
         val summary = buildSummary(
             machineName = machineName,
             session = session,
@@ -83,7 +85,8 @@ object RoastLogEngine {
             developmentRatio = developmentRatio,
             chargeTemp = chargeTemp,
             dropTemp = dropTemp,
-            finalRor = finalRor
+            finalRor = finalRor,
+            validation = validation
         )
 
         return RoastLog(
@@ -114,6 +117,7 @@ object RoastLogEngine {
         machineName: String = "HB M2SE"
     ): String {
         val log = buildLog(session, machineName)
+        val validation = buildValidation(session, machineName)
 
         return buildString {
             appendLine("Batch ID")
@@ -170,6 +174,12 @@ object RoastLogEngine {
                 if (log.finalRor == null) "-" else "${oneDecimal(log.finalRor)} ℃/min"
             )
             appendLine()
+            appendLine("Roast Health")
+            appendLine(buildValidationHeadline(validation))
+            appendLine()
+            appendLine("Validation Detail")
+            appendLine(buildValidationDetail(validation))
+            appendLine()
             appendLine("Summary")
             append(log.summary)
         }
@@ -183,7 +193,8 @@ object RoastLogEngine {
         developmentRatio: Double?,
         chargeTemp: Double?,
         dropTemp: Double?,
-        finalRor: Double?
+        finalRor: Double?,
+        validation: RoastValidationResult
     ): String {
         return buildString {
             appendLine("Machine: $machineName")
@@ -205,11 +216,98 @@ object RoastLogEngine {
                     if (developmentRatio == null) "-" else "${((developmentRatio * 1000.0).roundToInt() / 10.0)}%"
                 }"
             )
+            appendLine(
+                "Roast Health: ${buildValidationHeadline(validation)}"
+            )
             append(
                 "Final RoR: ${
                     if (finalRor == null) "-" else "${oneDecimal(finalRor)} ℃/min"
                 }"
             )
+        }
+    }
+
+    private fun buildValidation(
+        session: RoastSessionState,
+        machineName: String
+    ): RoastValidationResult {
+        val phaseSummary = RoastPhaseDetectionEngine.summary()
+        val tempLog = RoastLog(
+            batchId = activeBatchId,
+            machineName = machineName,
+            status = session.status.name,
+            totalTimeSec = session.lastElapsedSec,
+            chargeTemp = chargeTemp,
+            dropTemp = dropTemp,
+            turningPointSec = RoastPhaseDetectionEngine.currentState().turningPoint?.elapsedSec,
+            turningPointTemp = RoastPhaseDetectionEngine.currentState().turningPoint?.beanTemp,
+            dryEndSec = RoastPhaseDetectionEngine.currentState().dryEnd?.elapsedSec,
+            dryEndTemp = RoastPhaseDetectionEngine.currentState().dryEnd?.beanTemp,
+            maillardStartSec = RoastPhaseDetectionEngine.currentState().maillardStart?.elapsedSec,
+            maillardStartTemp = RoastPhaseDetectionEngine.currentState().maillardStart?.beanTemp,
+            firstCrackSec = RoastPhaseDetectionEngine.currentState().firstCrack?.elapsedSec,
+            firstCrackTemp = RoastPhaseDetectionEngine.currentState().firstCrack?.beanTemp,
+            dropSec = RoastPhaseDetectionEngine.currentState().drop?.elapsedSec ?: session.lastElapsedSec,
+            developmentTimeSec = null,
+            developmentRatio = null,
+            finalRor = finalRor,
+            summary = ""
+        )
+
+        val tempCompanion = RoastCompanionMessage(
+            title = "Validation",
+            body = "",
+            phaseLabel = RoastSessionEngine.phaseLabel(session.phase),
+            riskLevel = "none"
+        )
+
+        val snapshot = RoastSessionBusSnapshot(
+            session = session,
+            companion = tempCompanion,
+            log = tempLog,
+            phaseSummary = phaseSummary,
+            logText = "",
+            historySummary = "",
+            validation = RoastValidationResult(emptyList())
+        )
+
+        return RoastSessionValidator.validate(snapshot)
+    }
+
+    private fun buildValidationHeadline(
+        validation: RoastValidationResult
+    ): String {
+        return if (!validation.hasIssues()) {
+            "稳定"
+        } else {
+            when (validation.highestSeverity()) {
+                "high" -> "高风险"
+                "medium" -> "中风险"
+                "watch" -> "需留意"
+                else -> "稳定"
+            }
+        }
+    }
+
+    private fun buildValidationDetail(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) {
+            return "当前未检测到明显风险。"
+        }
+
+        return validation.issues.joinToString("\n\n") { issue ->
+            "${issue.title}\n${issue.detail}\n等级：${formatSeverity(issue.severity)}"
+        }
+    }
+
+    private fun formatSeverity(severity: String): String {
+        return when (severity) {
+            "high" -> "高"
+            "medium" -> "中"
+            "watch" -> "留意"
+            "low" -> "低"
+            else -> severity
         }
     }
 
