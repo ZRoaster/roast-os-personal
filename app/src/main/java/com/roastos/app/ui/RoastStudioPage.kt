@@ -14,6 +14,7 @@ import com.roastos.app.RoastCompanionMode
 import com.roastos.app.RoastCompanionPresence
 import com.roastos.app.RoastCompanionState
 import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastLogEngine
 import com.roastos.app.RoastPhaseDetectionEngine
 import com.roastos.app.RoastSessionEngine
 import com.roastos.app.RoastStabilityResult
@@ -206,13 +207,28 @@ object RoastStudioPage {
         workflowCard.addView(workflowBody)
         root.addView(workflowCard)
 
+        root.addView(UiKit.spacer(context))
+
+        val logCard = UiKit.card(context)
+        logCard.addView(
+            UiKit.cardTitle(
+                context,
+                "ROAST LOG"
+            )
+        )
+        val logBody = UiKit.bodyText(context, "")
+        logCard.addView(logBody)
+        root.addView(logCard)
+
         fun render(
             userRequested: Boolean = false,
             explorationRequested: Boolean = false
         ) {
             val profile = MachineProfiles.HB_M2SE
             val session = RoastSessionEngine.currentState()
+
             RoastPhaseDetectionEngine.update(session)
+            RoastLogEngine.update(session)
 
             val machineState = MachineStateEngine.buildState(
                 powerW = 1200,
@@ -323,6 +339,8 @@ object RoastStudioPage {
                 append("Suggested Next Step\n")
                 append(suggestNextStep(report))
             }
+
+            logBody.text = RoastLogEngine.buildLogText(session)
         }
 
         refreshBtn.setOnClickListener {
@@ -358,6 +376,7 @@ object RoastStudioPage {
             MachineBridge.stop()
             RoastSessionEngine.reset()
             RoastPhaseDetectionEngine.reset()
+            RoastLogEngine.reset()
             MachineBridge.start()
 
             lastActionLabel = "Start Roast pressed. MachineBridge started."
