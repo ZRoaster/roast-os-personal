@@ -73,6 +73,16 @@ object RoastStudioPage {
         root.addView(phaseCard)
         root.addView(UiKit.spacer(context))
 
+        val insightCard = UiKit.card(context)
+        val insightTitle = UiKit.cardTitle(context, "ROAST INSIGHT")
+        val insightPanel = RoastInsightPanel(context)
+
+        insightCard.addView(insightTitle)
+        insightCard.addView(insightPanel)
+
+        root.addView(insightCard)
+        root.addView(UiKit.spacer(context))
+
         val logCard = UiKit.card(context)
         val logTitle = UiKit.cardTitle(context, "ROAST LOG")
         val logBody = UiKit.bodyText(context, "")
@@ -100,6 +110,7 @@ object RoastStudioPage {
             RoastLogEngine.update(session)
 
             curvePanel.update()
+            insightPanel.update()
 
             stateBody.text =
                 """
@@ -135,6 +146,7 @@ ${formatElapsed(session.lastElapsedSec)}
             MachineBridge.start()
 
             running = true
+            render()
         }
 
         stopBtn.setOnClickListener {
