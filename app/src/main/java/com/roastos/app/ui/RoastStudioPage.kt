@@ -1,18 +1,21 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.EnergySnapshot
+import com.roastos.app.MachineBridge
 import com.roastos.app.MachineProfiles
 import com.roastos.app.MachineStateEngine
-import com.roastos.app.MachineTelemetryEngine
 import com.roastos.app.RoastCompanionLayer
 import com.roastos.app.RoastCompanionMode
 import com.roastos.app.RoastCompanionPresence
 import com.roastos.app.RoastCompanionState
 import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastSessionEngine
 import com.roastos.app.RoastStabilityResult
 import com.roastos.app.UiKit
 
@@ -26,8 +29,12 @@ object RoastStudioPage {
     private var lastActionLabel: String =
         "No action yet."
 
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private var autoRefreshRunnable: Runnable? = null
+
     fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
+        stopAutoRefresh()
 
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
@@ -63,8 +70,11 @@ object RoastStudioPage {
         val startRoastBtn = Button(context)
         startRoastBtn.text = "Start Roast"
 
-        val openCompanionBtn = Button(context)
-        openCompanionBtn.text = "Open Companion"
+        val stopRoastBtn = Button(context)
+        stopRoastBtn.text = "Stop Roast"
+
+        val askCompanionBtn = Button(context)
+        askCompanionBtn.text = "Ask Companion"
 
         val exploreBtn = Button(context)
         exploreBtn.text = "Explore"
@@ -74,7 +84,8 @@ object RoastStudioPage {
         root.addView(supportiveBtn)
         root.addView(explorationBtn)
         root.addView(startRoastBtn)
-        root.addView(openCompanionBtn)
+        root.addView(stopRoastBtn)
+        root.addView(askCompanionBtn)
         root.addView(exploreBtn)
 
         root.addView(UiKit.spacer(context))
@@ -89,6 +100,19 @@ object RoastStudioPage {
         val machineBody = UiKit.bodyText(context, "")
         machineCard.addView(machineBody)
         root.addView(machineCard)
+
+        root.addView(UiKit.spacer(context))
+
+        val sessionCard = UiKit.card(context)
+        sessionCard.addView(
+            UiKit.cardTitle(
+                context,
+                "SESSION"
+            )
+        )
+        val sessionBody = UiKit.bodyText(context, "")
+        sessionCard.addView(sessionBody)
+        root.addView(sessionCard)
 
         root.addView(UiKit.spacer(context))
 
@@ -147,17 +171,17 @@ object RoastStudioPage {
             explorationRequested: Boolean = false
         ) {
             val profile = MachineProfiles.HB_M2SE
-            val telemetry = MachineTelemetryEngine.currentState()
+            val session = RoastSessionEngine.currentState()
 
             val machineState = MachineStateEngine.buildState(
-                powerW = telemetry.livePowerW,
-                airflowPa = telemetry.liveAirflowPa,
-                drumRpm = telemetry.liveDrumRpm,
-                beanTemp = telemetry.liveBtC ?: 0.0,
-                ror = telemetry.liveRorCPerMin ?: 0.0,
-                elapsedSec = telemetry.liveElapsedSec,
+                powerW = 1200,
+                airflowPa = 20,
+                drumRpm = 55,
+                beanTemp = session.lastBeanTemp,
+                ror = session.lastRor,
+                elapsedSec = session.lastElapsedSec,
                 environmentTemp = 25.0,
-                environmentHumidity = 50.0
+                environmentHumidity = 40.0
             )
 
             val energy: EnergySnapshot? = null
@@ -185,8 +209,32 @@ object RoastStudioPage {
                 append("Profile\n")
                 append(profile.name)
                 append("\n\n")
-                append("Telemetry\n")
-                append(MachineTelemetryEngine.summary())
+                append("Bridge Running\n")
+                append(if (MachineBridge.isRunning()) "Yes" else "No")
+                append("\n\n")
+                append("Bean Temp\n")
+                append(String.format("%.1f ℃", session.lastBeanTemp))
+                append("\n\n")
+                append("RoR\n")
+                append(String.format("%.1f ℃/min", session.lastRor))
+            }
+
+            sessionBody.text = buildString {
+                append("Status\n")
+                append(session.status)
+                append("\n\n")
+                append("Phase\n")
+                append(RoastSessionEngine.phaseLabel(session.phase))
+                append("\n\n")
+                append("Elapsed\n")
+                append(session.lastElapsedSec)
+                append(" s")
+                append("\n\n")
+                append("First Crack Likely\n")
+                append(if (session.firstCrackLikely) "Yes" else "No")
+                append("\n\n")
+                append("Drop Suggested\n")
+                append(if (session.dropSuggested) "Yes" else "No")
             }
 
             todayBody.text = buildString {
@@ -256,12 +304,22 @@ object RoastStudioPage {
         }
 
         startRoastBtn.setOnClickListener {
-            lastActionLabel = "Start Roast pressed."
+            MachineBridge.stop()
+            RoastSessionEngine.reset()
+            MachineBridge.start()
+
+            lastActionLabel = "Start Roast pressed. MachineBridge started."
             render(userRequested = true)
         }
 
-        openCompanionBtn.setOnClickListener {
-            lastActionLabel = "Open Companion pressed."
+        stopRoastBtn.setOnClickListener {
+            MachineBridge.stop()
+            lastActionLabel = "Stop Roast pressed. MachineBridge stopped."
+            render(userRequested = true)
+        }
+
+        askCompanionBtn.setOnClickListener {
+            lastActionLabel = "Ask Companion pressed."
             render(userRequested = true)
         }
 
@@ -271,9 +329,32 @@ object RoastStudioPage {
         }
 
         render()
+        startAutoRefresh { render() }
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun startAutoRefresh(
+        block: () -> Unit
+    ) {
+        stopAutoRefresh()
+
+        autoRefreshRunnable = object : Runnable {
+            override fun run() {
+                block()
+                uiHandler.postDelayed(this, 1000L)
+            }
+        }
+
+        uiHandler.postDelayed(autoRefreshRunnable!!, 1000L)
+    }
+
+    private fun stopAutoRefresh() {
+        autoRefreshRunnable?.let {
+            uiHandler.removeCallbacks(it)
+        }
+        autoRefreshRunnable = null
     }
 
     private fun suggestNextStep(
