@@ -1,155 +1,82 @@
-package com.roastos.app.ui
+package com.roastos.app
 
 import android.content.Context
-import android.widget.Button
+import android.graphics.Typeface
+import android.view.Gravity
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import com.roastos.app.MachineProfiles
-import com.roastos.app.MachineStateEngine
-import com.roastos.app.MachineTelemetryEngine
-import com.roastos.app.RoastInsightEngine
-import com.roastos.app.RoastStabilityResult
-import com.roastos.app.EnergySnapshot
-import com.roastos.app.UiKit
+import android.widget.TextView
 
-object AiRoastAssistantPage {
+object UiKit {
 
-    fun show(context: Context, container: LinearLayout) {
-        container.removeAllViews()
+    fun pageRoot(context: Context): LinearLayout {
 
-        val scroll = ScrollView(context)
-        val root = UiKit.pageRoot(context)
+        val layout = LinearLayout(context)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(40, 40, 40, 40)
 
-        root.addView(
-            UiKit.pageTitle(
-                context,
-                "ROAST COMPANION"
-            )
-        )
+        return layout
+    }
 
-        root.addView(
-            UiKit.pageSubtitle(
-                context,
-                "Observation driven roast insight"
-            )
-        )
+    fun pageTitle(context: Context, text: String): TextView {
 
-        root.addView(UiKit.spacer(context))
+        val view = TextView(context)
 
-        val refreshBtn = Button(context)
-        refreshBtn.text = "Refresh Insight"
-        root.addView(refreshBtn)
+        view.text = text
+        view.textSize = 22f
+        view.setTypeface(null, Typeface.BOLD)
 
-        root.addView(UiKit.spacer(context))
+        return view
+    }
 
-        val summaryCard = UiKit.card(context)
-        summaryCard.addView(
-            UiKit.cardTitle(
-                context,
-                "SYSTEM STATE"
-            )
-        )
-        val summaryBody = UiKit.bodyText(context, "")
-        summaryCard.addView(summaryBody)
-        root.addView(summaryCard)
+    fun pageSubtitle(context: Context, text: String): TextView {
 
-        root.addView(UiKit.spacer(context))
+        val view = TextView(context)
 
-        val primaryCard = UiKit.card(context)
-        primaryCard.addView(
-            UiKit.cardTitle(
-                context,
-                "PRIMARY INSIGHT"
-            )
-        )
-        val primaryBody = UiKit.bodyText(context, "")
-        primaryCard.addView(primaryBody)
-        root.addView(primaryCard)
+        view.text = text
+        view.textSize = 14f
+        view.alpha = 0.7f
 
-        root.addView(UiKit.spacer(context))
+        return view
+    }
 
-        val observationCard = UiKit.card(context)
-        observationCard.addView(
-            UiKit.cardTitle(
-                context,
-                "OBSERVATIONS"
-            )
-        )
-        val observationBody = UiKit.bodyText(context, "")
-        observationCard.addView(observationBody)
-        root.addView(observationCard)
+    fun card(context: Context): LinearLayout {
 
-        root.addView(UiKit.spacer(context))
+        val layout = LinearLayout(context)
 
-        val possibilityCard = UiKit.card(context)
-        possibilityCard.addView(
-            UiKit.cardTitle(
-                context,
-                "POSSIBLE DIRECTIONS"
-            )
-        )
-        val possibilityBody = UiKit.bodyText(context, "")
-        possibilityCard.addView(possibilityBody)
-        root.addView(possibilityCard)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(30, 30, 30, 30)
 
-        fun refresh() {
-            val profile = MachineProfiles.HB_M2SE
-            val telemetry = MachineTelemetryEngine.currentState()
+        return layout
+    }
 
-            val machineState = MachineStateEngine.buildState(
-                powerW = telemetry.livePowerW,
-                airflowPa = telemetry.liveAirflowPa,
-                drumRpm = telemetry.liveDrumRpm,
-                beanTemp = telemetry.liveBtC ?: 0.0,
-                ror = telemetry.liveRorCPerMin ?: 0.0,
-                elapsedSec = telemetry.liveElapsedSec,
-                environmentTemp = 25.0,
-                environmentHumidity = 50.0
-            )
+    fun cardTitle(context: Context, text: String): TextView {
 
-            val energy: EnergySnapshot? = null
-            val stability: RoastStabilityResult? = null
+        val view = TextView(context)
 
-            val report = RoastInsightEngine.analyze(
-                profile = profile,
-                machineState = machineState,
-                energy = energy,
-                stability = stability,
-                styleGoal = null
-            )
+        view.text = text
+        view.textSize = 16f
+        view.setTypeface(null, Typeface.BOLD)
 
-            summaryBody.text = buildString {
-                append(report.quietSummary)
-                append("\n\n")
-                append("Telemetry\n")
-                append(MachineTelemetryEngine.summary())
-            }
+        return view
+    }
 
-            val primary = RoastInsightEngine.primaryInsight(report)
-            primaryBody.text = primary?.summary() ?: "System calm."
+    fun bodyText(context: Context, text: String): TextView {
 
-            observationBody.text =
-                if (report.observations.isEmpty()) {
-                    "-"
-                } else {
-                    report.observations.joinToString("\n\n") { it.summary() }
-                }
+        val view = TextView(context)
 
-            possibilityBody.text =
-                if (report.possibilities.isEmpty()) {
-                    "-"
-                } else {
-                    report.possibilities.joinToString("\n\n") { it.summary() }
-                }
-        }
+        view.text = text
+        view.textSize = 14f
 
-        refreshBtn.setOnClickListener {
-            refresh()
-        }
+        return view
+    }
 
-        refresh()
+    fun spacer(context: Context): TextView {
 
-        scroll.addView(root)
-        container.addView(scroll)
+        val view = TextView(context)
+
+        view.text = ""
+        view.height = 40
+
+        return view
     }
 }
