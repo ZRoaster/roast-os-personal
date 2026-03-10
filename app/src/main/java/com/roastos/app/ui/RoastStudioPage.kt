@@ -42,11 +42,13 @@ object RoastStudioPage {
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+        val latestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
 
         controlCard.addView(controlTitle)
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
+        controlCard.addView(latestHistoryBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
@@ -152,6 +154,14 @@ ${formatElapsed(session.lastElapsedSec)}
 
         refreshBtn.setOnClickListener {
             render()
+        }
+
+        latestHistoryBtn.setOnClickListener {
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = RoastHistoryEngine.latest()
+            )
         }
 
         handler.post(object : Runnable {
