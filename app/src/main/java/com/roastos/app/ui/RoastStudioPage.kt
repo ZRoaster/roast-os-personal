@@ -145,7 +145,6 @@ ${session.lastElapsedSec}s
             )
 
             MachineBridge.stop()
-            RoastSessionEngine.stop()
 
             running = false
         }
