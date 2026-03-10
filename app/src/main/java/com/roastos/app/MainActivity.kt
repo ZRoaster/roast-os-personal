@@ -1,5 +1,6 @@
 package com.roastos.app
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -12,7 +13,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 启动 RoastOS 机器桥接
         MachineBridge.start()
 
         rootContainer = LinearLayout(this)
@@ -20,6 +20,6 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(rootContainer)
 
-        DashboardPage.show(this, rootContainer)
+        DashboardPage.show(this as Context, rootContainer)
     }
 }
