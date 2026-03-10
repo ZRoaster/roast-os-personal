@@ -55,32 +55,50 @@ object RoastStudioPage {
 
         root.addView(UiKit.spacer(context))
 
-        val primaryActionsCard = UiKit.card(context)
-        primaryActionsCard.addView(
+        val curveCard = UiKit.card(context)
+        curveCard.addView(
             UiKit.cardTitle(
                 context,
-                "PRIMARY ACTIONS"
+                "LIVE CURVE"
+            )
+        )
+
+        val curvePanel = RoastCurvePanel(context)
+        curvePanel.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            900
+        )
+        curveCard.addView(curvePanel)
+        root.addView(curveCard)
+
+        root.addView(UiKit.spacer(context))
+
+        val actionCard = UiKit.card(context)
+        actionCard.addView(
+            UiKit.cardTitle(
+                context,
+                "ACTIONS"
             )
         )
 
         val startRoastBtn = Button(context)
-        startRoastBtn.text = "Start Roast"
+        startRoastBtn.text = "Start"
 
         val stopRoastBtn = Button(context)
-        stopRoastBtn.text = "Stop Roast"
+        stopRoastBtn.text = "Stop"
 
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh"
 
         val askCompanionBtn = Button(context)
-        askCompanionBtn.text = "Ask Companion"
+        askCompanionBtn.text = "Companion"
 
-        primaryActionsCard.addView(startRoastBtn)
-        primaryActionsCard.addView(stopRoastBtn)
-        primaryActionsCard.addView(refreshBtn)
-        primaryActionsCard.addView(askCompanionBtn)
+        actionCard.addView(startRoastBtn)
+        actionCard.addView(stopRoastBtn)
+        actionCard.addView(refreshBtn)
+        actionCard.addView(askCompanionBtn)
 
-        root.addView(primaryActionsCard)
+        root.addView(actionCard)
 
         root.addView(UiKit.spacer(context))
 
@@ -88,7 +106,7 @@ object RoastStudioPage {
         modeCard.addView(
             UiKit.cardTitle(
                 context,
-                "COMPANION MODE"
+                "MODE"
             )
         )
 
@@ -110,24 +128,6 @@ object RoastStudioPage {
         modeCard.addView(exploreBtn)
 
         root.addView(modeCard)
-
-        root.addView(UiKit.spacer(context))
-
-        val curveCard = UiKit.card(context)
-        curveCard.addView(
-            UiKit.cardTitle(
-                context,
-                "LIVE CURVE"
-            )
-        )
-
-        val curvePanel = RoastCurvePanel(context)
-        curvePanel.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            560
-        )
-        curveCard.addView(curvePanel)
-        root.addView(curveCard)
 
         root.addView(UiKit.spacer(context))
 
