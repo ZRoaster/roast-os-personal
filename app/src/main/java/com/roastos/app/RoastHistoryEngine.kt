@@ -176,6 +176,137 @@ object RoastHistoryEngine {
         )
     }
 
+    fun saveRoastLog(
+        log: RoastLog,
+        machineName: String = "HB M2SE"
+    ): RoastHistorySaveResult {
+
+        val existing = findByBatchId(log.batchId)
+        val validation = buildValidationFromLog(log)
+
+        val entry = RoastHistoryEntry(
+            batchId = log.batchId,
+            createdAtMillis = System.currentTimeMillis(),
+            title = "Roast ${log.batchId}",
+
+            process = machineName,
+            density = 0.0,
+            moisture = 0.0,
+            aw = 0.0,
+
+            envTemp = 0.0,
+            envRh = 0.0,
+
+            predictedTurningSec = null,
+            predictedYellowSec = null,
+            predictedFcSec = null,
+            predictedDropSec = null,
+
+            actualTurningSec = log.turningPointSec,
+            actualYellowSec = log.dryEndSec,
+            actualFcSec = log.firstCrackSec,
+            actualDropSec = log.dropSec,
+            actualPreFcRor = log.finalRor,
+
+            batchStatus = log.status,
+            reportText = RoastLogEngine.buildLogText(
+                session = RoastSessionEngine.currentState(),
+                machineName = machineName
+            ),
+            diagnosisText = buildDiagnosisText(log),
+            correctionText = buildCorrectionText(log),
+            evaluation = existing?.evaluation,
+
+            baselineSource = existing?.baselineSource,
+            baselineLabel = existing?.baselineLabel,
+            baselineMatchGrade = existing?.baselineMatchGrade,
+            baselineSourceProfileId = existing?.baselineSourceProfileId,
+            baselineSourceBatchId = existing?.baselineSourceBatchId,
+
+            roastHealthHeadline = buildValidationHeadline(validation),
+            roastHealthDetail = buildValidationDetail(validation)
+        )
+
+        val existingIndex = entries.indexOfFirst { it.batchId == log.batchId }
+        val replacedExisting = existingIndex >= 0
+
+        if (existingIndex >= 0) {
+            entries[existingIndex] = entry
+        } else {
+            entries.add(entry)
+        }
+
+        trimToMaxSize()
+
+        return RoastHistorySaveResult(
+            saved = true,
+            replacedExisting = replacedExisting,
+            totalCount = entries.size,
+            message = if (replacedExisting) {
+                "History updated for ${log.batchId}"
+            } else {
+                "History saved for ${log.batchId}"
+            }
+        )
+    }
+
+    fun saveCurrentRoastLog(
+        session: RoastSessionState,
+        machineName: String = "HB M2SE"
+    ): RoastHistorySaveResult {
+        val log = RoastLogEngine.buildLog(session, machineName)
+        return saveRoastLog(log, machineName)
+    }
+
+    fun saveEvaluation(
+        batchId: String,
+        evaluation: RoastEvaluation
+    ): RoastHistorySaveResult {
+        val index = entries.indexOfFirst { it.batchId == batchId }
+
+        if (index < 0) {
+            return RoastHistorySaveResult(
+                saved = false,
+                replacedExisting = false,
+                totalCount = entries.size,
+                message = "No history found for $batchId"
+            )
+        }
+
+        val updated = entries[index].copy(evaluation = evaluation)
+        entries[index] = updated
+
+        return RoastHistorySaveResult(
+            saved = true,
+            replacedExisting = true,
+            totalCount = entries.size,
+            message = "Evaluation saved for $batchId"
+        )
+    }
+
+    fun clearEvaluation(batchId: String): RoastHistorySaveResult {
+        val index = entries.indexOfFirst { it.batchId == batchId }
+
+        if (index < 0) {
+            return RoastHistorySaveResult(
+                saved = false,
+                replacedExisting = false,
+                totalCount = entries.size,
+                message = "No history found for $batchId"
+            )
+        }
+
+        val updated = entries[index].copy(evaluation = null)
+        entries[index] = updated
+
+        return RoastHistorySaveResult(
+            saved = true,
+            replacedExisting = true,
+            totalCount = entries.size,
+            message = "Evaluation cleared for $batchId"
+        )
+    }
+
     fun delete(batchId: String): RoastHistoryDeleteResult {
         val removed = entries.removeAll { it.batchId == batchId }
 
@@ -247,5 +378,149 @@ ${if (latest?.evaluation != null) "Saved" else "Not saved"}
 
         entries.clear()
         entries.addAll(trimmed)
+    }
+
+    private fun buildDiagnosisText(log: RoastLog): String {
+        return buildString {
+            appendLine("Roast Diagnosis")
+            appendLine()
+            appendLine("Status")
+            appendLine(log.status)
+            appendLine()
+            appendLine("Total Time")
+            appendLine(formatSec(log.totalTimeSec))
+            appendLine()
+            appendLine("Development Ratio")
+            appendLine(
+                if (log.developmentRatio == null) {
+                    "-"
+                } else {
+                    "${oneDecimal(log.developmentRatio * 100.0)}%"
+                }
+            )
+            appendLine()
+            appendLine("Final RoR")
+            append(
+                if (log.finalRor == null) {
+                    "-"
+                } else {
+                    "${oneDecimal(log.finalRor)} ℃/min"
+                }
+            )
+        }
+    }
+
+    private fun buildCorrectionText(log: RoastLog): String {
+        return buildString {
+            appendLine("Correction")
+            appendLine()
+            appendLine("Suggested Direction")
+            appendLine(
+                when {
+                    log.developmentRatio == null ->
+                        "Continue observing. Development ratio not available yet."
+
+                    log.developmentRatio < 0.12 ->
+                        "Development may be short. Consider extending post-crack slightly."
+
+                    log.developmentRatio > 0.22 ->
+                        "Development may be long. Consider shortening finish slightly."
+
+                    else ->
+                        "Development ratio looks balanced. Maintain current roast rhythm."
+                }
+            )
+        }
+    }
+
+    private fun buildValidationFromLog(
+        log: RoastLog
+    ): RoastValidationResult {
+        val issues = mutableListOf<RoastValidationIssue>()
+
+        if (log.finalRor != null && log.totalTimeSec >= 30 && log.finalRor < 3.0) {
+            issues.add(
+                RoastValidationIssue(
+                    code = "stall",
+                    title = "Possible Stall",
+                    detail = "Final RoR is very low. The roast may have lost internal momentum.",
+                    severity = "medium"
+                )
+            )
+        }
+
+        if (log.dropTemp != null && log.dropTemp >= 175.0 && log.finalRor != null && log.finalRor < 1.5) {
+            issues.add(
+                RoastValidationIssue(
+                    code = "crash",
+                    title = "Crash Risk",
+                    detail = "Late-stage RoR appears collapsed. The finish may become flat.",
+                    severity = "high"
+                )
+            )
+        }
+
+        if (log.dropTemp != null && log.dropTemp >= 185.0 && log.finalRor != null && log.finalRor > 10.0) {
+            issues.add(
+                RoastValidationIssue(
+                    code = "flick",
+                    title = "Flick Risk",
+                    detail = "Late-stage RoR appears too aggressive. The finish may become sharp.",
+                    severity = "medium"
+                )
+            )
+        }
+
+        return RoastValidationResult(
+            issues = issues.distinctBy { it.code }
+        )
+    }
+
+    private fun buildValidationHeadline(
+        validation: RoastValidationResult
+    ): String {
+        return if (!validation.hasIssues()) {
+            "稳定"
+        } else {
+            when (validation.highestSeverity()) {
+                "high" -> "高风险"
+                "medium" -> "中风险"
+                "watch" -> "需留意"
+                "low" -> "低风险"
+                else -> "稳定"
+            }
+        }
+    }
+
+    private fun buildValidationDetail(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) {
+            return "当前未检测到明显风险。"
+        }
+
+        return validation.issues.joinToString("\n\n") { issue ->
+            "${issue.title}\n${issue.detail}\n等级：${formatSeverity(issue.severity)}"
+        }
+    }
+
+    private fun formatSeverity(severity: String): String {
+        return when (severity) {
+            "high" -> "高"
+            "medium" -> "中"
+            "watch" -> "留意"
+            "low" -> "低"
+            else -> severity
+        }
+    }
+
+    private fun formatSec(sec: Int): String {
+        val minutes = sec / 60
+        val seconds = sec % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
+
+    private fun oneDecimal(value: Double): String {
+        return "%.1f".format(value)
     }
 }
