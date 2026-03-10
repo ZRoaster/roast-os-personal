@@ -49,14 +49,48 @@ object RoastStudioPage {
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "A quiet place to roast"
+                "Quiet system, clear observation, live roast session"
             )
         )
 
         root.addView(UiKit.spacer(context))
 
+        val primaryActionsCard = UiKit.card(context)
+        primaryActionsCard.addView(
+            UiKit.cardTitle(
+                context,
+                "PRIMARY ACTIONS"
+            )
+        )
+
+        val startRoastBtn = Button(context)
+        startRoastBtn.text = "Start Roast"
+
+        val stopRoastBtn = Button(context)
+        stopRoastBtn.text = "Stop Roast"
+
         val refreshBtn = Button(context)
         refreshBtn.text = "Refresh"
+
+        val askCompanionBtn = Button(context)
+        askCompanionBtn.text = "Ask Companion"
+
+        primaryActionsCard.addView(startRoastBtn)
+        primaryActionsCard.addView(stopRoastBtn)
+        primaryActionsCard.addView(refreshBtn)
+        primaryActionsCard.addView(askCompanionBtn)
+
+        root.addView(primaryActionsCard)
+
+        root.addView(UiKit.spacer(context))
+
+        val modeCard = UiKit.card(context)
+        modeCard.addView(
+            UiKit.cardTitle(
+                context,
+                "COMPANION MODE"
+            )
+        )
 
         val quietBtn = Button(context)
         quietBtn.text = "Quiet"
@@ -67,26 +101,15 @@ object RoastStudioPage {
         val explorationBtn = Button(context)
         explorationBtn.text = "Exploration"
 
-        val startRoastBtn = Button(context)
-        startRoastBtn.text = "Start Roast"
-
-        val stopRoastBtn = Button(context)
-        stopRoastBtn.text = "Stop Roast"
-
-        val askCompanionBtn = Button(context)
-        askCompanionBtn.text = "Ask Companion"
-
         val exploreBtn = Button(context)
         exploreBtn.text = "Explore"
 
-        root.addView(refreshBtn)
-        root.addView(quietBtn)
-        root.addView(supportiveBtn)
-        root.addView(explorationBtn)
-        root.addView(startRoastBtn)
-        root.addView(stopRoastBtn)
-        root.addView(askCompanionBtn)
-        root.addView(exploreBtn)
+        modeCard.addView(quietBtn)
+        modeCard.addView(supportiveBtn)
+        modeCard.addView(explorationBtn)
+        modeCard.addView(exploreBtn)
+
+        root.addView(modeCard)
 
         root.addView(UiKit.spacer(context))
 
@@ -101,10 +124,23 @@ object RoastStudioPage {
         val curvePanel = RoastCurvePanel(context)
         curvePanel.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            500
+            560
         )
         curveCard.addView(curvePanel)
         root.addView(curveCard)
+
+        root.addView(UiKit.spacer(context))
+
+        val overviewCard = UiKit.card(context)
+        overviewCard.addView(
+            UiKit.cardTitle(
+                context,
+                "ROAST OVERVIEW"
+            )
+        )
+        val overviewBody = UiKit.bodyText(context, "")
+        overviewCard.addView(overviewBody)
+        root.addView(overviewCard)
 
         root.addView(UiKit.spacer(context))
 
@@ -134,19 +170,6 @@ object RoastStudioPage {
 
         root.addView(UiKit.spacer(context))
 
-        val todayCard = UiKit.card(context)
-        todayCard.addView(
-            UiKit.cardTitle(
-                context,
-                "TODAY FOCUS"
-            )
-        )
-        val todayBody = UiKit.bodyText(context, "")
-        todayCard.addView(todayBody)
-        root.addView(todayCard)
-
-        root.addView(UiKit.spacer(context))
-
         val companionCard = UiKit.card(context)
         companionCard.addView(
             UiKit.cardTitle(
@@ -173,16 +196,16 @@ object RoastStudioPage {
 
         root.addView(UiKit.spacer(context))
 
-        val actionCard = UiKit.card(context)
-        actionCard.addView(
+        val workflowCard = UiKit.card(context)
+        workflowCard.addView(
             UiKit.cardTitle(
                 context,
                 "WORKFLOW"
             )
         )
-        val actionBody = UiKit.bodyText(context, "")
-        actionCard.addView(actionBody)
-        root.addView(actionCard)
+        val workflowBody = UiKit.bodyText(context, "")
+        workflowCard.addView(workflowBody)
+        root.addView(workflowCard)
 
         fun render(
             userRequested: Boolean = false,
@@ -225,6 +248,24 @@ object RoastStudioPage {
 
             curvePanel.update()
 
+            overviewBody.text = buildString {
+                append("Status\n")
+                append(session.status)
+                append("\n\n")
+                append("Phase\n")
+                append(RoastSessionEngine.phaseLabel(session.phase))
+                append("\n\n")
+                append("Bean Temp\n")
+                append(String.format("%.1f ℃", session.lastBeanTemp))
+                append("\n\n")
+                append("RoR\n")
+                append(String.format("%.1f ℃/min", session.lastRor))
+                append("\n\n")
+                append("Elapsed\n")
+                append(session.lastElapsedSec)
+                append(" s")
+            }
+
             machineBody.text = buildString {
                 append("Profile\n")
                 append(profile.name)
@@ -232,40 +273,28 @@ object RoastStudioPage {
                 append("Bridge Running\n")
                 append(if (MachineBridge.isRunning()) "Yes" else "No")
                 append("\n\n")
-                append("Bean Temp\n")
-                append(String.format("%.1f ℃", session.lastBeanTemp))
+                append("Power\n")
+                append("1200 W")
                 append("\n\n")
-                append("RoR\n")
-                append(String.format("%.1f ℃/min", session.lastRor))
+                append("Airflow\n")
+                append("20 Pa")
+                append("\n\n")
+                append("Drum\n")
+                append("55 rpm")
             }
 
             sessionBody.text = buildString {
-                append("Status\n")
-                append(session.status)
-                append("\n\n")
-                append("Phase\n")
-                append(RoastSessionEngine.phaseLabel(session.phase))
-                append("\n\n")
-                append("Elapsed\n")
-                append(session.lastElapsedSec)
-                append(" s")
-                append("\n\n")
                 append("First Crack Likely\n")
                 append(if (session.firstCrackLikely) "Yes" else "No")
                 append("\n\n")
                 append("Drop Suggested\n")
                 append(if (session.dropSuggested) "Yes" else "No")
-            }
-
-            todayBody.text = buildString {
+                append("\n\n")
                 append("Mode\n")
                 append(companionState.mode)
                 append("\n\n")
                 append("Presence\n")
                 append(decision.presence)
-                append("\n\n")
-                append("Quiet Summary\n")
-                append(report.quietSummary)
             }
 
             companionBody.text = when (decision.presence) {
@@ -285,7 +314,7 @@ object RoastStudioPage {
                     }
                 }
 
-            actionBody.text = buildString {
+            workflowBody.text = buildString {
                 append("Last Action\n")
                 append(lastActionLabel)
                 append("\n\n")
