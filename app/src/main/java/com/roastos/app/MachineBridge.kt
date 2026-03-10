@@ -29,10 +29,7 @@ object MachineBridge {
 
             MachineState.update(machine)
 
-            val snapshot = RoastSessionEngine.update(machine)
-
-            // 未来这里可以接 InsightEngine
-            snapshot.summary
+            RoastSessionEngine.update(machine)
         }
     }
 
@@ -62,18 +59,12 @@ object MachineBridge {
             randomDouble(4.0, 12.0)
 
         return MachineState(
-            mode = MachineMode.MANUAL,
-            connected = true,
-
             beanTemp = nextBt,
             ror = nextRor,
-
             powerW = 1200,
             airflowPa = 20,
             drumRpm = 55,
-
             elapsedSec = elapsed,
-
             environmentTemp = 25.0,
             environmentHumidity = 40.0
         )
