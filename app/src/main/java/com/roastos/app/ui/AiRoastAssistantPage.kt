@@ -101,11 +101,11 @@ object AiRoastAssistantPage {
             val machineState =
                 MachineStateEngine.currentState()
 
-            val energy =
-                EnergyEngine.currentSnapshot()
+            // 如果没有EnergyEngine snapshot接口就传null
+            val energy: EnergySnapshot? = null
 
-            val stability =
-                RoastStabilityEngine.lastResult()
+            // 如果没有Stability结果接口就传null
+            val stability: RoastStabilityResult? = null
 
             val report =
                 RoastInsightEngine.analyze(
