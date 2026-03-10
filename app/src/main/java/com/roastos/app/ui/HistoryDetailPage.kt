@@ -18,20 +18,14 @@ object HistoryDetailPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        root.addView(
-            UiKit.pageTitle(
-                context,
-                "ROAST DETAIL"
-            )
-        )
+        val title = UiKit.pageTitle(context, "ROAST DETAIL")
+        val subtitle = UiKit.pageSubtitle(context, "Detailed roast history view")
+        val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
 
-        root.addView(
-            UiKit.pageSubtitle(
-                context,
-                "Detailed roast history view"
-            )
-        )
-
+        root.addView(title)
+        root.addView(subtitle)
+        root.addView(UiKit.spacer(context))
+        root.addView(backBtn)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
@@ -49,6 +43,10 @@ object HistoryDetailPage {
                 )
             )
             root.addView(emptyCard)
+
+            backBtn.setOnClickListener {
+                RoastStudioPage.show(context, container)
+            }
 
             scroll.addView(root)
             container.addView(scroll)
@@ -280,6 +278,10 @@ object HistoryDetailPage {
             )
         )
         root.addView(baselineCard)
+
+        backBtn.setOnClickListener {
+            RoastStudioPage.show(context, container)
+        }
 
         scroll.addView(root)
         container.addView(scroll)
