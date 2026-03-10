@@ -32,11 +32,13 @@ object RoastStudioPage {
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+        val latestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
 
         controlCard.addView(controlTitle)
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
+        controlCard.addView(latestHistoryBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
@@ -71,6 +73,16 @@ object RoastStudioPage {
         root.addView(companionCard)
         root.addView(UiKit.spacer(context))
 
+        val healthCard = UiKit.card(context)
+        val healthTitle = UiKit.cardTitle(context, "ROAST HEALTH")
+        val healthBody = UiKit.bodyText(context, "")
+
+        healthCard.addView(healthTitle)
+        healthCard.addView(healthBody)
+
+        root.addView(healthCard)
+        root.addView(UiKit.spacer(context))
+
         val logCard = UiKit.card(context)
         val logTitle = UiKit.cardTitle(context, "ROAST LOG")
         val logBody = UiKit.bodyText(context, "")
@@ -93,7 +105,6 @@ object RoastStudioPage {
         fun render() {
 
             val snapshot = RoastSessionBus.tick()
-
             val session = snapshot.session
 
             stateBody.text =
@@ -123,8 +134,10 @@ Phase
 ${snapshot.companion.phaseLabel}
 
 Risk
-${snapshot.companion.riskLevel}
+${formatRisk(snapshot.companion.riskLevel)}
                 """.trimIndent()
+
+            healthBody.text = buildHealthText(snapshot.validation)
 
             logBody.text = snapshot.logText
             historyBody.text = RoastHistoryEngine.summary()
@@ -146,6 +159,14 @@ ${snapshot.companion.riskLevel}
             render()
         }
 
+        latestHistoryBtn.setOnClickListener {
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = RoastHistoryEngine.latest()
+            )
+        }
+
         handler.post(object : Runnable {
             override fun run() {
 
@@ -163,11 +184,57 @@ ${snapshot.companion.riskLevel}
         container.addView(scroll)
     }
 
+    private fun buildHealthText(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) {
+            return """
+状态
+稳定
+
+等级
+无
+
+说明
+当前未检测到明显风险。
+            """.trimIndent()
+        }
+
+        val issues = validation.issues.joinToString("\n\n") { issue ->
+            """
+${issue.title}
+${issue.detail}
+等级：${formatRisk(issue.severity)}
+            """.trimIndent()
+        }
+
+        return """
+状态
+存在风险
+
+等级
+${formatRisk(validation.highestSeverity())}
+
+$issues
+        """.trimIndent()
+    }
+
     private fun formatElapsed(sec: Int): String {
 
         val minutes = sec / 60
         val seconds = sec % 60
 
         return "%d:%02d".format(minutes, seconds)
+    }
+
+    private fun formatRisk(risk: String): String {
+        return when (risk) {
+            "none" -> "无"
+            "low" -> "低"
+            "watch" -> "留意"
+            "medium" -> "中"
+            "high" -> "高"
+            else -> risk
+        }
     }
 }
