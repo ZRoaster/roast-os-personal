@@ -3,7 +3,6 @@ package com.roastos.app.ui
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.EnergySnapshot
@@ -15,6 +14,7 @@ import com.roastos.app.RoastCompanionMode
 import com.roastos.app.RoastCompanionPresence
 import com.roastos.app.RoastCompanionState
 import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastPhaseDetectionEngine
 import com.roastos.app.RoastSessionEngine
 import com.roastos.app.RoastStabilityResult
 import com.roastos.app.UiKit
@@ -81,17 +81,10 @@ object RoastStudioPage {
             )
         )
 
-        val startRoastBtn = Button(context)
-        startRoastBtn.text = "Start"
-
-        val stopRoastBtn = Button(context)
-        stopRoastBtn.text = "Stop"
-
-        val refreshBtn = Button(context)
-        refreshBtn.text = "Refresh"
-
-        val askCompanionBtn = Button(context)
-        askCompanionBtn.text = "Companion"
+        val startRoastBtn = UiKit.primaryButton(context, "Start")
+        val stopRoastBtn = UiKit.primaryButton(context, "Stop")
+        val refreshBtn = UiKit.secondaryButton(context, "Refresh")
+        val askCompanionBtn = UiKit.secondaryButton(context, "Companion")
 
         actionCard.addView(startRoastBtn)
         actionCard.addView(stopRoastBtn)
@@ -110,17 +103,10 @@ object RoastStudioPage {
             )
         )
 
-        val quietBtn = Button(context)
-        quietBtn.text = "Quiet"
-
-        val supportiveBtn = Button(context)
-        supportiveBtn.text = "Supportive"
-
-        val explorationBtn = Button(context)
-        explorationBtn.text = "Exploration"
-
-        val exploreBtn = Button(context)
-        exploreBtn.text = "Explore"
+        val quietBtn = UiKit.secondaryButton(context, "Quiet")
+        val supportiveBtn = UiKit.secondaryButton(context, "Supportive")
+        val explorationBtn = UiKit.secondaryButton(context, "Exploration")
+        val exploreBtn = UiKit.secondaryButton(context, "Explore")
 
         modeCard.addView(quietBtn)
         modeCard.addView(supportiveBtn)
@@ -141,6 +127,19 @@ object RoastStudioPage {
         val overviewBody = UiKit.bodyText(context, "")
         overviewCard.addView(overviewBody)
         root.addView(overviewCard)
+
+        root.addView(UiKit.spacer(context))
+
+        val phaseCard = UiKit.card(context)
+        phaseCard.addView(
+            UiKit.cardTitle(
+                context,
+                "ROAST PHASES"
+            )
+        )
+        val phaseBody = UiKit.bodyText(context, "")
+        phaseCard.addView(phaseBody)
+        root.addView(phaseCard)
 
         root.addView(UiKit.spacer(context))
 
@@ -213,6 +212,7 @@ object RoastStudioPage {
         ) {
             val profile = MachineProfiles.HB_M2SE
             val session = RoastSessionEngine.currentState()
+            RoastPhaseDetectionEngine.update(session)
 
             val machineState = MachineStateEngine.buildState(
                 powerW = 1200,
@@ -265,6 +265,8 @@ object RoastStudioPage {
                 append(session.lastElapsedSec)
                 append(" s")
             }
+
+            phaseBody.text = RoastPhaseDetectionEngine.summary()
 
             machineBody.text = buildString {
                 append("Profile\n")
@@ -355,6 +357,7 @@ object RoastStudioPage {
         startRoastBtn.setOnClickListener {
             MachineBridge.stop()
             RoastSessionEngine.reset()
+            RoastPhaseDetectionEngine.reset()
             MachineBridge.start()
 
             lastActionLabel = "Start Roast pressed. MachineBridge started."
