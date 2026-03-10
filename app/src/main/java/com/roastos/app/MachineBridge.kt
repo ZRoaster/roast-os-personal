@@ -19,6 +19,7 @@ object MachineBridge {
             initialDelay = 0L,
             period = 1000L
         ) {
+
             if (!running) {
                 cancel()
                 return@fixedRateTimer
@@ -30,8 +31,7 @@ object MachineBridge {
 
             val snapshot = RoastSessionEngine.update(machine)
 
-            // 目前先驱动 SessionEngine
-            // 后续如果你要接 Insight / Companion 自动流，可以再从这里继续串
+            // 未来这里可以接 InsightEngine
             snapshot.summary
         }
     }
@@ -47,27 +47,34 @@ object MachineBridge {
     }
 
     private fun readMachine(): MachineState {
+
         val current = MachineState.current()
 
         val elapsed = current.elapsedSec + 1
 
-        val nextBt = if (current.beanTemp <= 0.0) {
-            30.0
-        } else {
-            current.beanTemp + randomDouble(0.5, 1.5)
-        }
+        val nextBt =
+            if (current.beanTemp <= 0.0)
+                30.0
+            else
+                current.beanTemp + randomDouble(0.5, 1.5)
 
-        val nextRor = randomDouble(4.0, 12.0)
+        val nextRor =
+            randomDouble(4.0, 12.0)
 
         return MachineState(
             mode = MachineMode.MANUAL,
             connected = true,
+
             beanTemp = nextBt,
             ror = nextRor,
+
             powerW = 1200,
             airflowPa = 20,
             drumRpm = 55,
+
             elapsedSec = elapsed,
+
+            environmentTemp = 25.0,
             environmentHumidity = 40.0
         )
     }
