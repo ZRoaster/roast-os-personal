@@ -90,6 +90,24 @@ object RoastStudioPage {
 
         root.addView(UiKit.spacer(context))
 
+        val curveCard = UiKit.card(context)
+        curveCard.addView(
+            UiKit.cardTitle(
+                context,
+                "LIVE CURVE"
+            )
+        )
+
+        val curvePanel = RoastCurvePanel(context)
+        curvePanel.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            500
+        )
+        curveCard.addView(curvePanel)
+        root.addView(curveCard)
+
+        root.addView(UiKit.spacer(context))
+
         val machineCard = UiKit.card(context)
         machineCard.addView(
             UiKit.cardTitle(
@@ -204,6 +222,8 @@ object RoastStudioPage {
             )
 
             companionState = decision.nextState
+
+            curvePanel.update()
 
             machineBody.text = buildString {
                 append("Profile\n")
