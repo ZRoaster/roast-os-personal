@@ -1,21 +1,15 @@
 package com.roastos.app
 
 data class RoastSessionBusSnapshot(
-
     val session: RoastSessionState,
-
-    val companion: RoastCompanionMessage,
-
-    val log: RoastLog,
-
+    val phaseState: RoastPhaseDetectionState,
     val phaseSummary: String,
-
+    val companion: RoastCompanionMessage,
+    val validation: RoastValidationResult,
+    val log: RoastLog,
     val logText: String,
-
     val historySummary: String,
-
-    val validation: RoastValidationResult
-
+    val recentRoasts: List<RoastHistoryEntry>
 )
 
 object RoastSessionBus {
@@ -27,13 +21,9 @@ object RoastSessionBus {
     }
 
     fun reset() {
-
         lastSnapshot = null
-
         RoastSessionEngine.reset()
-
         RoastPhaseDetectionEngine.reset()
-
         RoastLogEngine.reset()
     }
 
@@ -41,80 +31,76 @@ object RoastSessionBus {
 
         val session = RoastSessionEngine.currentState()
 
-        RoastPhaseDetectionEngine.update(session)
+        val phaseState = RoastPhaseDetectionEngine.update(session)
+        val phaseSummary = RoastPhaseDetectionEngine.summary()
 
         RoastLogEngine.update(session)
 
-        val companion = RoastCompanionEngine.buildMessage(session)
-
         val log = RoastLogEngine.buildLog(session)
+        val logText = RoastLogEngine.buildLogText(session)
+
+        val tempCompanion = RoastCompanionMessage(
+            title = "Pending",
+            body = "",
+            phaseLabel = RoastSessionEngine.phaseLabel(session.phase),
+            riskLevel = "none"
+        )
 
         val validation = RoastSessionValidator.validate(
             RoastSessionBusSnapshot(
                 session = session,
-                companion = companion,
+                phaseState = phaseState,
+                phaseSummary = phaseSummary,
+                companion = tempCompanion,
+                validation = RoastValidationResult(emptyList()),
                 log = log,
-                phaseSummary = RoastPhaseDetectionEngine.summary(),
-                logText = "",
-                historySummary = "",
-                validation = RoastValidationResult(emptyList())
+                logText = logText,
+                historySummary = RoastHistoryEngine.summary(),
+                recentRoasts = RoastHistoryEngine.all().take(3)
             )
         )
 
+        val companion = RoastCompanionEngine.buildMessage(session)
+
         val snapshot = RoastSessionBusSnapshot(
-
             session = session,
-
+            phaseState = phaseState,
+            phaseSummary = phaseSummary,
             companion = companion,
-
+            validation = validation,
             log = log,
-
-            phaseSummary = RoastPhaseDetectionEngine.summary(),
-
-            logText = RoastLogEngine.buildLogText(session),
-
+            logText = logText,
             historySummary = RoastHistoryEngine.summary(),
-
-            validation = validation
+            recentRoasts = RoastHistoryEngine.all().take(3)
         )
 
         lastSnapshot = snapshot
-
         return snapshot
     }
 
     fun stopAndSave(
-
         machineName: String = "HB M2SE"
-
     ): RoastHistorySaveResult {
 
         val session = RoastSessionEngine.currentState()
 
         val result = RoastHistoryEngine.saveCurrentRoastLog(
-
             session = session,
-
             machineName = machineName
         )
 
         MachineBridge.stop()
 
         val updatedSnapshot = tick()
-
         lastSnapshot = updatedSnapshot
 
         return result
     }
 
     fun startNewRoast() {
-
         MachineBridge.stop()
-
         reset()
-
         MachineBridge.start()
-
         tick()
     }
 }
