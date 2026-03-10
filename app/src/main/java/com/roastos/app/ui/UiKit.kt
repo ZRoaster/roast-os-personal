@@ -1,218 +1,148 @@
-package com.roastos.app.ui
+package com.roastos.app
 
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.util.TypedValue
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.Space
 import android.widget.TextView
 
 object UiKit {
 
-    const val PAGE_PADDING = 24
-    const val CARD_PADDING = 22
-    const val INNER_GAP = 14
-    const val SECTION_GAP = 18
-    const val PAGE_GAP = 24
-    const val BUTTON_GAP = 10
+    private const val PAGE_PADDING = 36
+    private const val CARD_PADDING = 28
+    private const val CARD_RADIUS = 28f
+    private const val BUTTON_RADIUS = 22f
 
-    private const val COLOR_TEXT_PRIMARY = "#202124"
-    private const val COLOR_TEXT_SECONDARY = "#5F6368"
-    private const val COLOR_TEXT_MUTED = "#80868B"
-
-    private const val COLOR_CARD = "#F4F5F7"
-    private const val COLOR_CARD_ALT = "#ECEFF3"
-
-    private const val COLOR_BTN_PRIMARY_BG = "#202124"
-    private const val COLOR_BTN_PRIMARY_TEXT = "#FFFFFF"
-
-    private const val COLOR_BTN_SECONDARY_BG = "#E6E6E6"
-    private const val COLOR_BTN_SECONDARY_TEXT = "#202124"
-
-    private const val COLOR_BTN_DANGER_BG = "#D93025"
-    private const val COLOR_BTN_DANGER_TEXT = "#FFFFFF"
+    private val pageBackgroundColor = Color.rgb(242, 242, 240)
+    private val cardBackgroundColor = Color.rgb(236, 236, 232)
+    private val buttonBackgroundColor = Color.rgb(214, 214, 210)
+    private val titleColor = Color.rgb(86, 86, 82)
+    private val bodyColor = Color.rgb(108, 108, 104)
+    private val subtleColor = Color.rgb(150, 150, 145)
+    private val borderColor = Color.rgb(222, 222, 218)
 
     fun pageRoot(context: Context): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, PAGE_PADDING)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
+        val layout = LinearLayout(context)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, PAGE_PADDING)
+        layout.setBackgroundColor(pageBackgroundColor)
+        return layout
     }
 
     fun pageTitle(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_PRIMARY))
-            setTypeface(null, Typeface.BOLD)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
-            setLineSpacing(0f, 1.08f)
-            setPadding(0, 0, 0, 4)
-        }
+        val view = TextView(context)
+        view.text = text
+        view.textSize = 24f
+        view.setTextColor(titleColor)
+        view.setTypeface(null, Typeface.BOLD)
+        return view
     }
 
     fun pageSubtitle(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_SECONDARY))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setLineSpacing(0f, 1.18f)
-            setPadding(0, 6, 0, 0)
-        }
+        val view = TextView(context)
+        view.text = text
+        view.textSize = 13.5f
+        view.setTextColor(subtleColor)
+        return view
     }
 
     fun card(context: Context): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-            setBackgroundColor(Color.parseColor(COLOR_CARD))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-    }
+        val layout = LinearLayout(context)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
 
-    fun cardAlt(context: Context): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-            setBackgroundColor(Color.parseColor(COLOR_CARD_ALT))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = CARD_RADIUS
+            setColor(cardBackgroundColor)
+            setStroke(1, borderColor)
         }
+
+        layout.background = bg
+        return layout
     }
 
     fun cardTitle(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor("#3C4043"))
-            setTypeface(null, Typeface.BOLD)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-            setLineSpacing(0f, 1.08f)
-            setPadding(0, 0, 0, 12)
-        }
-    }
-
-    fun sectionLabel(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_SECONDARY))
-            setTypeface(null, Typeface.BOLD)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(0, 0, 0, 8)
-        }
+        val view = TextView(context)
+        view.text = text
+        view.textSize = 16f
+        view.setTextColor(titleColor)
+        view.setTypeface(null, Typeface.BOLD)
+        return view
     }
 
     fun bodyText(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_PRIMARY))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f)
-            setLineSpacing(0f, 1.24f)
-        }
+        val view = TextView(context)
+        view.text = text
+        view.textSize = 13.5f
+        view.setTextColor(bodyColor)
+        view.setLineSpacing(8f, 1.0f)
+        return view
     }
 
-    fun captionText(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_SECONDARY))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f)
-            setLineSpacing(0f, 1.15f)
-        }
-    }
-
-    fun mutedText(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor(COLOR_TEXT_MUTED))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setLineSpacing(0f, 1.12f)
-        }
-    }
-
-    fun centeredLabel(context: Context, text: String): TextView {
-        return TextView(context).apply {
-            this.text = text
-            setTextColor(Color.parseColor("#3C4043"))
-            setTypeface(null, Typeface.BOLD)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            gravity = Gravity.CENTER
-        }
+    fun spacer(context: Context, height: Int = 22): TextView {
+        val view = TextView(context)
+        view.text = ""
+        view.height = height
+        return view
     }
 
     fun primaryButton(context: Context, text: String): Button {
-        return baseButton(context, text).apply {
-            setBackgroundColor(Color.parseColor(COLOR_BTN_PRIMARY_BG))
-            setTextColor(Color.parseColor(COLOR_BTN_PRIMARY_TEXT))
+        val button = Button(context)
+        button.text = text
+        button.textSize = 15f
+        button.setTextColor(titleColor)
+        button.setTypeface(null, Typeface.BOLD)
+        button.gravity = Gravity.CENTER
+
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = BUTTON_RADIUS
+            setColor(buttonBackgroundColor)
+            setStroke(1, borderColor)
         }
+
+        button.background = bg
+
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.bottomMargin = 16
+        button.layoutParams = params
+        button.setPadding(18, 26, 18, 26)
+
+        return button
     }
 
     fun secondaryButton(context: Context, text: String): Button {
-        return baseButton(context, text).apply {
-            setBackgroundColor(Color.parseColor(COLOR_BTN_SECONDARY_BG))
-            setTextColor(Color.parseColor(COLOR_BTN_SECONDARY_TEXT))
+        val button = Button(context)
+        button.text = text
+        button.textSize = 14f
+        button.setTextColor(bodyColor)
+        button.setTypeface(null, Typeface.BOLD)
+        button.gravity = Gravity.CENTER
+
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = BUTTON_RADIUS
+            setColor(Color.rgb(226, 226, 222))
+            setStroke(1, borderColor)
         }
-    }
 
-    fun dangerButton(context: Context, text: String): Button {
-        return baseButton(context, text).apply {
-            setBackgroundColor(Color.parseColor(COLOR_BTN_DANGER_BG))
-            setTextColor(Color.parseColor(COLOR_BTN_DANGER_TEXT))
-        }
-    }
+        button.background = bg
 
-    private fun baseButton(context: Context, text: String): Button {
-        return Button(context).apply {
-            this.text = text
-            setAllCaps(false)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(24, 18, 24, 18)
-            minWidth = 0
-            minimumWidth = 0
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = BUTTON_GAP
-            }
-        }
-    }
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.bottomMargin = 14
+        button.layoutParams = params
+        button.setPadding(18, 22, 18, 22)
 
-    fun buildCard(
-        context: Context,
-        title: String,
-        body: String
-    ): LinearLayout {
-        return card(context).apply {
-            addView(cardTitle(context, title))
-            addView(bodyText(context, body))
-        }
-    }
-
-    fun spacer(context: Context, heightDp: Int = PAGE_GAP): Space {
-        return Space(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                heightDp
-            )
-        }
-    }
-
-    fun smallSpacer(context: Context): Space {
-        return spacer(context, SECTION_GAP)
-    }
-
-    fun tinySpacer(context: Context): Space {
-        return spacer(context, INNER_GAP)
+        return button
     }
 }
