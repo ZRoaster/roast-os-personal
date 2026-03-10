@@ -121,7 +121,7 @@ ${session.lastElapsedSec}s
                 RoastLogEngine.buildLogText(session)
 
             historyBody.text =
-                RoastHistoryEngine.summary()
+                buildHistoryPanelText()
         }
 
         startBtn.setOnClickListener {
@@ -147,6 +147,7 @@ ${session.lastElapsedSec}s
             MachineBridge.stop()
 
             running = false
+            render()
         }
 
         refreshBtn.setOnClickListener {
@@ -168,5 +169,43 @@ ${session.lastElapsedSec}s
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildHistoryPanelText(): String {
+
+        val all = RoastHistoryEngine.all()
+
+        if (all.isEmpty()) {
+            return """
+Count
+0
+
+Latest Batch
+-
+
+Recent Entries
+-
+            """.trimIndent()
+        }
+
+        val latest = all.first()
+
+        val recentEntries = all.take(5).mapIndexed { index, entry ->
+            "${index + 1}. ${entry.title}\n${entry.batchId}"
+        }.joinToString("\n\n")
+
+        return """
+Count
+${all.size}
+
+Latest Batch
+${latest.batchId}
+
+Latest Status
+${latest.batchStatus}
+
+Recent Entries
+$recentEntries
+        """.trimIndent()
     }
 }
