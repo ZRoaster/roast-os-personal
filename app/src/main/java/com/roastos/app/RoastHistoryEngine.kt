@@ -46,7 +46,10 @@ data class RoastHistoryEntry(
     val baselineLabel: String? = null,
     val baselineMatchGrade: String? = null,
     val baselineSourceProfileId: String? = null,
-    val baselineSourceBatchId: String? = null
+    val baselineSourceBatchId: String? = null,
+
+    val roastHealthHeadline: String = "稳定",
+    val roastHealthDetail: String = "当前未检测到明显风险。"
 )
 
 data class RoastHistorySaveResult(
@@ -92,11 +95,8 @@ object RoastHistoryEngine {
         return entries.any { it.batchId == batchId }
     }
 
-    /**
-     * 旧系统保存入口
-     * 依赖旧的 RoastReport / Timeline / Planner / Baseline 结构
-     */
     fun saveCurrentState(): RoastHistorySaveResult {
+
         val report = RoastReportEngine.buildFromCurrentState()
         val diagnosis = RoastDeviationEngine.diagnoseFromCurrentState()
         val correction = RoastCorrectionBridge.buildFromCurrentState()
@@ -147,7 +147,10 @@ object RoastHistoryEngine {
             baselineLabel = baseline?.label,
             baselineMatchGrade = baselineMatch?.grade?.name,
             baselineSourceProfileId = baseline?.sourceProfileId,
-            baselineSourceBatchId = baseline?.sourceBatchId
+            baselineSourceBatchId = baseline?.sourceBatchId,
+
+            roastHealthHeadline = existing?.roastHealthHeadline ?: "稳定",
+            roastHealthDetail = existing?.roastHealthDetail ?: "当前未检测到明显风险。"
         )
 
         val existingIndex = entries.indexOfFirst { it.batchId == batchId }
@@ -170,140 +173,6 @@ object RoastHistoryEngine {
             } else {
                 "History saved for $batchId"
             }
-        )
-    }
-
-    /**
-     * 新系统保存入口
-     * 直接把 RoastLogEngine 生成的 RoastLog 存进 history
-     */
-    fun saveRoastLog(
-        log: RoastLog,
-        machineName: String = "HB M2SE"
-    ): RoastHistorySaveResult {
-        val existing = findByBatchId(log.batchId)
-
-        val entry = RoastHistoryEntry(
-            batchId = log.batchId,
-            createdAtMillis = System.currentTimeMillis(),
-            title = "Roast ${log.batchId}",
-
-            process = machineName,
-            density = 0.0,
-            moisture = 0.0,
-            aw = 0.0,
-
-            envTemp = 0.0,
-            envRh = 0.0,
-
-            predictedTurningSec = null,
-            predictedYellowSec = null,
-            predictedFcSec = null,
-            predictedDropSec = null,
-
-            actualTurningSec = log.turningPointSec,
-            actualYellowSec = log.dryEndSec,
-            actualFcSec = log.firstCrackSec,
-            actualDropSec = log.dropSec,
-            actualPreFcRor = log.finalRor,
-
-            batchStatus = log.status,
-            reportText = RoastLogEngine.buildLogText(
-                session = RoastSessionEngine.currentState(),
-                machineName = machineName
-            ),
-            diagnosisText = buildDiagnosisText(log),
-            correctionText = buildCorrectionText(log),
-            evaluation = existing?.evaluation,
-
-            baselineSource = existing?.baselineSource,
-            baselineLabel = existing?.baselineLabel,
-            baselineMatchGrade = existing?.baselineMatchGrade,
-            baselineSourceProfileId = existing?.baselineSourceProfileId,
-            baselineSourceBatchId = existing?.baselineSourceBatchId
-        )
-
-        val existingIndex = entries.indexOfFirst { it.batchId == log.batchId }
-        val replacedExisting = existingIndex >= 0
-
-        if (existingIndex >= 0) {
-            entries[existingIndex] = entry
-        } else {
-            entries.add(entry)
-        }
-
-        trimToMaxSize()
-
-        return RoastHistorySaveResult(
-            saved = true,
-            replacedExisting = replacedExisting,
-            totalCount = entries.size,
-            message = if (replacedExisting) {
-                "History updated for ${log.batchId}"
-            } else {
-                "History saved for ${log.batchId}"
-            }
-        )
-    }
-
-    /**
-     * 新系统便捷入口
-     * 从当前 session + RoastLogEngine 直接生成并保存
-     */
-    fun saveCurrentRoastLog(
-        session: RoastSessionState,
-        machineName: String = "HB M2SE"
-    ): RoastHistorySaveResult {
-        val log = RoastLogEngine.buildLog(session, machineName)
-        return saveRoastLog(log, machineName)
-    }
-
-    fun saveEvaluation(
-        batchId: String,
-        evaluation: RoastEvaluation
-    ): RoastHistorySaveResult {
-        val index = entries.indexOfFirst { it.batchId == batchId }
-
-        if (index < 0) {
-            return RoastHistorySaveResult(
-                saved = false,
-                replacedExisting = false,
-                totalCount = entries.size,
-                message = "No history found for $batchId"
-            )
-        }
-
-        val updated = entries[index].copy(evaluation = evaluation)
-        entries[index] = updated
-
-        return RoastHistorySaveResult(
-            saved = true,
-            replacedExisting = true,
-            totalCount = entries.size,
-            message = "Evaluation saved for $batchId"
-        )
-    }
-
-    fun clearEvaluation(batchId: String): RoastHistorySaveResult {
-        val index = entries.indexOfFirst { it.batchId == batchId }
-
-        if (index < 0) {
-            return RoastHistorySaveResult(
-                saved = false,
-                replacedExisting = false,
-                totalCount = entries.size,
-                message = "No history found for $batchId"
-            )
-        }
-
-        val updated = entries[index].copy(evaluation = null)
-        entries[index] = updated
-
-        return RoastHistorySaveResult(
-            saved = true,
-            replacedExisting = true,
-            totalCount = entries.size,
-            message = "Evaluation cleared for $batchId"
         )
     }
 
@@ -331,6 +200,7 @@ object RoastHistoryEngine {
     }
 
     fun summary(): String {
+
         if (entries.isEmpty()) {
             return """
 Roast History
@@ -357,21 +227,19 @@ ${entries.size}
 Latest Batch
 ${latest?.batchId ?: "-"}
 
-Latest Process
-${latest?.process ?: "-"}
-
 Latest Status
 ${latest?.batchStatus ?: "-"}
 
+Latest Health
+${latest?.roastHealthHeadline ?: "-"}
+
 Latest Evaluation
 ${if (latest?.evaluation != null) "Saved" else "Not saved"}
-
-Latest Baseline
-${latest?.baselineLabel ?: "Not recorded"}
         """.trimIndent()
     }
 
     private fun trimToMaxSize() {
+
         if (entries.size <= MAX_HISTORY_COUNT) return
 
         val sorted = entries.sortedByDescending { it.createdAtMillis }
@@ -379,68 +247,5 @@ ${latest?.baselineLabel ?: "Not recorded"}
 
         entries.clear()
         entries.addAll(trimmed)
-    }
-
-    private fun buildDiagnosisText(log: RoastLog): String {
-        return buildString {
-            appendLine("Roast Diagnosis")
-            appendLine()
-            appendLine("Status")
-            appendLine(log.status)
-            appendLine()
-            appendLine("Total Time")
-            appendLine(formatSec(log.totalTimeSec))
-            appendLine()
-            appendLine("Development Ratio")
-            appendLine(
-                if (log.developmentRatio == null) {
-                    "-"
-                } else {
-                    "${oneDecimal(log.developmentRatio * 100.0)}%"
-                }
-            )
-            appendLine()
-            appendLine("Final RoR")
-            append(
-                if (log.finalRor == null) {
-                    "-"
-                } else {
-                    "${oneDecimal(log.finalRor)} ℃/min"
-                }
-            )
-        }
-    }
-
-    private fun buildCorrectionText(log: RoastLog): String {
-        return buildString {
-            appendLine("Correction")
-            appendLine()
-            appendLine("Suggested Direction")
-            appendLine(
-                when {
-                    log.developmentRatio == null ->
-                        "Continue observing. Development ratio not available yet."
-
-                    log.developmentRatio < 0.12 ->
-                        "Development may be short. Consider extending post-crack slightly."
-
-                    log.developmentRatio > 0.22 ->
-                        "Development may be long. Consider shortening finish slightly."
-
-                    else ->
-                        "Development ratio looks balanced. Maintain current roast rhythm."
-                }
-            )
-        }
-    }
-
-    private fun formatSec(sec: Int): String {
-        val minutes = sec / 60
-        val seconds = sec % 60
-        return "%d:%02d".format(minutes, seconds)
-    }
-
-    private fun oneDecimal(value: Double): String {
-        return "%.1f".format(value)
     }
 }
