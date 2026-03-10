@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
         rootContainer = LinearLayout(this)
         rootContainer.orientation = LinearLayout.VERTICAL
 
-        setContentView(rootContainer)
+        setContentView(rootContainer as android.view.View)
 
         DashboardPage.show(this as Context, rootContainer)
     }
