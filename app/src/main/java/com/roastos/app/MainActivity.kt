@@ -2,8 +2,8 @@ package com.roastos.app
 
 import android.os.Bundle
 import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.roastos.app.ui.RoastStudioPage
 
 class MainActivity : AppCompatActivity() {
 
@@ -12,22 +12,10 @@ class MainActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
         }
-
-        val title = TextView(this).apply {
-            text = "Roast OS"
-            textSize = 28f
-        }
-
-        val subtitle = TextView(this).apply {
-            text = "App is running."
-            textSize = 18f
-        }
-
-        root.addView(title)
-        root.addView(subtitle)
 
         setContentView(root)
+
+        RoastStudioPage.show(this, root)
     }
 }
