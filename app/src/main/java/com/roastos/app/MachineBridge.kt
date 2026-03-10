@@ -1,63 +1,81 @@
 package com.roastos.app
 
 import kotlin.concurrent.fixedRateTimer
+import java.util.Timer
 
 object MachineBridge {
 
     private var running = false
+    private var timer: Timer? = null
 
     fun start() {
         if (running) return
+
         running = true
 
-        fixedRateTimer(
+        timer = fixedRateTimer(
             name = "machine-bridge",
             daemon = true,
-            period = 1000
+            initialDelay = 0L,
+            period = 1000L
         ) {
+            if (!running) {
+                cancel()
+                return@fixedRateTimer
+            }
 
             val machine = readMachine()
 
             MachineState.update(machine)
 
-            val snapshot =
-                RoastSessionEngine.update(machine)
+            val snapshot = RoastSessionEngine.update(machine)
 
-            RoastInsightEngine.onSnapshot(snapshot)
+            // 目前先驱动 SessionEngine
+            // 后续如果你要接 Insight / Companion 自动流，可以再从这里继续串
+            snapshot.summary
         }
     }
 
     fun stop() {
         running = false
+        timer?.cancel()
+        timer = null
+    }
+
+    fun isRunning(): Boolean {
+        return running
     }
 
     private fun readMachine(): MachineState {
+        val current = MachineState.current()
 
-        // TODO: 未来这里接真实烘焙机
-        // 现在先模拟数据
+        val elapsed = current.elapsedSec + 1
 
-        val elapsed =
-            MachineState.current().elapsedSec + 1
+        val nextBt = if (current.beanTemp <= 0.0) {
+            30.0
+        } else {
+            current.beanTemp + randomDouble(0.5, 1.5)
+        }
 
-        val bt =
-            MachineState.current().beanTemp + (0.5..1.5).random()
-
-        val ror =
-            (4..12).random().toDouble()
+        val nextRor = randomDouble(4.0, 12.0)
 
         return MachineState(
             mode = MachineMode.MANUAL,
             connected = true,
-            beanTemp = bt,
-            ror = ror,
+            beanTemp = nextBt,
+            ror = nextRor,
             powerW = 1200,
             airflowPa = 20,
             drumRpm = 55,
-            elapsedSec = elapsed
+            elapsedSec = elapsed,
+            environmentHumidity = 40.0
         )
     }
 
+    private fun randomDouble(
+        min: Double,
+        max: Double
+    ): Double {
+        return min + Math.random() * (max - min)
+    }
 }
-
-private fun ClosedFloatingPointRange<Double>.random() =
-    (Math.random() * (endInclusive - start)) + start
