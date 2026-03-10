@@ -111,7 +111,7 @@ RoR
 ${String.format("%.1f", session.lastRor)} ℃/min
 
 Elapsed
-${session.lastElapsedSec}s
+${formatElapsed(session.lastElapsedSec)}
                 """.trimIndent()
 
             phaseBody.text =
@@ -183,7 +183,7 @@ Count
 Latest Batch
 -
 
-Recent Entries
+Recent Roasts
 -
             """.trimIndent()
         }
@@ -191,8 +191,36 @@ Recent Entries
         val latest = all.first()
 
         val recentEntries = all.take(5).mapIndexed { index, entry ->
-            "${index + 1}. ${entry.title}\n${entry.batchId}"
-        }.joinToString("\n\n")
+            buildString {
+                append(index + 1)
+                append(". ")
+                append(entry.title)
+                append("\n")
+
+                append("Batch ID\n")
+                append(entry.batchId)
+                append("\n\n")
+
+                append("Status\n")
+                append(entry.batchStatus)
+                append("\n\n")
+
+                append("Total Time\n")
+                append(extractTotalTime(entry.reportText))
+                append("\n\n")
+
+                append("Drop Temp\n")
+                append(extractField(entry.reportText, "Drop Temp"))
+                append("\n\n")
+
+                append("First Crack\n")
+                append(extractField(entry.reportText, "First Crack"))
+                append("\n\n")
+
+                append("Development Ratio\n")
+                append(extractField(entry.reportText, "Development Ratio"))
+            }
+        }.joinToString("\n\n────────\n\n")
 
         return """
 Count
@@ -204,8 +232,36 @@ ${latest.batchId}
 Latest Status
 ${latest.batchStatus}
 
-Recent Entries
+Recent Roasts
 $recentEntries
         """.trimIndent()
+    }
+
+    private fun extractTotalTime(reportText: String): String {
+        return extractField(reportText, "Total Time")
+    }
+
+    private fun extractField(reportText: String, field: String): String {
+        val lines = reportText.lines()
+
+        for (i in lines.indices) {
+            if (lines[i].trim() == field) {
+                val nextIndex = i + 1
+                if (nextIndex in lines.indices) {
+                    val value = lines[nextIndex].trim()
+                    if (value.isNotEmpty()) {
+                        return value
+                    }
+                }
+            }
+        }
+
+        return "-"
+    }
+
+    private fun formatElapsed(sec: Int): String {
+        val minutes = sec / 60
+        val seconds = sec % 60
+        return "%d:%02d".format(minutes, seconds)
     }
 }
