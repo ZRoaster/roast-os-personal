@@ -156,7 +156,7 @@ Risk
 ${formatRisk(snapshot.companion.riskLevel)}
                 """.trimIndent()
 
-            phaseBody.text = buildPhaseText(snapshot)
+            phaseBody.text = buildPhasePanelText(snapshot)
 
             logBody.text = buildCompactLogText(snapshot.log)
 
@@ -209,29 +209,24 @@ ${formatRisk(snapshot.companion.riskLevel)}
         container.addView(scroll)
     }
 
-    private fun buildPhaseText(
+    private fun buildPhasePanelText(
         snapshot: RoastSessionBusSnapshot
     ): String {
-        val phaseState = snapshot.phaseState
+        val p = snapshot.phaseState
 
         return """
 Current
 ${snapshot.companion.phaseLabel}
 
-Turning Point
-${formatPhaseEvent(phaseState.turningPoint)}
+Detected Milestones
+Turning Point  ${formatPhaseEventCompact(p.turningPoint)}
+Dry End        ${formatPhaseEventCompact(p.dryEnd)}
+Maillard       ${formatPhaseEventCompact(p.maillardStart)}
+First Crack    ${formatPhaseEventCompact(p.firstCrack)}
+Drop           ${formatPhaseEventCompact(p.drop)}
 
-Dry End
-${formatPhaseEvent(phaseState.dryEnd)}
-
-Maillard Start
-${formatPhaseEvent(phaseState.maillardStart)}
-
-First Crack
-${formatPhaseEvent(phaseState.firstCrack)}
-
-Drop
-${formatPhaseEvent(phaseState.drop)}
+Summary
+${snapshot.phaseSummary}
         """.trimIndent()
     }
 
@@ -330,11 +325,11 @@ ${formatTime(it.createdAtMillis)}
         }
     }
 
-    private fun formatPhaseEvent(
+    private fun formatPhaseEventCompact(
         event: RoastPhaseEvent?
     ): String {
         if (event == null) return "-"
-        return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)} ℃"
+        return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)}℃"
     }
 
     private fun formatLogEvent(
