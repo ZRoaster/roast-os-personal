@@ -83,9 +83,14 @@ object RoastStudioPage {
 
         val historyCard = UiKit.card(context)
         val historyBody = UiKit.bodyText(context, "")
+        val openLatestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
+        val openRecentHistoryBtn = UiKit.secondaryButton(context, "OPEN HISTORY FROM RECENT")
 
         historyCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
         historyCard.addView(historyBody)
+        historyCard.addView(UiKit.spacer(context))
+        historyCard.addView(openLatestHistoryBtn)
+        historyCard.addView(openRecentHistoryBtn)
 
         root.addView(historyCard)
 
@@ -145,6 +150,25 @@ ${formatRisk(snapshot.companion.riskLevel)}
 
         refreshBtn.setOnClickListener {
             render()
+        }
+
+        openLatestHistoryBtn.setOnClickListener {
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = RoastHistoryEngine.latest()
+            )
+        }
+
+        openRecentHistoryBtn.setOnClickListener {
+            val latestFromRecent = RoastSessionBus.current()?.recentRoasts?.firstOrNull()
+                ?: RoastHistoryEngine.latest()
+
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = latestFromRecent
+            )
         }
 
         handler.post(object : Runnable {
@@ -219,7 +243,7 @@ ${formatRisk(it.severity)}
             return "No roast history yet."
         }
 
-        return roasts.joinToString("\n\n") {
+        return roasts.joinToString("\n\n────────\n\n") {
             """
 Batch
 ${it.batchId}
