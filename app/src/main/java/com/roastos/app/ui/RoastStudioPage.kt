@@ -109,7 +109,7 @@ Elapsed
 ${formatElapsed(session.lastElapsedSec)}
                 """.trimIndent()
 
-            phaseBody.text = snapshot.phaseSummary
+            phaseBody.text = buildPhaseText(snapshot)
 
             companionBody.text =
                 """
@@ -121,14 +121,14 @@ Phase
 ${snapshot.companion.phaseLabel}
 
 Risk
-${snapshot.companion.riskLevel}
+${formatRisk(snapshot.companion.riskLevel)}
                 """.trimIndent()
 
             healthBody.text = buildHealthText(snapshot.validation)
 
             logBody.text = snapshot.logText
 
-            historyBody.text = buildRecentRoasts()
+            historyBody.text = buildRecentRoasts(snapshot.recentRoasts)
         }
 
         startBtn.setOnClickListener {
@@ -149,11 +149,9 @@ ${snapshot.companion.riskLevel}
 
         handler.post(object : Runnable {
             override fun run() {
-
                 if (running) {
                     render()
                 }
-
                 handler.postDelayed(this, 1000)
             }
         })
@@ -164,16 +162,64 @@ ${snapshot.companion.riskLevel}
         container.addView(scroll)
     }
 
-    private fun buildRecentRoasts(): String {
+    private fun buildPhaseText(
+        snapshot: RoastSessionBusSnapshot
+    ): String {
+        val phaseState = snapshot.phaseState
 
-        val list = RoastHistoryEngine.all().take(3)
+        return """
+Current
+${snapshot.companion.phaseLabel}
 
-        if (list.isEmpty()) {
+Turning Point
+${formatPhaseEvent(phaseState.turningPoint)}
+
+Dry End
+${formatPhaseEvent(phaseState.dryEnd)}
+
+Maillard Start
+${formatPhaseEvent(phaseState.maillardStart)}
+
+First Crack
+${formatPhaseEvent(phaseState.firstCrack)}
+
+Drop
+${formatPhaseEvent(phaseState.drop)}
+        """.trimIndent()
+    }
+
+    private fun buildHealthText(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) {
+            return """
+状态
+稳定
+
+说明
+当前未检测到明显风险。
+            """.trimIndent()
+        }
+
+        return validation.issues.joinToString("\n\n") {
+            """
+${it.title}
+${it.detail}
+
+等级
+${formatRisk(it.severity)}
+            """.trimIndent()
+        }
+    }
+
+    private fun buildRecentRoasts(
+        roasts: List<RoastHistoryEntry>
+    ): String {
+        if (roasts.isEmpty()) {
             return "No roast history yet."
         }
 
-        return list.joinToString("\n\n") {
-
+        return roasts.joinToString("\n\n") {
             """
 Batch
 ${it.batchId}
@@ -190,44 +236,35 @@ ${formatTime(it.createdAtMillis)}
         }
     }
 
-    private fun buildHealthText(validation: RoastValidationResult): String {
+    private fun formatPhaseEvent(
+        event: RoastPhaseEvent?
+    ): String {
+        if (event == null) return "-"
 
-        if (!validation.hasIssues()) {
-            return """
-状态
-稳定
-
-说明
-当前未检测到明显风险。
-            """.trimIndent()
-        }
-
-        return validation.issues.joinToString("\n\n") {
-
-            """
-${it.title}
-${it.detail}
-
-等级
-${it.severity}
-            """.trimIndent()
-        }
+        return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)} ℃"
     }
 
     private fun formatElapsed(sec: Int): String {
-
         val minutes = sec / 60
         val seconds = sec % 60
-
         return "%d:%02d".format(minutes, seconds)
     }
 
     private fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
 
-        val seconds = ms / 1000
-        val minutes = seconds / 60
-        val remain = seconds % 60
-
-        return "%d:%02d".format(minutes, remain)
+    private fun formatRisk(risk: String): String {
+        return when (risk) {
+            "none" -> "无"
+            "low" -> "低"
+            "watch" -> "留意"
+            "medium" -> "中"
+            "high" -> "高"
+            else -> risk
+        }
     }
 }
