@@ -57,6 +57,15 @@ object RoastStudioPage {
         root.addView(healthCard)
         root.addView(UiKit.spacer(context))
 
+        val decisionCard = UiKit.card(context)
+        val decisionBody = UiKit.bodyText(context, "")
+
+        decisionCard.addView(UiKit.cardTitle(context, "DECISION"))
+        decisionCard.addView(decisionBody)
+
+        root.addView(decisionCard)
+        root.addView(UiKit.spacer(context))
+
         val companionCard = UiKit.card(context)
         val companionBody = UiKit.bodyText(context, "")
 
@@ -99,6 +108,7 @@ object RoastStudioPage {
 
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
+            val decisionText = RoastDecisionEngine.buildDisplayText(snapshot)
 
             overviewBody.text =
                 """
@@ -114,6 +124,8 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             healthBody.text = buildHealthText(snapshot.validation)
+
+            decisionBody.text = decisionText
 
             companionBody.text =
                 """
@@ -223,7 +235,6 @@ ${formatRor(log.finalRor)}
         if (list.isEmpty()) return "No roast history yet."
 
         return list.joinToString("\n\n────────\n\n") {
-
             """
 BATCH
 ${it.batchId}
@@ -266,7 +277,6 @@ ${formatTime(it.createdAtMillis)}
         }
 
         return v.issues.joinToString("\n\n") {
-
             """
 ${it.title}
 ${it.detail}
