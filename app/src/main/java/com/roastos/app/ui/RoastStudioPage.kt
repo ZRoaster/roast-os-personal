@@ -39,6 +39,7 @@ object RoastStudioPage {
         val openRecentBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
         val openLatestBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
         val openKnowledgeBtn = UiKit.secondaryButton(context, "OPEN KNOWLEDGE")
+        val openStylesBtn = UiKit.secondaryButton(context, "OPEN STYLES")
 
         controlCard.addView(UiKit.cardTitle(context, "CONTROL"))
         controlCard.addView(startBtn)
@@ -47,6 +48,7 @@ object RoastStudioPage {
         controlCard.addView(openRecentBtn)
         controlCard.addView(openLatestBtn)
         controlCard.addView(openKnowledgeBtn)
+        controlCard.addView(openStylesBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
@@ -258,6 +260,10 @@ ${cup.brewNote}
 
         openKnowledgeBtn.setOnClickListener {
             RoastKnowledgePage.show(context, container)
+        }
+
+        openStylesBtn.setOnClickListener {
+            RoastStylePage.show(context, container)
         }
 
         handler.post(object : Runnable {
