@@ -15,10 +15,13 @@ data class RoastSessionBusSnapshot(
 object RoastSessionBus {
 
     private var lastSnapshot: RoastSessionBusSnapshot? = null
-
     private var lastRiskRecordSignature: String? = null
 
     fun current(): RoastSessionBusSnapshot? {
+        return lastSnapshot
+    }
+
+    fun peek(): RoastSessionBusSnapshot? {
         return lastSnapshot
     }
 
@@ -120,6 +123,7 @@ object RoastSessionBus {
         decision: RoastDecision
     ) {
         val validation = snapshot.validation
+
         if (!validation.hasIssues()) {
             lastRiskRecordSignature = null
             return
