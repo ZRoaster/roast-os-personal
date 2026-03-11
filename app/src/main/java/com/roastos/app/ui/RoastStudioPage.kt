@@ -26,34 +26,26 @@ object RoastStudioPage {
         val overviewCard = UiKit.card(context)
         val overviewBody = UiKit.bodyText(context, "")
 
-        overviewCard.addView(UiKit.cardTitle(context, "OVERVIEW"))
+        overviewCard.addView(UiKit.cardTitle(context, "ROAST STATUS"))
         overviewCard.addView(overviewBody)
 
         root.addView(overviewCard)
         root.addView(UiKit.spacer(context))
 
         val controlCard = UiKit.card(context)
+
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
-        val openRecentRoastsBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
+        val openRecentBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
 
         controlCard.addView(UiKit.cardTitle(context, "CONTROL"))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
-        controlCard.addView(openRecentRoastsBtn)
+        controlCard.addView(openRecentBtn)
 
         root.addView(controlCard)
-        root.addView(UiKit.spacer(context))
-
-        val stateCard = UiKit.card(context)
-        val stateBody = UiKit.bodyText(context, "")
-
-        stateCard.addView(UiKit.cardTitle(context, "SESSION STATE"))
-        stateCard.addView(stateBody)
-
-        root.addView(stateCard)
         root.addView(UiKit.spacer(context))
 
         val healthCard = UiKit.card(context)
@@ -94,12 +86,12 @@ object RoastStudioPage {
 
         val historyCard = UiKit.card(context)
         val historyBody = UiKit.bodyText(context, "")
-        val openLatestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
+        val openLatestBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
 
         historyCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
         historyCard.addView(historyBody)
         historyCard.addView(UiKit.spacer(context))
-        historyCard.addView(openLatestHistoryBtn)
+        historyCard.addView(openLatestBtn)
 
         root.addView(historyCard)
 
@@ -110,35 +102,15 @@ object RoastStudioPage {
 
             overviewBody.text =
                 """
-Status
-${session.status}
+STATUS   ${session.status}
 
-BT
-${String.format("%.1f", session.lastBeanTemp)} ℃
+BT       ${String.format("%.1f", session.lastBeanTemp)} ℃
 
-RoR
-${String.format("%.1f", session.lastRor)} ℃/min
+RoR      ${String.format("%.1f", session.lastRor)} ℃/min
 
-Elapsed
-${formatElapsed(session.lastElapsedSec)}
+TIME     ${formatElapsed(session.lastElapsedSec)}
 
-Health
-${buildHealthHeadline(snapshot.validation)}
-                """.trimIndent()
-
-            stateBody.text =
-                """
-Status
-${session.status}
-
-Bean Temp
-${String.format("%.1f", session.lastBeanTemp)} ℃
-
-RoR
-${String.format("%.1f", session.lastRor)} ℃/min
-
-Elapsed
-${formatElapsed(session.lastElapsedSec)}
+HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             healthBody.text = buildHealthText(snapshot.validation)
@@ -149,18 +121,18 @@ ${snapshot.companion.title}
 
 ${snapshot.companion.body}
 
-Phase
+PHASE
 ${snapshot.companion.phaseLabel}
 
-Risk
+RISK
 ${formatRisk(snapshot.companion.riskLevel)}
                 """.trimIndent()
 
-            phaseBody.text = buildPhasePanelText(snapshot)
+            phaseBody.text = buildPhasePanel(snapshot)
 
-            logBody.text = buildCompactLogText(snapshot.log)
+            logBody.text = buildLog(snapshot.log)
 
-            historyBody.text = buildRecentRoasts(snapshot.recentRoasts)
+            historyBody.text = buildRecent(snapshot.recentRoasts)
         }
 
         startBtn.setOnClickListener {
@@ -179,26 +151,21 @@ ${formatRisk(snapshot.companion.riskLevel)}
             render()
         }
 
-        openRecentRoastsBtn.setOnClickListener {
-            RecentRoastListPage.show(
-                context = context,
-                container = container
-            )
+        openRecentBtn.setOnClickListener {
+            RecentRoastListPage.show(context, container)
         }
 
-        openLatestHistoryBtn.setOnClickListener {
+        openLatestBtn.setOnClickListener {
             HistoryDetailPage.show(
-                context = context,
-                container = container,
-                entry = RoastHistoryEngine.latest()
+                context,
+                container,
+                RoastHistoryEngine.latest()
             )
         }
 
         handler.post(object : Runnable {
             override fun run() {
-                if (running) {
-                    render()
-                }
+                if (running) render()
                 handler.postDelayed(this, 1000)
             }
         })
@@ -209,33 +176,75 @@ ${formatRisk(snapshot.companion.riskLevel)}
         container.addView(scroll)
     }
 
-    private fun buildPhasePanelText(
-        snapshot: RoastSessionBusSnapshot
-    ): String {
+    private fun buildPhasePanel(snapshot: RoastSessionBusSnapshot): String {
+
         val p = snapshot.phaseState
 
         return """
-Current
+CURRENT
 ${snapshot.companion.phaseLabel}
 
-Detected Milestones
-Turning Point  ${formatPhaseEventCompact(p.turningPoint)}
-Dry End        ${formatPhaseEventCompact(p.dryEnd)}
-Maillard       ${formatPhaseEventCompact(p.maillardStart)}
-First Crack    ${formatPhaseEventCompact(p.firstCrack)}
-Drop           ${formatPhaseEventCompact(p.drop)}
-
-Summary
-${snapshot.phaseSummary}
+TURNING   ${formatPhase(p.turningPoint)}
+DRY END   ${formatPhase(p.dryEnd)}
+MAILLARD  ${formatPhase(p.maillardStart)}
+FC        ${formatPhase(p.firstCrack)}
+DROP      ${formatPhase(p.drop)}
         """.trimIndent()
     }
 
-    private fun buildHealthHeadline(
-        validation: RoastValidationResult
-    ): String {
-        if (!validation.hasIssues()) return "稳定"
+    private fun buildLog(log: RoastLog): String {
 
-        return when (validation.highestSeverity()) {
+        return """
+BATCH
+${log.batchId}
+
+STATUS
+${log.status}
+
+TOTAL TIME
+${formatElapsed(log.totalTimeSec)}
+
+FC
+${formatEvent(log.firstCrackSec, log.firstCrackTemp)}
+
+DROP
+${formatEvent(log.dropSec, log.dropTemp)}
+
+DEV RATIO
+${formatRatio(log.developmentRatio)}
+
+FINAL ROR
+${formatRor(log.finalRor)}
+        """.trimIndent()
+    }
+
+    private fun buildRecent(list: List<RoastHistoryEntry>): String {
+
+        if (list.isEmpty()) return "No roast history yet."
+
+        return list.joinToString("\n\n────────\n\n") {
+
+            """
+BATCH
+${it.batchId}
+
+STATUS
+${it.batchStatus}
+
+HEALTH
+${it.roastHealthHeadline}
+
+TIME
+${formatTime(it.createdAtMillis)}
+            """.trimIndent()
+        }
+    }
+
+    private fun buildHealthHeadline(v: RoastValidationResult): String {
+
+        if (!v.hasIssues()) return "稳定"
+
+        return when (v.highestSeverity()) {
             "high" -> "高风险"
             "medium" -> "中风险"
             "watch" -> "需留意"
@@ -244,20 +253,20 @@ ${snapshot.phaseSummary}
         }
     }
 
-    private fun buildHealthText(
-        validation: RoastValidationResult
-    ): String {
-        if (!validation.hasIssues()) {
+    private fun buildHealthText(v: RoastValidationResult): String {
+
+        if (!v.hasIssues()) {
             return """
 状态
 稳定
 
 说明
-当前未检测到明显风险。
+当前未检测到明显风险
             """.trimIndent()
         }
 
-        return validation.issues.joinToString("\n\n") {
+        return v.issues.joinToString("\n\n") {
+
             """
 ${it.title}
 ${it.detail}
@@ -268,115 +277,47 @@ ${formatRisk(it.severity)}
         }
     }
 
-    private fun buildCompactLogText(
-        log: RoastLog
-    ): String {
-        return """
-Batch
-${log.batchId}
-
-Status
-${log.status}
-
-Total Time
-${formatElapsed(log.totalTimeSec)}
-
-Charge Temp
-${formatTemp(log.chargeTemp)}
-
-First Crack
-${formatLogEvent(log.firstCrackSec, log.firstCrackTemp)}
-
-Drop
-${if (log.dropSec == null) "-" else formatElapsed(log.dropSec)}
-
-Drop Temp
-${formatTemp(log.dropTemp)}
-
-Development Ratio
-${formatRatio(log.developmentRatio)}
-
-Final RoR
-${formatRor(log.finalRor)}
-        """.trimIndent()
+    private fun formatPhase(e: RoastPhaseEvent?): String {
+        if (e == null) return "-"
+        return "${formatElapsed(e.elapsedSec)} · ${String.format("%.1f", e.beanTemp)}℃"
     }
 
-    private fun buildRecentRoasts(
-        roasts: List<RoastHistoryEntry>
-    ): String {
-        if (roasts.isEmpty()) {
-            return "No roast history yet."
-        }
-
-        return roasts.joinToString("\n\n────────\n\n") {
-            """
-Batch
-${it.batchId}
-
-Status
-${it.batchStatus}
-
-Health
-${it.roastHealthHeadline}
-
-Time
-${formatTime(it.createdAtMillis)}
-            """.trimIndent()
-        }
-    }
-
-    private fun formatPhaseEventCompact(
-        event: RoastPhaseEvent?
-    ): String {
-        if (event == null) return "-"
-        return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)}℃"
-    }
-
-    private fun formatLogEvent(
-        sec: Int?,
-        temp: Double?
-    ): String {
+    private fun formatEvent(sec: Int?, temp: Double?): String {
         if (sec == null || temp == null) return "-"
-        return "${formatElapsed(sec)} · ${String.format("%.1f", temp)} ℃"
+        return "${formatElapsed(sec)} · ${String.format("%.1f", temp)}℃"
     }
 
     private fun formatElapsed(sec: Int): String {
-        val minutes = sec / 60
-        val seconds = sec % 60
-        return "%d:%02d".format(minutes, seconds)
+        val m = sec / 60
+        val s = sec % 60
+        return "%d:%02d".format(m, s)
     }
 
     private fun formatTime(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
+        val t = ms / 1000
+        val m = t / 60
+        val s = t % 60
+        return "%d:%02d".format(m, s)
     }
 
-    private fun formatTemp(value: Double?): String {
-        return if (value == null) "-" else "${String.format("%.1f", value)} ℃"
+    private fun formatRatio(v: Double?): String {
+        if (v == null) return "-"
+        return "${String.format("%.1f", v * 100)}%"
     }
 
-    private fun formatRor(value: Double?): String {
-        return if (value == null) "-" else "${String.format("%.1f", value)} ℃/min"
+    private fun formatRor(v: Double?): String {
+        if (v == null) return "-"
+        return "${String.format("%.1f", v)} ℃/min"
     }
 
-    private fun formatRatio(value: Double?): String {
-        return if (value == null) {
-            "-"
-        } else {
-            "${String.format("%.1f", value * 100)}%"
-        }
-    }
-
-    private fun formatRisk(risk: String): String {
-        return when (risk) {
+    private fun formatRisk(r: String): String {
+        return when (r) {
             "none" -> "无"
             "low" -> "低"
             "watch" -> "留意"
             "medium" -> "中"
             "high" -> "高"
-            else -> risk
+            else -> r
         }
     }
 }
