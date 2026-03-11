@@ -27,11 +27,13 @@ object RoastStudioPage {
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+        val openRecentRoastsBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
 
         controlCard.addView(UiKit.cardTitle(context, "CONTROL"))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
+        controlCard.addView(openRecentRoastsBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
@@ -84,13 +86,11 @@ object RoastStudioPage {
         val historyCard = UiKit.card(context)
         val historyBody = UiKit.bodyText(context, "")
         val openLatestHistoryBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
-        val openRecentHistoryBtn = UiKit.secondaryButton(context, "OPEN HISTORY FROM RECENT")
 
         historyCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
         historyCard.addView(historyBody)
         historyCard.addView(UiKit.spacer(context))
         historyCard.addView(openLatestHistoryBtn)
-        historyCard.addView(openRecentHistoryBtn)
 
         root.addView(historyCard)
 
@@ -152,22 +152,18 @@ ${formatRisk(snapshot.companion.riskLevel)}
             render()
         }
 
+        openRecentRoastsBtn.setOnClickListener {
+            RecentRoastListPage.show(
+                context = context,
+                container = container
+            )
+        }
+
         openLatestHistoryBtn.setOnClickListener {
             HistoryDetailPage.show(
                 context = context,
                 container = container,
                 entry = RoastHistoryEngine.latest()
-            )
-        }
-
-        openRecentHistoryBtn.setOnClickListener {
-            val latestFromRecent = RoastSessionBus.current()?.recentRoasts?.firstOrNull()
-                ?: RoastHistoryEngine.latest()
-
-            HistoryDetailPage.show(
-                context = context,
-                container = container,
-                entry = latestFromRecent
             )
         }
 
@@ -264,7 +260,6 @@ ${formatTime(it.createdAtMillis)}
         event: RoastPhaseEvent?
     ): String {
         if (event == null) return "-"
-
         return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)} ℃"
     }
 
