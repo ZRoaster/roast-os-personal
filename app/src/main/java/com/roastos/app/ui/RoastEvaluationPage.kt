@@ -25,6 +25,10 @@ object RoastEvaluationPage {
         root.addView(UiKit.pageSubtitle(context, "Post roast cup / color / aw input"))
         root.addView(UiKit.spacer(context))
 
+        val backBtn = UiKit.secondaryButton(context, "BACK TO DETAIL")
+        root.addView(backBtn)
+        root.addView(UiKit.spacer(context))
+
         if (entry == null) {
 
             val empty = UiKit.card(context)
@@ -38,6 +42,10 @@ object RoastEvaluationPage {
             )
 
             root.addView(empty)
+
+            backBtn.setOnClickListener {
+                HistoryDetailPage.show(context, container, null)
+            }
 
             scroll.addView(root)
             container.addView(scroll)
@@ -58,6 +66,18 @@ object RoastEvaluationPage {
         notesInput.hint = "Cup notes"
         notesInput.minLines = 3
 
+        entry.evaluation?.let { evaluation ->
+            beanColorInput.setText(evaluation.beanColor?.toString() ?: "")
+            groundColorInput.setText(evaluation.groundColor?.toString() ?: "")
+            awInput.setText(evaluation.roastedAw?.toString() ?: "")
+            sweetnessInput.setText(evaluation.sweetness?.toString() ?: "")
+            acidityInput.setText(evaluation.acidity?.toString() ?: "")
+            bodyInput.setText(evaluation.body?.toString() ?: "")
+            clarityInput.setText(evaluation.flavorClarity?.toString() ?: "")
+            balanceInput.setText(evaluation.balance?.toString() ?: "")
+            notesInput.setText(evaluation.notes)
+        }
+
         val saveBtn = Button(context)
         saveBtn.text = "SAVE EVALUATION"
 
@@ -66,6 +86,19 @@ object RoastEvaluationPage {
         val card = UiKit.card(context)
 
         card.addView(UiKit.cardTitle(context, "CUP INPUT"))
+        card.addView(
+            UiKit.bodyText(
+                context,
+                """
+Batch
+${entry.batchId}
+
+Title
+${entry.title}
+                """.trimIndent()
+            )
+        )
+        card.addView(UiKit.spacer(context))
 
         card.addView(beanColorInput)
         card.addView(groundColorInput)
@@ -80,37 +113,69 @@ object RoastEvaluationPage {
         card.addView(notesInput)
         card.addView(UiKit.spacer(context))
         card.addView(saveBtn)
+        card.addView(UiKit.spacer(context))
         card.addView(resultText)
 
         root.addView(card)
 
         saveBtn.setOnClickListener {
 
+            val beanColor = beanColorInput.text.toString().toDoubleOrNull()
+            val groundColor = groundColorInput.text.toString().toDoubleOrNull()
+            val roastedAw = awInput.text.toString().toDoubleOrNull()
+
+            val sweetness = sweetnessInput.text.toString().toIntOrNull()
+            val acidity = acidityInput.text.toString().toIntOrNull()
+            val body = bodyInput.text.toString().toIntOrNull()
+            val clarity = clarityInput.text.toString().toIntOrNull()
+            val balance = balanceInput.text.toString().toIntOrNull()
+            val notes = notesInput.text.toString()
+
             val evaluation = RoastEvaluation(
-                beanColor = beanColorInput.text.toString().toDoubleOrNull(),
-                groundColor = groundColorInput.text.toString().toDoubleOrNull(),
-                roastedAw = awInput.text.toString().toDoubleOrNull(),
-                sweetness = sweetnessInput.text.toString().toIntOrNull(),
-                acidity = acidityInput.text.toString().toIntOrNull(),
-                body = bodyInput.text.toString().toIntOrNull(),
-                flavorClarity = clarityInput.text.toString().toIntOrNull(),
-                balance = balanceInput.text.toString().toIntOrNull(),
-                notes = notesInput.text.toString()
+                beanColor = beanColor,
+                groundColor = groundColor,
+                roastedAw = roastedAw,
+                sweetness = sweetness,
+                acidity = acidity,
+                body = body,
+                flavorClarity = clarity,
+                balance = balance,
+                notes = notes
             )
 
-            val result = RoastHistoryEngine.saveEvaluation(
+            val saveResult = RoastHistoryEngine.saveEvaluation(
                 entry.batchId,
                 evaluation
+            )
+
+            RoastRiskEventEngine.attachCupResult(
+                batchId = entry.batchId,
+                beanColor = beanColor,
+                groundColor = groundColor,
+                aw = roastedAw,
+                cupScore = buildCupScore(
+                    sweetness = sweetness,
+                    acidity = acidity,
+                    body = body,
+                    clarity = clarity,
+                    balance = balance
+                ),
+                notes = notes
             )
 
             resultText.text =
                 """
 Saved
 
-${result.message}
+${saveResult.message}
 
+Risk events updated with cup result.
 Learning will update automatically.
                 """.trimIndent()
+        }
+
+        backBtn.setOnClickListener {
+            HistoryDetailPage.show(context, container, RoastHistoryEngine.findByBatchId(entry.batchId))
         }
 
         scroll.addView(root)
@@ -144,5 +209,17 @@ Learning will update automatically.
             InputType.TYPE_CLASS_NUMBER
 
         return input
+    }
+
+    private fun buildCupScore(
+        sweetness: Int?,
+        acidity: Int?,
+        body: Int?,
+        clarity: Int?,
+        balance: Int?
+    ): Int? {
+        val values = listOf(sweetness, acidity, body, clarity, balance).filterNotNull()
+        if (values.isEmpty()) return null
+        return values.sum() / values.size
     }
 }
