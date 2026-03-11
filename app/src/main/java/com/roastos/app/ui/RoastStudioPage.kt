@@ -47,13 +47,13 @@ object RoastStudioPage {
         root.addView(stateCard)
         root.addView(UiKit.spacer(context))
 
-        val phaseCard = UiKit.card(context)
-        val phaseBody = UiKit.bodyText(context, "")
+        val healthCard = UiKit.card(context)
+        val healthBody = UiKit.bodyText(context, "")
 
-        phaseCard.addView(UiKit.cardTitle(context, "PHASE"))
-        phaseCard.addView(phaseBody)
+        healthCard.addView(UiKit.cardTitle(context, "ROAST HEALTH"))
+        healthCard.addView(healthBody)
 
-        root.addView(phaseCard)
+        root.addView(healthCard)
         root.addView(UiKit.spacer(context))
 
         val companionCard = UiKit.card(context)
@@ -65,13 +65,13 @@ object RoastStudioPage {
         root.addView(companionCard)
         root.addView(UiKit.spacer(context))
 
-        val healthCard = UiKit.card(context)
-        val healthBody = UiKit.bodyText(context, "")
+        val phaseCard = UiKit.card(context)
+        val phaseBody = UiKit.bodyText(context, "")
 
-        healthCard.addView(UiKit.cardTitle(context, "ROAST HEALTH"))
-        healthCard.addView(healthBody)
+        phaseCard.addView(UiKit.cardTitle(context, "PHASE"))
+        phaseCard.addView(phaseBody)
 
-        root.addView(healthCard)
+        root.addView(phaseCard)
         root.addView(UiKit.spacer(context))
 
         val logCard = UiKit.card(context)
@@ -114,7 +114,7 @@ Elapsed
 ${formatElapsed(session.lastElapsedSec)}
                 """.trimIndent()
 
-            phaseBody.text = buildPhaseText(snapshot)
+            healthBody.text = buildHealthText(snapshot.validation)
 
             companionBody.text =
                 """
@@ -129,9 +129,9 @@ Risk
 ${formatRisk(snapshot.companion.riskLevel)}
                 """.trimIndent()
 
-            healthBody.text = buildHealthText(snapshot.validation)
+            phaseBody.text = buildPhaseText(snapshot)
 
-            logBody.text = snapshot.logText
+            logBody.text = buildCompactLogText(snapshot.log)
 
             historyBody.text = buildRecentRoasts(snapshot.recentRoasts)
         }
@@ -232,6 +232,39 @@ ${formatRisk(it.severity)}
         }
     }
 
+    private fun buildCompactLogText(
+        log: RoastLog
+    ): String {
+        return """
+Batch
+${log.batchId}
+
+Status
+${log.status}
+
+Total Time
+${formatElapsed(log.totalTimeSec)}
+
+Charge Temp
+${formatTemp(log.chargeTemp)}
+
+First Crack
+${formatLogEvent(log.firstCrackSec, log.firstCrackTemp)}
+
+Drop
+${if (log.dropSec == null) "-" else formatElapsed(log.dropSec)}
+
+Drop Temp
+${formatTemp(log.dropTemp)}
+
+Development Ratio
+${formatRatio(log.developmentRatio)}
+
+Final RoR
+${formatRor(log.finalRor)}
+        """.trimIndent()
+    }
+
     private fun buildRecentRoasts(
         roasts: List<RoastHistoryEntry>
     ): String {
@@ -263,6 +296,14 @@ ${formatTime(it.createdAtMillis)}
         return "${formatElapsed(event.elapsedSec)} · ${String.format("%.1f", event.beanTemp)} ℃"
     }
 
+    private fun formatLogEvent(
+        sec: Int?,
+        temp: Double?
+    ): String {
+        if (sec == null || temp == null) return "-"
+        return "${formatElapsed(sec)} · ${String.format("%.1f", temp)} ℃"
+    }
+
     private fun formatElapsed(sec: Int): String {
         val minutes = sec / 60
         val seconds = sec % 60
@@ -274,6 +315,22 @@ ${formatTime(it.createdAtMillis)}
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
         return "%d:%02d".format(minutes, seconds)
+    }
+
+    private fun formatTemp(value: Double?): String {
+        return if (value == null) "-" else "${String.format("%.1f", value)} ℃"
+    }
+
+    private fun formatRor(value: Double?): String {
+        return if (value == null) "-" else "${String.format("%.1f", value)} ℃/min"
+    }
+
+    private fun formatRatio(value: Double?): String {
+        return if (value == null) {
+            "-"
+        } else {
+            "${String.format("%.1f", value * 100)}%"
+        }
     }
 
     private fun formatRisk(risk: String): String {
