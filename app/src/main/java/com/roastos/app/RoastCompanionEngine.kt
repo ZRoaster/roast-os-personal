@@ -23,20 +23,22 @@ object RoastCompanionEngine {
             ror = ror
         )
 
+        val phaseState = RoastPhaseDetectionEngine.currentState()
+        val phaseSummary = RoastPhaseDetectionEngine.summary()
+        val log = RoastLogEngine.buildLog(session)
+        val logText = RoastLogEngine.buildLogText(session)
+
         val validation = RoastSessionValidator.validate(
             RoastSessionBusSnapshot(
                 session = session,
-                companion = RoastCompanionMessage(
-                    title = baseMessage.title,
-                    body = baseMessage.body,
-                    phaseLabel = baseMessage.phaseLabel,
-                    riskLevel = baseMessage.riskLevel
-                ),
-                log = RoastLogEngine.buildLog(session),
-                phaseSummary = RoastPhaseDetectionEngine.summary(),
-                logText = RoastLogEngine.buildLogText(session),
+                phaseState = phaseState,
+                phaseSummary = phaseSummary,
+                companion = baseMessage,
+                validation = RoastValidationResult(emptyList()),
+                log = log,
+                logText = logText,
                 historySummary = RoastHistoryEngine.summary(),
-                validation = RoastValidationResult(emptyList())
+                recentRoasts = RoastHistoryEngine.all().take(3)
             )
         )
 
@@ -193,23 +195,12 @@ ${buildSuggestion(phase, ror)}
         ror: Double
     ): String {
         return when (phase) {
-            "Charge" ->
-                "等待回温点"
-
-            "Drying" ->
-                if (ror < 4) "轻微增加能量" else "保持当前能量"
-
-            "Maillard" ->
-                if (ror < 4) "避免能量下降" else "维持稳定下降"
-
-            "First Crack" ->
-                "准备进入发展段"
-
-            "Development" ->
-                "控制收尾节奏"
-
-            else ->
-                "观察曲线"
+            "Charge" -> "等待回温点"
+            "Drying" -> if (ror < 4) "轻微增加能量" else "保持当前能量"
+            "Maillard" -> if (ror < 4) "避免能量下降" else "维持稳定下降"
+            "First Crack" -> "准备进入发展段"
+            "Development" -> "控制收尾节奏"
+            else -> "观察曲线"
         }
     }
 
