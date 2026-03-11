@@ -3,7 +3,10 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.RoastExplorationEngine
 import com.roastos.app.RoastHistoryEntry
+import com.roastos.app.RoastLearningEngine
+import com.roastos.app.RoastRiskEventEngine
 import com.roastos.app.UiKit
 
 object HistoryDetailPage {
@@ -105,6 +108,54 @@ ${entry.roastHealthDetail}
         )
 
         root.addView(healthCard)
+        root.addView(UiKit.spacer(context))
+
+        val riskEventsCard = UiKit.card(context)
+
+        riskEventsCard.addView(
+            UiKit.cardTitle(context, "RISK EVENTS")
+        )
+
+        riskEventsCard.addView(
+            UiKit.bodyText(
+                context,
+                buildRiskEventsText(entry.batchId)
+            )
+        )
+
+        root.addView(riskEventsCard)
+        root.addView(UiKit.spacer(context))
+
+        val explorationCard = UiKit.card(context)
+
+        explorationCard.addView(
+            UiKit.cardTitle(context, "EXPLORATION")
+        )
+
+        explorationCard.addView(
+            UiKit.bodyText(
+                context,
+                RoastExplorationEngine.buildDisplayText(entry.batchId)
+            )
+        )
+
+        root.addView(explorationCard)
+        root.addView(UiKit.spacer(context))
+
+        val learningCard = UiKit.card(context)
+
+        learningCard.addView(
+            UiKit.cardTitle(context, "LEARNING")
+        )
+
+        learningCard.addView(
+            UiKit.bodyText(
+                context,
+                buildLearningText(entry.batchId)
+            )
+        )
+
+        root.addView(learningCard)
         root.addView(UiKit.spacer(context))
 
         val beanCard = UiKit.card(context)
@@ -284,6 +335,75 @@ ${entry.baselineSourceBatchId ?: "-"}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildRiskEventsText(
+        batchId: String
+    ): String {
+        val events = RoastRiskEventEngine.eventsForBatch(batchId)
+
+        if (events.isEmpty()) {
+            return "No recorded risk events for this batch."
+        }
+
+        return events.joinToString("\n\n────────\n\n") { event ->
+            """
+Issue
+${event.issueCode}
+
+Phase
+${event.phase}
+
+Elapsed
+${formatSec(event.elapsedSec)}
+
+BT
+${String.format("%.1f", event.beanTemp)} ℃
+
+RoR
+${String.format("%.1f", event.ror)} ℃/min
+
+Heat
+${event.suggestedHeatAction}
+
+Airflow
+${event.suggestedAirflowAction}
+
+Continued
+${if (event.operatorContinued) "Yes" else "No"}
+            """.trimIndent()
+        }
+    }
+
+    private fun buildLearningText(
+        batchId: String
+    ): String {
+        val records = RoastLearningEngine.buildRecords()
+        val record = records.firstOrNull { it.batchId == batchId }
+
+        if (record == null) {
+            return "No learning record for this batch."
+        }
+
+        return """
+Batch
+${record.batchId}
+
+Exploration
+${record.explorationStatus}
+
+Roast Health
+${record.roastHealth}
+
+Risk Events
+${record.riskEventCount}
+
+Evaluation
+${if (record.hasEvaluation) "已记录" else "未记录"}
+
+Recommendation
+${record.recommendation}
+        """.trimIndent()
     }
 
     private fun formatSec(value: Int?): String {
