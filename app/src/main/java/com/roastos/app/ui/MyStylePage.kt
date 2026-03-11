@@ -13,6 +13,7 @@ object MyStylePage {
         context: Context,
         container: LinearLayout
     ) {
+
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -38,10 +39,21 @@ object MyStylePage {
         root.addView(summaryCard)
         root.addView(UiKit.spacer(context))
 
+        val learningCard = UiKit.card(context)
+        val learningPanel = RoastStyleLearningPanel(context)
+
+        learningCard.addView(UiKit.cardTitle(context, "STYLE LEARNING"))
+        learningCard.addView(learningPanel)
+
+        root.addView(learningCard)
+        root.addView(UiKit.spacer(context))
+
         val styles = MyStyleEngine.all()
 
         if (styles.isEmpty()) {
+
             val emptyCard = UiKit.card(context)
+
             emptyCard.addView(UiKit.cardTitle(context, "NO CUSTOM STYLES"))
             emptyCard.addView(
                 UiKit.bodyText(
@@ -49,9 +61,13 @@ object MyStylePage {
                     "No saved custom roast styles yet."
                 )
             )
+
             root.addView(emptyCard)
+
         } else {
+
             styles.forEachIndexed { index, style ->
+
                 val card = UiKit.card(context)
 
                 card.addView(
@@ -87,6 +103,7 @@ object MyStylePage {
     private fun buildStyleText(
         style: RoastStyleProfile
     ): String {
+
         return """
 Name
 ${style.name}
@@ -133,8 +150,10 @@ ${style.notes ?: "-"}
     }
 
     private fun formatSec(sec: Int): String {
+
         val m = sec / 60
         val s = sec % 60
+
         return "%d:%02d".format(m, s)
     }
 }
