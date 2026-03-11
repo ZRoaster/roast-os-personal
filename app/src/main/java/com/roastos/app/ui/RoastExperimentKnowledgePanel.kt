@@ -9,15 +9,20 @@ class RoastExperimentKnowledgePanel(
     context: Context
 ) : LinearLayout(context) {
 
-    private val textView = UiKit.bodyText(context, "")
+    private val body = UiKit.bodyText(context, "")
 
     init {
+
         orientation = VERTICAL
-        addView(textView)
+
+        addView(body)
+
         update()
     }
 
     fun update() {
-        textView.text = RoastExperimentKnowledgeEngine.latestText()
+
+        body.text = RoastExperimentKnowledgeEngine.latestText()
+
     }
 }
