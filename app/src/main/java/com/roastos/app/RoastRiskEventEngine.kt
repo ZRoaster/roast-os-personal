@@ -33,19 +33,21 @@ object RoastRiskEventEngine {
 
     fun recordFromSnapshot(
         snapshot: RoastSessionBusSnapshot,
-        policyBundle: RoastRiskDecisionBundle
+        decision: RoastDecision
     ) {
+        val validation = snapshot.validation
 
-        if (!policyBundle.hasRisk) return
+        if (!validation.hasIssues()) return
 
         val session = snapshot.session
         val phase = snapshot.companion.phaseLabel
+        val batchId = snapshot.log.batchId
 
-        policyBundle.policies.forEach { policy ->
+        validation.issues.forEach { issue ->
 
             val event = RoastRiskEvent(
                 id = generateId(),
-                batchId = session.batchId,
+                batchId = batchId,
 
                 timestampMillis = System.currentTimeMillis(),
                 elapsedSec = session.lastElapsedSec,
@@ -55,11 +57,11 @@ object RoastRiskEventEngine {
                 beanTemp = session.lastBeanTemp,
                 ror = session.lastRor,
 
-                issueCode = policy.issueCode,
-                severity = policy.level,
+                issueCode = issue.code,
+                severity = issue.severity,
 
-                suggestedHeatAction = policy.suggestedHeatAction,
-                suggestedAirflowAction = policy.suggestedAirflowAction,
+                suggestedHeatAction = decision.heatAction,
+                suggestedAirflowAction = decision.airflowAction,
 
                 operatorContinued = true
             )
@@ -76,23 +78,21 @@ object RoastRiskEventEngine {
         cupScore: Int?,
         notes: String?
     ) {
-
         events
-            .filter { it.batchId == batchId }
-            .forEach {
-
-                it.beanColor = beanColor
-                it.groundColor = groundColor
-                it.aw = aw
-                it.cupScore = cupScore
-                it.cupNotes = notes
+            .filter { event -> event.batchId == batchId }
+            .forEach { event ->
+                event.beanColor = beanColor
+                event.groundColor = groundColor
+                event.aw = aw
+                event.cupScore = cupScore
+                event.cupNotes = notes
             }
     }
 
     fun eventsForBatch(
         batchId: String
     ): List<RoastRiskEvent> {
-        return events.filter { it.batchId == batchId }
+        return events.filter { event -> event.batchId == batchId }
     }
 
     fun all(): List<RoastRiskEvent> {
