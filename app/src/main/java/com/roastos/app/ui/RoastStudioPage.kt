@@ -84,6 +84,15 @@ object RoastStudioPage {
         root.addView(phaseCard)
         root.addView(UiKit.spacer(context))
 
+        val riskCard = UiKit.card(context)
+        val riskPanel = RoastRiskEventPanel(context)
+
+        riskCard.addView(UiKit.cardTitle(context, "RISK EVENTS"))
+        riskCard.addView(riskPanel)
+
+        root.addView(riskCard)
+        root.addView(UiKit.spacer(context))
+
         val logCard = UiKit.card(context)
         val logBody = UiKit.bodyText(context, "")
 
@@ -91,6 +100,15 @@ object RoastStudioPage {
         logCard.addView(logBody)
 
         root.addView(logCard)
+        root.addView(UiKit.spacer(context))
+
+        val cupCard = UiKit.card(context)
+        val cupBody = UiKit.bodyText(context, "")
+
+        cupCard.addView(UiKit.cardTitle(context, "CUP PROFILE"))
+        cupCard.addView(cupBody)
+
+        root.addView(cupCard)
         root.addView(UiKit.spacer(context))
 
         val historyCard = UiKit.card(context)
@@ -109,6 +127,7 @@ object RoastStudioPage {
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
             val decision = RoastDecisionEngine.evaluate(snapshot)
+            val cup = RoastCupProfileEngine.evaluate(snapshot.log)
 
             overviewBody.text =
                 """
@@ -142,7 +161,30 @@ ${formatRisk(snapshot.companion.riskLevel)}
 
             phaseBody.text = buildPhasePanel(snapshot)
 
+            riskPanel.update()
+
             logBody.text = snapshot.log.summary
+
+            cupBody.text =
+                """
+风味预测
+${cup.flavorPrediction}
+
+推荐冲煮
+${cup.brewMethod}
+
+水温
+${cup.brewTempC} ℃
+
+粉水比
+${cup.brewRatio}
+
+研磨
+${cup.grindLevel}
+
+说明
+${cup.brewNote}
+                """.trimIndent()
 
             historyBody.text = buildRecent(snapshot.recentRoasts)
         }
