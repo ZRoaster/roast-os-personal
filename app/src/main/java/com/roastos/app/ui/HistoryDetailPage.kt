@@ -30,8 +30,10 @@ object HistoryDetailPage {
         root.addView(UiKit.spacer(context))
 
         val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
+        val evaluationBtn = UiKit.secondaryButton(context, "OPEN EVALUATION")
 
         root.addView(backBtn)
+        root.addView(evaluationBtn)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
@@ -53,6 +55,10 @@ object HistoryDetailPage {
 
             backBtn.setOnClickListener {
                 RoastStudioPage.show(context, container)
+            }
+
+            evaluationBtn.setOnClickListener {
+                RoastEvaluationPage.show(context, container, null)
             }
 
             scroll.addView(root)
@@ -331,6 +337,10 @@ ${entry.baselineSourceBatchId ?: "-"}
 
         backBtn.setOnClickListener {
             RoastStudioPage.show(context, container)
+        }
+
+        evaluationBtn.setOnClickListener {
+            RoastEvaluationPage.show(context, container, entry)
         }
 
         scroll.addView(root)
