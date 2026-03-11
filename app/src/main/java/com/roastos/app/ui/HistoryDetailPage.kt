@@ -3,7 +3,8 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.*
+import com.roastos.app.RoastHistoryEntry
+import com.roastos.app.UiKit
 
 object HistoryDetailPage {
 
@@ -82,6 +83,28 @@ ${entry.createdAtMillis}
         )
 
         root.addView(batchCard)
+        root.addView(UiKit.spacer(context))
+
+        val healthCard = UiKit.card(context)
+
+        healthCard.addView(
+            UiKit.cardTitle(context, "ROAST HEALTH")
+        )
+
+        healthCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+Headline
+${entry.roastHealthHeadline}
+
+Detail
+${entry.roastHealthDetail}
+                """.trimIndent()
+            )
+        )
+
+        root.addView(healthCard)
         root.addView(UiKit.spacer(context))
 
         val beanCard = UiKit.card(context)
