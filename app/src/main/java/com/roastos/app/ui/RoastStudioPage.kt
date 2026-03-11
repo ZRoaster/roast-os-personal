@@ -23,6 +23,15 @@ object RoastStudioPage {
         root.addView(UiKit.pageSubtitle(context, "Live Roast Session"))
         root.addView(UiKit.spacer(context))
 
+        val overviewCard = UiKit.card(context)
+        val overviewBody = UiKit.bodyText(context, "")
+
+        overviewCard.addView(UiKit.cardTitle(context, "OVERVIEW"))
+        overviewCard.addView(overviewBody)
+
+        root.addView(overviewCard)
+        root.addView(UiKit.spacer(context))
+
         val controlCard = UiKit.card(context)
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
@@ -98,6 +107,24 @@ object RoastStudioPage {
 
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
+
+            overviewBody.text =
+                """
+Status
+${session.status}
+
+BT
+${String.format("%.1f", session.lastBeanTemp)} ℃
+
+RoR
+${String.format("%.1f", session.lastRor)} ℃/min
+
+Elapsed
+${formatElapsed(session.lastElapsedSec)}
+
+Health
+${buildHealthHeadline(snapshot.validation)}
+                """.trimIndent()
 
             stateBody.text =
                 """
@@ -206,6 +233,20 @@ ${formatPhaseEvent(phaseState.firstCrack)}
 Drop
 ${formatPhaseEvent(phaseState.drop)}
         """.trimIndent()
+    }
+
+    private fun buildHealthHeadline(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) return "稳定"
+
+        return when (validation.highestSeverity()) {
+            "high" -> "高风险"
+            "medium" -> "中风险"
+            "watch" -> "需留意"
+            "low" -> "低风险"
+            else -> "稳定"
+        }
     }
 
     private fun buildHealthText(
