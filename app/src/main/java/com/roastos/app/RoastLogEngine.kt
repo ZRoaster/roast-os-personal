@@ -148,31 +148,21 @@ object RoastLogEngine {
             appendLine(formatEvent(log.firstCrackSec, log.firstCrackTemp))
             appendLine()
             appendLine("Drop")
-            appendLine(
-                if (log.dropSec == null) "-" else formatSec(log.dropSec)
-            )
+            appendLine(if (log.dropSec == null) "-" else formatSec(log.dropSec))
             appendLine()
             appendLine("Drop Temp")
             appendLine(formatTemp(log.dropTemp))
             appendLine()
             appendLine("Development Time")
-            appendLine(
-                if (log.developmentTimeSec == null) "-" else formatSec(log.developmentTimeSec)
-            )
+            appendLine(if (log.developmentTimeSec == null) "-" else formatSec(log.developmentTimeSec))
             appendLine()
             appendLine("Development Ratio")
             appendLine(
-                if (log.developmentRatio == null) {
-                    "-"
-                } else {
-                    "${((log.developmentRatio * 1000.0).roundToInt() / 10.0)}%"
-                }
+                if (log.developmentRatio == null) "-" else "${((log.developmentRatio * 1000.0).roundToInt() / 10.0)}%"
             )
             appendLine()
             appendLine("Final RoR")
-            appendLine(
-                if (log.finalRor == null) "-" else "${oneDecimal(log.finalRor)} ℃/min"
-            )
+            appendLine(if (log.finalRor == null) "-" else "${oneDecimal(log.finalRor)} ℃/min")
             appendLine()
             appendLine("Roast Health")
             appendLine(buildValidationHeadline(validation))
@@ -206,24 +196,14 @@ object RoastLogEngine {
             appendLine("Maillard Start: ${formatEvent(phaseState.maillardStart?.elapsedSec, phaseState.maillardStart?.beanTemp)}")
             appendLine("First Crack: ${formatEvent(phaseState.firstCrack?.elapsedSec, phaseState.firstCrack?.beanTemp)}")
             appendLine("Drop Temp: ${formatTemp(dropTemp)}")
-            appendLine(
-                "Development: ${
-                    if (developmentTimeSec == null) "-" else formatSec(developmentTimeSec)
-                }"
-            )
+            appendLine("Development: ${if (developmentTimeSec == null) "-" else formatSec(developmentTimeSec)}")
             appendLine(
                 "Development Ratio: ${
                     if (developmentRatio == null) "-" else "${((developmentRatio * 1000.0).roundToInt() / 10.0)}%"
                 }"
             )
-            appendLine(
-                "Roast Health: ${buildValidationHeadline(validation)}"
-            )
-            append(
-                "Final RoR: ${
-                    if (finalRor == null) "-" else "${oneDecimal(finalRor)} ℃/min"
-                }"
-            )
+            appendLine("Roast Health: ${buildValidationHeadline(validation)}")
+            append("Final RoR: ${if (finalRor == null) "-" else "${oneDecimal(finalRor)} ℃/min"}")
         }
     }
 
@@ -231,7 +211,9 @@ object RoastLogEngine {
         session: RoastSessionState,
         machineName: String
     ): RoastValidationResult {
+        val phaseState = RoastPhaseDetectionEngine.currentState()
         val phaseSummary = RoastPhaseDetectionEngine.summary()
+
         val tempLog = RoastLog(
             batchId = activeBatchId,
             machineName = machineName,
@@ -239,15 +221,15 @@ object RoastLogEngine {
             totalTimeSec = session.lastElapsedSec,
             chargeTemp = chargeTemp,
             dropTemp = dropTemp,
-            turningPointSec = RoastPhaseDetectionEngine.currentState().turningPoint?.elapsedSec,
-            turningPointTemp = RoastPhaseDetectionEngine.currentState().turningPoint?.beanTemp,
-            dryEndSec = RoastPhaseDetectionEngine.currentState().dryEnd?.elapsedSec,
-            dryEndTemp = RoastPhaseDetectionEngine.currentState().dryEnd?.beanTemp,
-            maillardStartSec = RoastPhaseDetectionEngine.currentState().maillardStart?.elapsedSec,
-            maillardStartTemp = RoastPhaseDetectionEngine.currentState().maillardStart?.beanTemp,
-            firstCrackSec = RoastPhaseDetectionEngine.currentState().firstCrack?.elapsedSec,
-            firstCrackTemp = RoastPhaseDetectionEngine.currentState().firstCrack?.beanTemp,
-            dropSec = RoastPhaseDetectionEngine.currentState().drop?.elapsedSec ?: session.lastElapsedSec,
+            turningPointSec = phaseState.turningPoint?.elapsedSec,
+            turningPointTemp = phaseState.turningPoint?.beanTemp,
+            dryEndSec = phaseState.dryEnd?.elapsedSec,
+            dryEndTemp = phaseState.dryEnd?.beanTemp,
+            maillardStartSec = phaseState.maillardStart?.elapsedSec,
+            maillardStartTemp = phaseState.maillardStart?.beanTemp,
+            firstCrackSec = phaseState.firstCrack?.elapsedSec,
+            firstCrackTemp = phaseState.firstCrack?.beanTemp,
+            dropSec = phaseState.drop?.elapsedSec ?: session.lastElapsedSec,
             developmentTimeSec = null,
             developmentRatio = null,
             finalRor = finalRor,
@@ -263,12 +245,14 @@ object RoastLogEngine {
 
         val snapshot = RoastSessionBusSnapshot(
             session = session,
-            companion = tempCompanion,
-            log = tempLog,
+            phaseState = phaseState,
             phaseSummary = phaseSummary,
+            companion = tempCompanion,
+            validation = RoastValidationResult(emptyList()),
+            log = tempLog,
             logText = "",
             historySummary = "",
-            validation = RoastValidationResult(emptyList())
+            recentRoasts = RoastHistoryEngine.all().take(3)
         )
 
         return RoastSessionValidator.validate(snapshot)
@@ -339,4 +323,4 @@ object RoastLogEngine {
     private fun newBatchId(): String {
         return "BATCH-${System.currentTimeMillis()}"
     }
-}
+                   }
