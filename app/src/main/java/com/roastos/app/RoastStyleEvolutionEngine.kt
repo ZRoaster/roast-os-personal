@@ -147,6 +147,7 @@ ${latest.recommendation}
         styles: List<RoastStyleProfile>
     ): String {
         val names = styles.map { it.name }
+
         val common = when {
             names.any { it.contains("Sweet", ignoreCase = true) } -> "Sweet"
             names.any { it.contains("Clarity", ignoreCase = true) } -> "Clarity"
@@ -213,12 +214,12 @@ ${latest.recommendation}
     private fun summarizeConfidence(
         records: List<RoastStyleLearningRecord>
     ): String {
-        val score = records.sumOf {
-            when (it.confidence) {
+        val score = records.sumOf { record ->
+            when (record.confidence) {
                 "高" -> 3
                 "中" -> 2
                 else -> 1
-            }
+            }.toInt()
         }
 
         return when {
