@@ -16,12 +16,16 @@ object RoastSessionBus {
 
     private var lastSnapshot: RoastSessionBusSnapshot? = null
 
+    private var lastRiskRecordSignature: String? = null
+
     fun current(): RoastSessionBusSnapshot? {
         return lastSnapshot
     }
 
     fun reset() {
         lastSnapshot = null
+        lastRiskRecordSignature = null
+
         RoastSessionEngine.reset()
         RoastPhaseDetectionEngine.reset()
         RoastLogEngine.reset()
@@ -74,6 +78,13 @@ object RoastSessionBus {
             recentRoasts = RoastHistoryEngine.all().take(3)
         )
 
+        val decision = RoastDecisionEngine.evaluate(snapshot)
+
+        autoRecordRiskEvent(
+            snapshot = snapshot,
+            decision = decision
+        )
+
         lastSnapshot = snapshot
         return snapshot
     }
@@ -102,5 +113,50 @@ object RoastSessionBus {
         reset()
         MachineBridge.start()
         tick()
+    }
+
+    private fun autoRecordRiskEvent(
+        snapshot: RoastSessionBusSnapshot,
+        decision: RoastDecision
+    ) {
+        val validation = snapshot.validation
+        if (!validation.hasIssues()) {
+            lastRiskRecordSignature = null
+            return
+        }
+
+        val signature = buildRiskSignature(snapshot)
+
+        if (signature == lastRiskRecordSignature) {
+            return
+        }
+
+        RoastRiskEventEngine.recordFromSnapshot(
+            snapshot = snapshot,
+            decision = decision
+        )
+
+        lastRiskRecordSignature = signature
+    }
+
+    private fun buildRiskSignature(
+        snapshot: RoastSessionBusSnapshot
+    ): String {
+        val issueCodes = snapshot.validation.issues
+            .map { it.code }
+            .sorted()
+            .joinToString(",")
+
+        val elapsedBucket = snapshot.session.lastElapsedSec / 5
+
+        return buildString {
+            append(snapshot.log.batchId)
+            append("|")
+            append(snapshot.companion.phaseLabel)
+            append("|")
+            append(issueCodes)
+            append("|")
+            append(elapsedBucket)
+        }
     }
 }
