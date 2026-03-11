@@ -20,16 +20,21 @@ object RecentRoastListPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "RECENT ROASTS"))
-        root.addView(UiKit.pageSubtitle(context, "Recent roast history list"))
+        root.addView(UiKit.pageSubtitle(context, "Latest roast history"))
         root.addView(UiKit.spacer(context))
 
+        val topCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
-        root.addView(backBtn)
+
+        topCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        topCard.addView(backBtn)
+
+        root.addView(topCard)
         root.addView(UiKit.spacer(context))
 
-        val all = RoastHistoryEngine.all()
+        val entries = RoastHistoryEngine.all()
 
-        if (all.isEmpty()) {
+        if (entries.isEmpty()) {
             val emptyCard = UiKit.card(context)
             emptyCard.addView(UiKit.cardTitle(context, "NO HISTORY"))
             emptyCard.addView(
@@ -40,25 +45,13 @@ object RecentRoastListPage {
             )
             root.addView(emptyCard)
         } else {
-            all.forEachIndexed { index, entry ->
+            entries.forEachIndexed { index, entry ->
 
-                val card = UiKit.card(context)
-
-                card.addView(
-                    UiKit.cardTitle(
-                        context,
-                        "ROAST ${index + 1}"
-                    )
-                )
-
-                card.addView(
-                    UiKit.bodyText(
-                        context,
-                        buildEntryText(entry)
-                    )
-                )
-
+                val itemCard = UiKit.card(context)
+                val itemTitle = UiKit.cardTitle(context, "ROAST ${index + 1}")
+                val itemBody = UiKit.bodyText(context, buildCompactEntryText(entry))
                 val openBtn = UiKit.secondaryButton(context, "OPEN DETAIL")
+
                 openBtn.setOnClickListener {
                     HistoryDetailPage.show(
                         context = context,
@@ -67,11 +60,16 @@ object RecentRoastListPage {
                     )
                 }
 
-                card.addView(UiKit.spacer(context))
-                card.addView(openBtn)
+                itemCard.addView(itemTitle)
+                itemCard.addView(itemBody)
+                itemCard.addView(UiKit.spacer(context))
+                itemCard.addView(openBtn)
 
-                root.addView(card)
-                root.addView(UiKit.spacer(context))
+                root.addView(itemCard)
+
+                if (index != entries.lastIndex) {
+                    root.addView(UiKit.spacer(context))
+                }
             }
         }
 
@@ -83,7 +81,7 @@ object RecentRoastListPage {
         container.addView(scroll)
     }
 
-    private fun buildEntryText(
+    private fun buildCompactEntryText(
         entry: RoastHistoryEntry
     ): String {
         return """
@@ -98,9 +96,6 @@ ${entry.roastHealthHeadline}
 
 Time
 ${formatTime(entry.createdAtMillis)}
-
-Report
-${entry.reportText.take(160).ifBlank { "-" }}
         """.trimIndent()
     }
 
