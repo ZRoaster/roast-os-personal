@@ -44,8 +44,8 @@ object RoastDecisionEngine {
                     stage = phase,
                     priority = "恢复动能",
                     heatAction = "小幅加火",
-                    airflowAction = "风门暂不继续加大",
-                    flavorDirection = "避免发闷，保留中段支撑",
+                    airflowAction = "风量暂不继续加大",
+                    flavorDirection = "避免发闷，保住中段支撑",
                     rationale = "当前 RoR 偏低，存在失速风险。优先恢复热动能，避免后段塌陷。",
                     confidence = severityToConfidence(topIssue.severity)
                 )
@@ -65,7 +65,7 @@ object RoastDecisionEngine {
                     priority = "控制后段过冲",
                     heatAction = "停止继续推火",
                     airflowAction = "保持或轻微增风",
-                    flavorDirection = "避免尖、躁、收尾粗糙",
+                    flavorDirection = "避免尖、躁、收尾粗",
                     rationale = "后段 RoR 反弹偏强，继续推进会让收尾变尖。",
                     confidence = severityToConfidence(topIssue.severity)
                 )
@@ -83,10 +83,10 @@ object RoastDecisionEngine {
                 "high_energy" -> RoastDecision(
                     stage = phase,
                     priority = "抑制推进过猛",
-                    heatAction = "克制火力",
+                    heatAction = "收一点火",
                     airflowAction = "视情况轻微增风",
-                    flavorDirection = "避免粗糙、保留细致度",
-                    rationale = "中段推进偏强，若不收，会影响后续精细度。",
+                    flavorDirection = "避免粗糙，保留细致度",
+                    rationale = "中段推进偏强，若不收，容易影响后续风味精细度。",
                     confidence = severityToConfidence(topIssue.severity)
                 )
 
@@ -113,25 +113,25 @@ object RoastDecisionEngine {
         val d = evaluate(snapshot)
 
         return """
-Stage
+阶段
 ${d.stage}
 
-Priority
+当前重点
 ${d.priority}
 
-Heat
+火力建议
 ${d.heatAction}
 
-Airflow
+风门建议
 ${d.airflowAction}
 
-Flavor Direction
+风味走向
 ${d.flavorDirection}
 
-Rationale
+判断依据
 ${d.rationale}
 
-Confidence
+可信度
 ${d.confidence}
         """.trimIndent()
     }
@@ -217,7 +217,7 @@ ${d.confidence}
                 priority = "进入发展段判断",
                 heatAction = "不要再明显推火",
                 airflowAction = "保持稳定或轻微增风",
-                flavorDirection = "准备决定清晰感或甜感取向",
+                flavorDirection = "开始决定清晰感或甜感取向",
                 rationale = "进入一爆附近后，重点转向发展控制与收尾节奏。",
                 confidence = buildConfidence(ror, elapsed)
             )
@@ -240,7 +240,7 @@ ${d.confidence}
                         heatAction = "小幅微调即可",
                         airflowAction = "保持稳定",
                         flavorDirection = "根据目标选择清晰或甜感",
-                        rationale = "发展段的重点不是大动作，而是精确决定落点。",
+                        rationale = "发展段重点不是大动作，而是精确决定落点。",
                         confidence = buildConfidence(ror, elapsed)
                     )
                 }
