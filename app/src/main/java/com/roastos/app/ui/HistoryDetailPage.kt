@@ -3,6 +3,7 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Toast
 import com.roastos.app.*
 
 object HistoryDetailPage {
@@ -18,29 +19,22 @@ object HistoryDetailPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        root.addView(UiKit.pageTitle(context, "ROAST DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Detailed roast history"))
+        root.addView(UiKit.pageTitle(context, "ROAST HISTORY DETAIL"))
         root.addView(UiKit.spacer(context))
 
-        val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
-        val evaluationBtn = UiKit.secondaryButton(context, "OPEN EVALUATION")
-
+        val backBtn = UiKit.secondaryButton(context, "BACK")
         root.addView(backBtn)
-        root.addView(evaluationBtn)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
 
             val emptyCard = UiKit.card(context)
 
-            emptyCard.addView(
-                UiKit.cardTitle(context, "NO DATA")
-            )
-
+            emptyCard.addView(UiKit.cardTitle(context, "NO DATA"))
             emptyCard.addView(
                 UiKit.bodyText(
                     context,
-                    "No roast history entry selected."
+                    "No roast history entry found."
                 )
             )
 
@@ -50,19 +44,15 @@ object HistoryDetailPage {
                 RoastStudioPage.show(context, container)
             }
 
-            evaluationBtn.setOnClickListener {
-                RoastEvaluationPage.show(context, container, null)
-            }
-
             scroll.addView(root)
             container.addView(scroll)
+
             return
         }
 
         val batchCard = UiKit.card(context)
 
         batchCard.addView(UiKit.cardTitle(context, "BATCH"))
-
         batchCard.addView(
             UiKit.bodyText(
                 context,
@@ -70,11 +60,20 @@ object HistoryDetailPage {
 Batch ID
 ${entry.batchId}
 
-Title
-${entry.title}
+Process
+${entry.process}
 
-Status
-${entry.batchStatus}
+Density
+${entry.density}
+
+Moisture
+${entry.moisture}
+
+AW
+${entry.aw}
+
+Environment
+${entry.envTemp} ℃ / ${entry.envRh} %
                 """.trimIndent()
             )
         )
@@ -82,207 +81,116 @@ ${entry.batchStatus}
         root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
-        val riskCard = UiKit.card(context)
+        val timelineCard = UiKit.card(context)
 
-        riskCard.addView(
-            UiKit.cardTitle(context, "RISK EVENTS")
-        )
+        timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
 
-        riskCard.addView(
+        timelineCard.addView(
             UiKit.bodyText(
                 context,
-                buildRiskEventsText(entry.batchId)
+                """
+Turning
+${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)}
+
+Yellow
+${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
+
+First Crack
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
+
+Drop
+${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+                """.trimIndent()
             )
         )
 
-        root.addView(riskCard)
+        root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        val explorationCard = UiKit.card(context)
+        val reportCard = UiKit.card(context)
 
-        explorationCard.addView(
-            UiKit.cardTitle(context, "EXPLORATION")
-        )
-
-        explorationCard.addView(
+        reportCard.addView(UiKit.cardTitle(context, "REPORT"))
+        reportCard.addView(
             UiKit.bodyText(
                 context,
-                RoastExplorationEngine.buildDisplayText(entry.batchId)
+                entry.reportText
             )
         )
 
-        root.addView(explorationCard)
+        root.addView(reportCard)
         root.addView(UiKit.spacer(context))
 
-        val learningCard = UiKit.card(context)
+        val diagnosisCard = UiKit.card(context)
 
-        learningCard.addView(
-            UiKit.cardTitle(context, "LEARNING")
-        )
-
-        learningCard.addView(
+        diagnosisCard.addView(UiKit.cardTitle(context, "DIAGNOSIS"))
+        diagnosisCard.addView(
             UiKit.bodyText(
                 context,
-                buildLearningText(entry.batchId)
+                entry.diagnosisText
             )
         )
 
-        root.addView(learningCard)
+        root.addView(diagnosisCard)
         root.addView(UiKit.spacer(context))
 
-        val evaluationCard = UiKit.card(context)
+        val correctionCard = UiKit.card(context)
 
-        evaluationCard.addView(
-            UiKit.cardTitle(context, "EVALUATION")
-        )
-
-        evaluationCard.addView(
+        correctionCard.addView(UiKit.cardTitle(context, "CORRECTION"))
+        correctionCard.addView(
             UiKit.bodyText(
                 context,
-                buildEvaluation(entry)
+                entry.correctionText
             )
         )
 
-        root.addView(evaluationCard)
+        root.addView(correctionCard)
+        root.addView(UiKit.spacer(context))
+
+        val styleCard = UiKit.card(context)
+
+        val createStyleBtn = UiKit.primaryButton(
+            context,
+            "CREATE MY STYLE"
+        )
+
+        styleCard.addView(UiKit.cardTitle(context, "STYLE"))
+        styleCard.addView(createStyleBtn)
+
+        root.addView(styleCard)
+
+        createStyleBtn.setOnClickListener {
+
+            val suggestedName =
+                RoastStyleFromBatchEngine.suggestStyleName(entry.batchId)
+
+            val result =
+                RoastStyleFromBatchEngine.createFromBatch(
+                    entry.batchId,
+                    suggestedName
+                )
+
+            Toast.makeText(
+                context,
+                result.message,
+                Toast.LENGTH_LONG
+            ).show()
+        }
 
         backBtn.setOnClickListener {
             RoastStudioPage.show(context, container)
-        }
-
-        evaluationBtn.setOnClickListener {
-            RoastEvaluationPage.show(context, container, entry)
         }
 
         scroll.addView(root)
         container.addView(scroll)
     }
 
-    private fun buildRiskEventsText(
-        batchId: String
-    ): String {
+    private fun formatSec(sec: Int?): String {
 
-        val events = RoastRiskEventEngine.eventsForBatch(batchId)
+        if (sec == null) return "-"
 
-        if (events.isEmpty()) {
-            return "No recorded risk events for this batch."
-        }
-
-        return events.joinToString("\n\n────────\n\n") { event ->
-
-            val cupResult = if (
-                event.cupScore != null ||
-                event.beanColor != null ||
-                event.aw != null
-            ) {
-                "Yes"
-            } else {
-                "No"
-            }
-
-            """
-Issue
-${event.issueCode}
-
-Phase
-${event.phase}
-
-Elapsed
-${formatSec(event.elapsedSec)}
-
-BT
-${String.format("%.1f", event.beanTemp)} ℃
-
-RoR
-${String.format("%.1f", event.ror)} ℃/min
-
-Heat
-${event.suggestedHeatAction}
-
-Airflow
-${event.suggestedAirflowAction}
-
-Operator Continued
-${if (event.operatorContinued) "Yes" else "No"}
-
-Cup Result
-$cupResult
-            """.trimIndent()
-        }
-    }
-
-    private fun buildLearningText(
-        batchId: String
-    ): String {
-
-        val records = RoastLearningEngine.buildRecords()
-        val record = records.firstOrNull { it.batchId == batchId }
-
-        if (record == null) {
-            return "No learning record for this batch."
-        }
-
-        return """
-Batch
-${record.batchId}
-
-Exploration
-${record.explorationStatus}
-
-Roast Health
-${record.roastHealth}
-
-Risk Events
-${record.riskEventCount}
-
-Evaluation
-${if (record.hasEvaluation) "Saved" else "Missing"}
-
-Recommendation
-${record.recommendation}
-        """.trimIndent()
-    }
-
-    private fun formatSec(value: Int?): String {
-
-        if (value == null) return "-"
-
-        val m = value / 60
-        val s = value % 60
+        val m = sec / 60
+        val s = sec % 60
 
         return "%d:%02d".format(m, s)
-    }
-
-    private fun buildEvaluation(entry: RoastHistoryEntry): String {
-
-        val e = entry.evaluation ?: return "No evaluation saved."
-
-        return """
-Bean Color
-${e.beanColor ?: "-"}
-
-Ground Color
-${e.groundColor ?: "-"}
-
-Roasted Aw
-${e.roastedAw ?: "-"}
-
-Sweetness
-${e.sweetness ?: "-"}
-
-Acidity
-${e.acidity ?: "-"}
-
-Body
-${e.body ?: "-"}
-
-Flavor Clarity
-${e.flavorClarity ?: "-"}
-
-Balance
-${e.balance ?: "-"}
-
-Notes
-${e.notes}
-        """.trimIndent()
     }
 }
