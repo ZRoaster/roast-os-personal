@@ -108,7 +108,7 @@ object RoastStudioPage {
 
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
-            val decisionText = RoastDecisionEngine.buildDisplayText(snapshot)
+            val decision = RoastDecisionEngine.evaluate(snapshot)
 
             overviewBody.text =
                 """
@@ -125,7 +125,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
 
             healthBody.text = buildHealthText(snapshot.validation)
 
-            decisionBody.text = decisionText
+            decisionBody.text = buildDecisionPanel(decision)
 
             companionBody.text =
                 """
@@ -186,6 +186,33 @@ ${formatRisk(snapshot.companion.riskLevel)}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun buildDecisionPanel(
+        decision: RoastDecision
+    ): String {
+        return """
+阶段
+${decision.stage}
+
+当前重点
+${decision.priority}
+
+火力建议
+${decision.heatAction}
+
+风门建议
+${decision.airflowAction}
+
+风味走向
+${decision.flavorDirection}
+
+可信度
+${decision.confidence}
+
+判断依据
+${decision.rationale}
+        """.trimIndent()
     }
 
     private fun buildPhasePanel(snapshot: RoastSessionBusSnapshot): String {
