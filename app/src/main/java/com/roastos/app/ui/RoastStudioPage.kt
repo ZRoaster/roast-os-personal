@@ -112,6 +112,15 @@ object RoastStudioPage {
         root.addView(learningCard)
         root.addView(UiKit.spacer(context))
 
+        val knowledgeCard = UiKit.card(context)
+        val knowledgePanel = RoastKnowledgePanel(context)
+
+        knowledgeCard.addView(UiKit.cardTitle(context, "KNOWLEDGE"))
+        knowledgeCard.addView(knowledgePanel)
+
+        root.addView(knowledgeCard)
+        root.addView(UiKit.spacer(context))
+
         val logCard = UiKit.card(context)
         val logBody = UiKit.bodyText(context, "")
 
@@ -178,6 +187,7 @@ ${formatRisk(snapshot.companion.riskLevel)}
             riskPanel.update()
             explorationPanel.update()
             learningPanel.update()
+            knowledgePanel.update()
 
             logBody.text = snapshot.log.summary
 
