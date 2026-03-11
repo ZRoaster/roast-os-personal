@@ -38,7 +38,7 @@ object RoastKnowledgeEngine {
                 evaluateRoastHealth(entry)
 
             val explorationStatus =
-                RoastExplorationEngine.classify(entry.batchId)
+                evaluateExploration(entry.batchId)
 
             val resultTag =
                 classifyResult(roastHealth, evaluation)
@@ -59,6 +59,27 @@ object RoastKnowledgeEngine {
         }
 
         return list
+    }
+
+    private fun evaluateExploration(
+        batchId: String
+    ): String {
+
+        val events =
+            RoastRiskEventEngine.eventsForBatch(batchId)
+
+        if (events.isEmpty()) {
+            return "Stable Profile"
+        }
+
+        val continued =
+            events.any { it.operatorContinued }
+
+        return if (continued) {
+            "Exploration Attempt"
+        } else {
+            "Risk Avoided"
+        }
     }
 
     private fun evaluateRoastHealth(
