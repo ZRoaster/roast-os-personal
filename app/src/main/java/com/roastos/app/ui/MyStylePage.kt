@@ -48,6 +48,15 @@ object MyStylePage {
         root.addView(learningCard)
         root.addView(UiKit.spacer(context))
 
+        val evolutionCard = UiKit.card(context)
+        val evolutionPanel = RoastStyleEvolutionPanel(context)
+
+        evolutionCard.addView(UiKit.cardTitle(context, "STYLE EVOLUTION"))
+        evolutionCard.addView(evolutionPanel)
+
+        root.addView(evolutionCard)
+        root.addView(UiKit.spacer(context))
+
         val styles = MyStyleEngine.all()
 
         if (styles.isEmpty()) {
