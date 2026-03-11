@@ -3,11 +3,7 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.RoastExplorationEngine
-import com.roastos.app.RoastHistoryEntry
-import com.roastos.app.RoastLearningEngine
-import com.roastos.app.RoastRiskEventEngine
-import com.roastos.app.UiKit
+import com.roastos.app.*
 
 object HistoryDetailPage {
 
@@ -22,11 +18,8 @@ object HistoryDetailPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        val title = UiKit.pageTitle(context, "ROAST DETAIL")
-        val subtitle = UiKit.pageSubtitle(context, "Detailed roast history")
-
-        root.addView(title)
-        root.addView(subtitle)
+        root.addView(UiKit.pageTitle(context, "ROAST DETAIL"))
+        root.addView(UiKit.pageSubtitle(context, "Detailed roast history"))
         root.addView(UiKit.spacer(context))
 
         val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
@@ -68,9 +61,7 @@ object HistoryDetailPage {
 
         val batchCard = UiKit.card(context)
 
-        batchCard.addView(
-            UiKit.cardTitle(context, "BATCH")
-        )
+        batchCard.addView(UiKit.cardTitle(context, "BATCH"))
 
         batchCard.addView(
             UiKit.bodyText(
@@ -84,9 +75,6 @@ ${entry.title}
 
 Status
 ${entry.batchStatus}
-
-Created
-${entry.createdAtMillis}
                 """.trimIndent()
             )
         )
@@ -94,42 +82,20 @@ ${entry.createdAtMillis}
         root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
-        val healthCard = UiKit.card(context)
+        val riskCard = UiKit.card(context)
 
-        healthCard.addView(
-            UiKit.cardTitle(context, "ROAST HEALTH")
-        )
-
-        healthCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Headline
-${entry.roastHealthHeadline}
-
-Detail
-${entry.roastHealthDetail}
-                """.trimIndent()
-            )
-        )
-
-        root.addView(healthCard)
-        root.addView(UiKit.spacer(context))
-
-        val riskEventsCard = UiKit.card(context)
-
-        riskEventsCard.addView(
+        riskCard.addView(
             UiKit.cardTitle(context, "RISK EVENTS")
         )
 
-        riskEventsCard.addView(
+        riskCard.addView(
             UiKit.bodyText(
                 context,
                 buildRiskEventsText(entry.batchId)
             )
         )
 
-        root.addView(riskEventsCard)
+        root.addView(riskCard)
         root.addView(UiKit.spacer(context))
 
         val explorationCard = UiKit.card(context)
@@ -164,131 +130,6 @@ ${entry.roastHealthDetail}
         root.addView(learningCard)
         root.addView(UiKit.spacer(context))
 
-        val beanCard = UiKit.card(context)
-
-        beanCard.addView(
-            UiKit.cardTitle(context, "BEAN / ENVIRONMENT")
-        )
-
-        beanCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Process
-${entry.process}
-
-Density
-${entry.density}
-
-Moisture
-${entry.moisture}
-
-Aw
-${entry.aw}
-
-Environment Temp
-${entry.envTemp}
-
-Environment RH
-${entry.envRh}
-                """.trimIndent()
-            )
-        )
-
-        root.addView(beanCard)
-        root.addView(UiKit.spacer(context))
-
-        val timelineCard = UiKit.card(context)
-
-        timelineCard.addView(
-            UiKit.cardTitle(context, "TIMELINE")
-        )
-
-        timelineCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Predicted Turning
-${formatSec(entry.predictedTurningSec)}
-
-Predicted Yellow
-${formatSec(entry.predictedYellowSec)}
-
-Predicted First Crack
-${formatSec(entry.predictedFcSec)}
-
-Predicted Drop
-${formatSec(entry.predictedDropSec)}
-
-Actual Turning
-${formatSec(entry.actualTurningSec)}
-
-Actual Yellow
-${formatSec(entry.actualYellowSec)}
-
-Actual First Crack
-${formatSec(entry.actualFcSec)}
-
-Actual Drop
-${formatSec(entry.actualDropSec)}
-
-Actual Pre-FC RoR
-${entry.actualPreFcRor ?: "-"}
-                """.trimIndent()
-            )
-        )
-
-        root.addView(timelineCard)
-        root.addView(UiKit.spacer(context))
-
-        val reportCard = UiKit.card(context)
-
-        reportCard.addView(
-            UiKit.cardTitle(context, "REPORT")
-        )
-
-        reportCard.addView(
-            UiKit.bodyText(
-                context,
-                entry.reportText.ifBlank { "-" }
-            )
-        )
-
-        root.addView(reportCard)
-        root.addView(UiKit.spacer(context))
-
-        val diagnosisCard = UiKit.card(context)
-
-        diagnosisCard.addView(
-            UiKit.cardTitle(context, "DIAGNOSIS")
-        )
-
-        diagnosisCard.addView(
-            UiKit.bodyText(
-                context,
-                entry.diagnosisText.ifBlank { "-" }
-            )
-        )
-
-        root.addView(diagnosisCard)
-        root.addView(UiKit.spacer(context))
-
-        val correctionCard = UiKit.card(context)
-
-        correctionCard.addView(
-            UiKit.cardTitle(context, "CORRECTION")
-        )
-
-        correctionCard.addView(
-            UiKit.bodyText(
-                context,
-                entry.correctionText.ifBlank { "-" }
-            )
-        )
-
-        root.addView(correctionCard)
-        root.addView(UiKit.spacer(context))
-
         val evaluationCard = UiKit.card(context)
 
         evaluationCard.addView(
@@ -303,37 +144,6 @@ ${entry.actualPreFcRor ?: "-"}
         )
 
         root.addView(evaluationCard)
-        root.addView(UiKit.spacer(context))
-
-        val baselineCard = UiKit.card(context)
-
-        baselineCard.addView(
-            UiKit.cardTitle(context, "BASELINE")
-        )
-
-        baselineCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Baseline Source
-${entry.baselineSource ?: "-"}
-
-Baseline Label
-${entry.baselineLabel ?: "-"}
-
-Match Grade
-${entry.baselineMatchGrade ?: "-"}
-
-Source Profile ID
-${entry.baselineSourceProfileId ?: "-"}
-
-Source Batch ID
-${entry.baselineSourceBatchId ?: "-"}
-                """.trimIndent()
-            )
-        )
-
-        root.addView(baselineCard)
 
         backBtn.setOnClickListener {
             RoastStudioPage.show(context, container)
@@ -350,6 +160,7 @@ ${entry.baselineSourceBatchId ?: "-"}
     private fun buildRiskEventsText(
         batchId: String
     ): String {
+
         val events = RoastRiskEventEngine.eventsForBatch(batchId)
 
         if (events.isEmpty()) {
@@ -357,6 +168,17 @@ ${entry.baselineSourceBatchId ?: "-"}
         }
 
         return events.joinToString("\n\n────────\n\n") { event ->
+
+            val cupResult = if (
+                event.cupScore != null ||
+                event.beanColor != null ||
+                event.aw != null
+            ) {
+                "Yes"
+            } else {
+                "No"
+            }
+
             """
 Issue
 ${event.issueCode}
@@ -379,8 +201,11 @@ ${event.suggestedHeatAction}
 Airflow
 ${event.suggestedAirflowAction}
 
-Continued
+Operator Continued
 ${if (event.operatorContinued) "Yes" else "No"}
+
+Cup Result
+$cupResult
             """.trimIndent()
         }
     }
@@ -388,6 +213,7 @@ ${if (event.operatorContinued) "Yes" else "No"}
     private fun buildLearningText(
         batchId: String
     ): String {
+
         val records = RoastLearningEngine.buildRecords()
         val record = records.firstOrNull { it.batchId == batchId }
 
@@ -409,7 +235,7 @@ Risk Events
 ${record.riskEventCount}
 
 Evaluation
-${if (record.hasEvaluation) "已记录" else "未记录"}
+${if (record.hasEvaluation) "Saved" else "Missing"}
 
 Recommendation
 ${record.recommendation}
@@ -417,9 +243,12 @@ ${record.recommendation}
     }
 
     private fun formatSec(value: Int?): String {
+
         if (value == null) return "-"
+
         val m = value / 60
         val s = value % 60
+
         return "%d:%02d".format(m, s)
     }
 
