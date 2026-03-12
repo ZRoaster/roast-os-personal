@@ -2,8 +2,7 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.widget.LinearLayout
-import com.roastos.app.RoastAiPromptBuilder
-import com.roastos.app.RoastAiRealtimeContextBuilder
+import com.roastos.app.RoastAiSessionEngine
 import com.roastos.app.UiKit
 
 class RoastAiPromptPreviewPanel(
@@ -19,16 +18,14 @@ class RoastAiPromptPreviewPanel(
     }
 
     fun update() {
-        val aiContext = RoastAiRealtimeContextBuilder.build(
+        val session = RoastAiSessionEngine.build(
             userPrompt = "Preview current AI prompt"
         )
-
-        val prompt = RoastAiPromptBuilder.buildFullPrompt(aiContext)
 
         textView.text = """
 AI Prompt Preview
 
-$prompt
+${session.prompt}
         """.trimIndent()
     }
 }
