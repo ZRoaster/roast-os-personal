@@ -8,7 +8,17 @@ data class RoastAiSessionSnapshot(
 
 object RoastAiSessionEngine {
 
-    fun build(
+    private var currentSnapshot: RoastAiSessionSnapshot? = null
+
+    fun current(): RoastAiSessionSnapshot {
+        return currentSnapshot ?: refresh()
+    }
+
+    fun peek(): RoastAiSessionSnapshot? {
+        return currentSnapshot
+    }
+
+    fun refresh(
         userPrompt: String = "",
         operatorNote: String = ""
     ): RoastAiSessionSnapshot {
@@ -20,13 +30,19 @@ object RoastAiSessionEngine {
         )
 
         val prompt = RoastAiPromptBuilder.buildFullPrompt(context)
-
         val assistantOutput = RoastAiAssistantEngine.generate(context)
 
-        return RoastAiSessionSnapshot(
+        val snapshot = RoastAiSessionSnapshot(
             context = context,
             prompt = prompt,
             assistantOutput = assistantOutput
         )
+
+        currentSnapshot = snapshot
+        return snapshot
+    }
+
+    fun reset() {
+        currentSnapshot = null
     }
 }
