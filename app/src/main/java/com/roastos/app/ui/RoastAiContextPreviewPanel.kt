@@ -2,17 +2,22 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.widget.LinearLayout
+import android.widget.TextView
 import com.roastos.app.*
 
 class RoastAiContextPreviewPanel(
     context: Context
 ) : LinearLayout(context) {
 
-    private val textView = UiKit.bodyText(context, "")
+    private val textView = TextView(context)
 
     init {
+
         orientation = VERTICAL
+
+        textView.textSize = 12f
         addView(textView)
+
         update()
     }
 
@@ -22,11 +27,12 @@ class RoastAiContextPreviewPanel(
 
         if (snapshot == null) {
 
-            textView.text = """
+            textView.text =
+                """
 AI Context Preview
 
 No active roast session.
-            """.trimIndent()
+                """.trimIndent()
 
             return
         }
@@ -41,9 +47,9 @@ No active roast session.
         val driving = tryBuildDriving(snapshot)
         val decision = tryBuildDecision(snapshot)
 
-        val context = RoastAiContexts.buildMinimal(
+        val contextPreview = RoastAiContexts.buildMinimal(
             intent = RoastAiIntentType.REALTIME_COACHING,
-            userPrompt = "Context preview",
+            userPrompt = "Preview current AI context",
             environmentProfile = EnvironmentProfileEngine.current(),
             environmentCompensation = EnvironmentCompensationEngine.evaluate()
         ).copy(
@@ -57,7 +63,7 @@ No active roast session.
             decisionResult = decision
         )
 
-        textView.text = context.summary()
+        textView.text = contextPreview.summary()
     }
 
     private fun tryBuildDecision(
@@ -70,8 +76,9 @@ No active roast session.
 
             DecisionEngine.DecisionResult(
                 suggestion = result.heatAction,
-                severity = result.confidence,
-                reason = result.rationale
+                severity = result.confidence.toString(),
+                reason = result.rationale,
+                confidence = result.confidence
             )
 
         } catch (_: Throwable) {
