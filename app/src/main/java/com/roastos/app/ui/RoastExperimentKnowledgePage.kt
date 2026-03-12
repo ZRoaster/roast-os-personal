@@ -103,9 +103,6 @@ ${record.aw ?: "-"}
 Bean Color
 ${record.beanColor ?: "-"}
 
-Knowledge State
-${record.knowledgeState}
-
 Knowledge Tag
 ${record.knowledgeTag}
 
