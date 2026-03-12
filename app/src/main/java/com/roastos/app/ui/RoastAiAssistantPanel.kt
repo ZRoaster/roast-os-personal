@@ -2,7 +2,7 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.widget.LinearLayout
-import com.roastos.app.RoastAiAssistantEngine
+import com.roastos.app.RoastAiSessionEngine
 import com.roastos.app.UiKit
 
 class RoastAiAssistantPanel(
@@ -18,7 +18,8 @@ class RoastAiAssistantPanel(
     }
 
     fun update() {
-        val output = RoastAiAssistantEngine.generate()
-        textView.text = output.summaryText()
+        val session = RoastAiSessionEngine.build()
+
+        textView.text = session.assistantOutput.summaryText()
     }
 }
