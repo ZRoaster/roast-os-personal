@@ -23,14 +23,29 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Locate gradlew
+        id: locate_gradlew
+        run: |
+          GRADLEW_PATH=$(find . -type f -name gradlew | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "gradlew not found in repository"
+            exit 1
+          fi
+          echo "Found gradlew at: $GRADLEW_PATH"
+          echo "gradlew_path=$GRADLEW_PATH" >> $GITHUB_OUTPUT
+          echo "project_dir=$(dirname "$GRADLEW_PATH")" >> $GITHUB_OUTPUT
+
       - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
+        run: chmod +x "${{ steps.locate_gradlew.outputs.gradlew_path }}"
 
       - name: Build debug APK
+        working-directory: ${{ steps.locate_gradlew.outputs.project_dir }}
         run: ./gradlew assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: roast-os-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            ${{ steps.locate_gradlew.outputs.project_dir }}/app/build/outputs/apk/debug/*.apk
+            ${{ steps.locate_gradlew.outputs.project_dir }}/**/build/outputs/apk/debug/*.apk
