@@ -62,7 +62,16 @@ object RoastAiRealtimeContextBuilder {
 
         val decision = try {
             if (snapshot != null) {
-                RoastDecisionEngine.evaluate(snapshot)
+
+                val d = RoastDecisionEngine.evaluate(snapshot)
+
+                DecisionEngine.DecisionResult(
+                    suggestion = d.heatAction,
+                    severity = d.confidence.toString(),
+                    reason = d.rationale,
+                    confidence = d.confidence
+                )
+
             } else null
         } catch (_: Throwable) {
             null
