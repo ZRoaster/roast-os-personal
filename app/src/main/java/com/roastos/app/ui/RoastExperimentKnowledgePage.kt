@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.RoastExperimentKnowledgeEngine
-import com.roastos.app.RoastExperimentKnowledgeRecord
 import com.roastos.app.UiKit
 
 object RoastExperimentKnowledgePage {
@@ -19,81 +18,45 @@ object RoastExperimentKnowledgePage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        root.addView(UiKit.pageTitle(context, "EXPERIMENT KNOWLEDGE"))
+        root.addView(
+            UiKit.pageTitle(
+                context,
+                "EXPERIMENT KNOWLEDGE"
+            )
+        )
+
         root.addView(
             UiKit.pageSubtitle(
                 context,
-                "Experiment knowledge and controllable patterns"
+                "Latest experiment knowledge"
             )
         )
+
         root.addView(UiKit.spacer(context))
 
-        val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
+        val backBtn =
+            UiKit.secondaryButton(context, "BACK TO STUDIO")
 
         root.addView(backBtn)
         root.addView(UiKit.spacer(context))
 
-        val summaryCard = UiKit.card(context)
+        val card = UiKit.card(context)
 
-        summaryCard.addView(UiKit.cardTitle(context, "SUMMARY"))
-
-        summaryCard.addView(
-            UiKit.bodyText(
+        card.addView(
+            UiKit.cardTitle(
                 context,
-                RoastExperimentKnowledgeEngine.summary()
+                "LATEST KNOWLEDGE"
             )
         )
 
-        root.addView(summaryCard)
-        root.addView(UiKit.spacer(context))
-
-        val records: List<RoastExperimentKnowledgeRecord> =
-            RoastExperimentKnowledgeEngine.buildRecords()
-
-        if (records.isEmpty()) {
-
-            val emptyCard = UiKit.card(context)
-
-            emptyCard.addView(UiKit.cardTitle(context, "NO KNOWLEDGE"))
-
-            emptyCard.addView(
-                UiKit.bodyText(
-                    context,
-                    "No experiment knowledge records yet."
-                )
+        card.addView(
+            UiKit.bodyText(
+                context,
+                RoastExperimentKnowledgeEngine.latestText()
             )
+        )
 
-            root.addView(emptyCard)
-
-        } else {
-
-            for (i in records.indices) {
-
-                val record: RoastExperimentKnowledgeRecord = records[i]
-
-                val card = UiKit.card(context)
-
-                card.addView(
-                    UiKit.cardTitle(
-                        context,
-                        "KNOWLEDGE ${i + 1}"
-                    )
-                )
-
-                card.addView(
-                    UiKit.bodyText(
-                        context,
-                        buildRecordText(record)
-                    )
-                )
-
-                root.addView(card)
-
-                if (i != records.lastIndex) {
-                    root.addView(UiKit.spacer(context))
-                }
-            }
-        }
+        root.addView(card)
 
         backBtn.setOnClickListener {
 
@@ -103,22 +66,5 @@ object RoastExperimentKnowledgePage {
 
         scroll.addView(root)
         container.addView(scroll)
-    }
-
-    private fun buildRecordText(
-        record: RoastExperimentKnowledgeRecord
-    ): String {
-
-        return """
-Batch
-${record.batchId}
-
-Knowledge Tag
-${record.knowledgeTag}
-
-Recommendation
-${record.recommendation}
-        """.trimIndent()
-
     }
 }
