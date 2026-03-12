@@ -55,6 +55,49 @@ object MachineDynamicsEngine {
         return current().summary()
     }
 
+    fun currentAdjustedForEnvironment(): MachineCalibrationProfile {
+        val env = EnvironmentProfileEngine.current()
+
+        return applyEnvironmentOffset(
+            ambientTempC = env.ambientTempC,
+            ambientHumidityRh = env.ambientHumidityRh,
+            altitudeMeters = env.altitudeMeters
+        )
+    }
+
+    fun adjustedSummary(): String {
+        val adjusted = currentAdjustedForEnvironment()
+        val envComp = EnvironmentCompensationEngine.evaluate()
+
+        return """
+Machine Dynamics Adjusted
+
+Machine
+${adjusted.machineName}
+
+Calibration ID
+${adjusted.calibrationId}
+
+Adjusted Environment
+Altitude: ${adjusted.calibrationEnvironment.altitudeMeters ?: "-"} m
+Temp: ${adjusted.calibrationEnvironment.ambientTempC ?: "-"} °C
+Humidity: ${adjusted.calibrationEnvironment.ambientHumidityRh ?: "-"} %
+
+Adjusted Delays
+Heat Up Delay: ${adjusted.delays.heatUpDelaySec ?: "-"} s
+Heat Down Delay: ${adjusted.delays.heatDownDelaySec ?: "-"} s
+Airflow Delay: ${adjusted.delays.airflowDelaySec ?: "-"} s
+Drum Delay: ${adjusted.delays.drumSpeedDelaySec ?: "-"} s
+Cooling Delay: ${adjusted.delays.coolingResponseDelaySec ?: "-"} s
+
+Compensation
+Heat Retention: ${formatOffset(envComp.heatRetentionOffset)}
+Drying: ${formatOffset(envComp.dryingOffset)}
+Airflow Efficiency: ${formatOffset(envComp.airflowEfficiencyOffset)}
+Pressure: ${formatOffset(envComp.pressureOffset)}
+        """.trimIndent()
+    }
+
     fun applyEnvironmentOffset(
         ambientTempC: Double?,
         ambientHumidityRh: Double?,
@@ -138,6 +181,14 @@ object MachineDynamicsEngine {
                 (altitudeDelta * 0.0005)
 
         return adjusted.coerceAtLeast(0.5)
+    }
+
+    private fun formatOffset(value: Double): String {
+        return if (value >= 0) {
+            "+${String.format("%.2f", value)}"
+        } else {
+            String.format("%.2f", value)
+        }
     }
 
     private fun buildCalibrationId(): String {
