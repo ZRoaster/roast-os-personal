@@ -79,33 +79,33 @@ object MachineDynamicsEngine {
         }
 
         val altitudeDelta = if (altitudeMeters != null && baseAltitude != null) {
-            altitudeMeters - baseAltitude
+            (altitudeMeters - baseAltitude).toDouble()
         } else {
-            0
+            0.0
         }
 
         val adjustedDelays = MachineDelayProfile(
             heatUpDelaySec = adjustDelay(
-                base.delays.heatUpDelaySec,
+                baseValue = base.delays.heatUpDelaySec,
                 tempDelta = tempDelta,
                 humidityDelta = humidityDelta,
                 altitudeDelta = altitudeDelta
             ),
             heatDownDelaySec = adjustDelay(
-                base.delays.heatDownDelaySec,
+                baseValue = base.delays.heatDownDelaySec,
                 tempDelta = -tempDelta * 0.5,
                 humidityDelta = humidityDelta * 0.3,
                 altitudeDelta = altitudeDelta
             ),
             airflowDelaySec = adjustDelay(
-                base.delays.airflowDelaySec,
+                baseValue = base.delays.airflowDelaySec,
                 tempDelta = 0.0,
                 humidityDelta = humidityDelta * 0.1,
                 altitudeDelta = altitudeDelta * 0.002
             ),
             drumSpeedDelaySec = base.delays.drumSpeedDelaySec,
             coolingResponseDelaySec = adjustDelay(
-                base.delays.coolingResponseDelaySec,
+                baseValue = base.delays.coolingResponseDelaySec,
                 tempDelta = -tempDelta * 0.4,
                 humidityDelta = humidityDelta * 0.2,
                 altitudeDelta = altitudeDelta * 0.001
@@ -127,7 +127,7 @@ object MachineDynamicsEngine {
         baseValue: Double?,
         tempDelta: Double,
         humidityDelta: Double,
-        altitudeDelta: Int
+        altitudeDelta: Double
     ): Double? {
         if (baseValue == null) return null
 
