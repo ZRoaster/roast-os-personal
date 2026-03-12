@@ -3,7 +3,11 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.roastos.app.*
+import com.roastos.app.EnvironmentCompensationEngine
+import com.roastos.app.EnvironmentProfileEngine
+import com.roastos.app.RoastAiContexts
+import com.roastos.app.RoastAiIntentType
+import com.roastos.app.RoastSessionBus
 
 class RoastAiContextPreviewPanel(
     context: Context
@@ -19,32 +23,15 @@ class RoastAiContextPreviewPanel(
     }
 
     fun update() {
-
         val snapshot = RoastSessionBus.peek()
 
         if (snapshot == null) {
-            textView.text =
-                """
+            textView.text = """
 AI Context Preview
 
 No active roast session.
-                """.trimIndent()
+            """.trimIndent()
             return
-        }
-
-        val machineProfile = MachineProfileRegistry.currentOrNull()
-        val machineState = MachineStateEngine.currentOrNull()
-        val telemetryFrame = MachineTelemetryEngine.latestOrNull()
-        val controlCapability = MachineControlCapabilityRegistry.currentOrNull()
-        val energySnapshot = EnergyEngine.currentOrNull()
-
-        val stability = buildStability(snapshot)
-        val driving = buildDriving(snapshot)
-
-        val decision = try {
-            RoastDecisionEngine.evaluate(snapshot)
-        } catch (_: Throwable) {
-            null
         }
 
         val contextPreview = RoastAiContexts.buildMinimal(
@@ -52,69 +39,8 @@ No active roast session.
             userPrompt = "AI Context Preview",
             environmentProfile = EnvironmentProfileEngine.current(),
             environmentCompensation = EnvironmentCompensationEngine.evaluate()
-        ).copy(
-            machineProfile = machineProfile,
-            machineState = machineState,
-            telemetryFrame = telemetryFrame,
-            controlCapability = controlCapability,
-            energySnapshot = energySnapshot,
-            stabilityResult = stability,
-            drivingAdvice = driving,
-            decisionResult = decision
         )
 
         textView.text = contextPreview.summary()
-    }
-
-    private fun buildStability(
-        snapshot: RoastSessionBusSnapshot
-    ): RoastStabilityResult? {
-
-        return try {
-
-            if (snapshot.validation.hasIssues()) {
-
-                RoastStabilityResult(
-                    stability = "watch",
-                    summary = "Validation issues detected"
-                )
-
-            } else {
-
-                RoastStabilityResult(
-                    stability = "stable",
-                    summary = "System stable"
-                )
-            }
-
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    private fun buildDriving(
-        snapshot: RoastSessionBusSnapshot
-    ): RoastDrivingAdvice? {
-
-        return try {
-
-            if (snapshot.validation.hasIssues()) {
-
-                RoastDrivingAdvice(
-                    actionLevel = "adjust",
-                    summary = "Adjustment suggested"
-                )
-
-            } else {
-
-                RoastDrivingAdvice(
-                    actionLevel = "hold",
-                    summary = "Hold current trajectory"
-                )
-            }
-
-        } catch (_: Throwable) {
-            null
-        }
     }
 }
