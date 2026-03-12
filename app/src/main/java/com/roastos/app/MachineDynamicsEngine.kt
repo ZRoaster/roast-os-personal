@@ -1,0 +1,146 @@
+package com.roastos.app
+
+object MachineDynamicsEngine {
+
+    private var currentProfile: MachineCalibrationProfile? = null
+
+    fun current(): MachineCalibrationProfile {
+        return currentProfile ?: defaultProfile().also {
+            currentProfile = it
+        }
+    }
+
+    fun peek(): MachineCalibrationProfile? {
+        return currentProfile
+    }
+
+    fun save(profile: MachineCalibrationProfile) {
+        currentProfile = profile
+    }
+
+    fun reset() {
+        currentProfile = defaultProfile()
+    }
+
+    fun defaultProfile(): MachineCalibrationProfile {
+        return MachineCalibrationProfile(
+            calibrationId = buildCalibrationId(),
+            machineId = "hb_m2se_default",
+            machineName = "HB M2SE",
+            calibratedAtMillis = System.currentTimeMillis(),
+            calibrationEnvironment = EnvironmentProfile(
+                altitudeMeters = null,
+                ambientTempC = 25.0,
+                ambientHumidityRh = 50.0,
+                barometricPressureHpa = null,
+                note = "Default environment"
+            ),
+            delays = MachineDelayProfile(
+                heatUpDelaySec = 8.0,
+                heatDownDelaySec = 10.0,
+                airflowDelaySec = 3.0,
+                drumSpeedDelaySec = 2.0,
+                coolingResponseDelaySec = 6.0
+            ),
+            inertia = MachineInertiaProfile(
+                thermalInertiaScore = 0.50,
+                airflowInertiaScore = 0.40,
+                drumInertiaScore = 0.30
+            ),
+            note = "Default machine dynamics profile"
+        )
+    }
+
+    fun summary(): String {
+        return current().summary()
+    }
+
+    fun applyEnvironmentOffset(
+        ambientTempC: Double?,
+        ambientHumidityRh: Double?,
+        altitudeMeters: Int?
+    ): MachineCalibrationProfile {
+        val base = current()
+
+        val baseTemp = base.calibrationEnvironment.ambientTempC
+        val baseHumidity = base.calibrationEnvironment.ambientHumidityRh
+        val baseAltitude = base.calibrationEnvironment.altitudeMeters
+
+        val tempDelta = if (ambientTempC != null && baseTemp != null) {
+            ambientTempC - baseTemp
+        } else {
+            0.0
+        }
+
+        val humidityDelta = if (ambientHumidityRh != null && baseHumidity != null) {
+            ambientHumidityRh - baseHumidity
+        } else {
+            0.0
+        }
+
+        val altitudeDelta = if (altitudeMeters != null && baseAltitude != null) {
+            altitudeMeters - baseAltitude
+        } else {
+            0
+        }
+
+        val adjustedDelays = MachineDelayProfile(
+            heatUpDelaySec = adjustDelay(
+                base.delays.heatUpDelaySec,
+                tempDelta = tempDelta,
+                humidityDelta = humidityDelta,
+                altitudeDelta = altitudeDelta
+            ),
+            heatDownDelaySec = adjustDelay(
+                base.delays.heatDownDelaySec,
+                tempDelta = -tempDelta * 0.5,
+                humidityDelta = humidityDelta * 0.3,
+                altitudeDelta = altitudeDelta
+            ),
+            airflowDelaySec = adjustDelay(
+                base.delays.airflowDelaySec,
+                tempDelta = 0.0,
+                humidityDelta = humidityDelta * 0.1,
+                altitudeDelta = altitudeDelta * 0.002
+            ),
+            drumSpeedDelaySec = base.delays.drumSpeedDelaySec,
+            coolingResponseDelaySec = adjustDelay(
+                base.delays.coolingResponseDelaySec,
+                tempDelta = -tempDelta * 0.4,
+                humidityDelta = humidityDelta * 0.2,
+                altitudeDelta = altitudeDelta * 0.001
+            )
+        )
+
+        return base.copy(
+            calibrationEnvironment = base.calibrationEnvironment.copy(
+                altitudeMeters = altitudeMeters ?: base.calibrationEnvironment.altitudeMeters,
+                ambientTempC = ambientTempC ?: base.calibrationEnvironment.ambientTempC,
+                ambientHumidityRh = ambientHumidityRh ?: base.calibrationEnvironment.ambientHumidityRh
+            ),
+            delays = adjustedDelays,
+            note = "Environment-adjusted profile"
+        )
+    }
+
+    private fun adjustDelay(
+        baseValue: Double?,
+        tempDelta: Double,
+        humidityDelta: Double,
+        altitudeDelta: Int
+    ): Double? {
+        if (baseValue == null) return null
+
+        val adjusted =
+            baseValue +
+                (-tempDelta * 0.08) +
+                (humidityDelta * 0.01) +
+                (altitudeDelta * 0.0005)
+
+        return adjusted.coerceAtLeast(0.5)
+    }
+
+    private fun buildCalibrationId(): String {
+        return "cal-${System.currentTimeMillis()}"
+    }
+}
