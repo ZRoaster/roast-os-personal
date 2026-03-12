@@ -91,18 +91,6 @@ object RoastExperimentKnowledgePage {
 Batch
 ${record.batchId}
 
-Risk Events
-${record.riskEvents}
-
-Cup Score
-${record.cupScore ?: "-"}
-
-Aw
-${record.aw ?: "-"}
-
-Bean Color
-${record.beanColor ?: "-"}
-
 Knowledge Tag
 ${record.knowledgeTag}
 
