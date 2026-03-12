@@ -9,20 +9,15 @@ object RoastAiRealtimeContextBuilder {
     ): RoastAiContext {
 
         val machineProfile = MachineProfileRegistry.currentOrNull()
-
         val machineState = MachineStateEngine.currentOrNull()
-
         val telemetry = MachineTelemetryEngine.latestOrNull()
-
         val capability = MachineControlCapabilityRegistry.currentOrNull()
-
         val energy = EnergyEngine.currentOrNull()
 
         val snapshot = RoastSessionBus.peek()
 
         val stability = try {
             if (snapshot != null) {
-
                 if (snapshot.validation.hasIssues()) {
                     RoastStabilityResult(
                         stability = "watch",
@@ -34,7 +29,6 @@ object RoastAiRealtimeContextBuilder {
                         summary = "System stable"
                     )
                 }
-
             } else null
         } catch (_: Throwable) {
             null
@@ -42,7 +36,6 @@ object RoastAiRealtimeContextBuilder {
 
         val driving = try {
             if (snapshot != null) {
-
                 if (snapshot.validation.hasIssues()) {
                     RoastDrivingAdvice(
                         actionLevel = "adjust",
@@ -54,7 +47,6 @@ object RoastAiRealtimeContextBuilder {
                         summary = "Hold current trajectory"
                     )
                 }
-
             } else null
         } catch (_: Throwable) {
             null
@@ -67,8 +59,8 @@ object RoastAiRealtimeContextBuilder {
 
                 DecisionEngine.DecisionResult(
                     suggestion = d.heatAction,
-                    severity = d.confidence.toString(),
-                    reason = d.rationale
+                    reason = d.rationale,
+                    confidence = d.confidence
                 )
 
             } else null
@@ -77,7 +69,6 @@ object RoastAiRealtimeContextBuilder {
         }
 
         val environmentProfile = EnvironmentProfileEngine.current()
-
         val environmentCompensation = EnvironmentCompensationEngine.evaluate()
 
         return RoastAiContext(
