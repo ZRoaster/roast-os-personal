@@ -1,48 +1,34 @@
 package com.roastos.app.ui
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.roastos.app.RoastAiRealtimeContextBuilder
+import android.content.Context
+import android.widget.LinearLayout
 import com.roastos.app.RoastAiPromptBuilder
+import com.roastos.app.RoastAiRealtimeContextBuilder
+import com.roastos.app.UiKit
 
-@Composable
-fun RoastAiPromptPreviewPanel() {
+class RoastAiPromptPreviewPanel(
+    context: Context
+) : LinearLayout(context) {
 
-    val context = RoastAiRealtimeContextBuilder.build()
+    private val textView = UiKit.bodyText(context, "")
 
-    val prompt = RoastAiPromptBuilder.buildFullPrompt(context)
+    init {
+        orientation = VERTICAL
+        addView(textView)
+        update()
+    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        colors = CardDefaults.cardColors()
-    ) {
+    fun update() {
+        val aiContext = RoastAiRealtimeContextBuilder.build(
+            userPrompt = "Preview current AI prompt"
+        )
 
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
+        val prompt = RoastAiPromptBuilder.buildFullPrompt(aiContext)
 
-            Text(
-                text = "AI Prompt Preview",
-            )
+        textView.text = """
+AI Prompt Preview
 
-            Text(
-                text = prompt,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-        }
+$prompt
+        """.trimIndent()
     }
 }
