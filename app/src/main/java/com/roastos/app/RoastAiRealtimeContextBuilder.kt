@@ -8,70 +8,6 @@ object RoastAiRealtimeContextBuilder {
         operatorNote: String = ""
     ): RoastAiContext {
 
-        val machineProfile = MachineProfileRegistry.currentOrNull()
-        val machineState = MachineStateEngine.currentOrNull()
-        val telemetry = MachineTelemetryEngine.latestOrNull()
-        val capability = MachineControlCapabilityRegistry.currentOrNull()
-        val energy = EnergyEngine.currentOrNull()
-
-        val snapshot = RoastSessionBus.peek()
-
-        val stability = try {
-            if (snapshot != null) {
-                if (snapshot.validation.hasIssues()) {
-                    RoastStabilityResult(
-                        stability = "watch",
-                        summary = "Validation issues detected"
-                    )
-                } else {
-                    RoastStabilityResult(
-                        stability = "stable",
-                        summary = "System stable"
-                    )
-                }
-            } else {
-                null
-            }
-        } catch (_: Throwable) {
-            null
-        }
-
-        val driving = try {
-            if (snapshot != null) {
-                if (snapshot.validation.hasIssues()) {
-                    RoastDrivingAdvice(
-                        actionLevel = "adjust",
-                        summary = "Adjustment suggested"
-                    )
-                } else {
-                    RoastDrivingAdvice(
-                        actionLevel = "hold",
-                        summary = "Hold current trajectory"
-                    )
-                }
-            } else {
-                null
-            }
-        } catch (_: Throwable) {
-            null
-        }
-
-        val decision = try {
-            if (snapshot != null) {
-                val d = RoastDecisionEngine.evaluate(snapshot)
-
-                DecisionEngine.DecisionResult(
-                    suggestion = d.heatAction,
-                    severity = d.confidence.toString(),
-                    reason = d.rationale
-                )
-            } else {
-                null
-            }
-        } catch (_: Throwable) {
-            null
-        }
-
         val environmentProfile = EnvironmentProfileEngine.current()
         val environmentCompensation = EnvironmentCompensationEngine.evaluate()
 
@@ -79,15 +15,15 @@ object RoastAiRealtimeContextBuilder {
             sessionId = "realtime_" + System.currentTimeMillis(),
             intent = intent,
 
-            machineProfile = machineProfile,
-            machineState = machineState,
-            telemetryFrame = telemetry,
-            controlCapability = capability,
+            machineProfile = null,
+            machineState = null,
+            telemetryFrame = null,
+            controlCapability = null,
 
-            energySnapshot = energy,
-            stabilityResult = stability,
-            drivingAdvice = driving,
-            decisionResult = decision,
+            energySnapshot = null,
+            stabilityResult = null,
+            drivingAdvice = null,
+            decisionResult = null,
 
             controlPlan = null,
             executionSummary = null,
