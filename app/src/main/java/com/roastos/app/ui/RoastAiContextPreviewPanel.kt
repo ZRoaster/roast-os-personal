@@ -12,12 +12,9 @@ class RoastAiContextPreviewPanel(
     private val textView = TextView(context)
 
     init {
-
         orientation = VERTICAL
-
         textView.textSize = 12f
         addView(textView)
-
         update()
     }
 
@@ -26,14 +23,12 @@ class RoastAiContextPreviewPanel(
         val snapshot = RoastSessionBus.peek()
 
         if (snapshot == null) {
-
             textView.text =
                 """
 AI Context Preview
 
 No active roast session.
                 """.trimIndent()
-
             return
         }
 
@@ -43,13 +38,18 @@ No active roast session.
         val controlCapability = MachineControlCapabilityRegistry.currentOrNull()
         val energySnapshot = EnergyEngine.currentOrNull()
 
-        val stability = tryBuildStability(snapshot)
-        val driving = tryBuildDriving(snapshot)
-        val decision = tryBuildDecision(snapshot)
+        val stability = buildStability(snapshot)
+        val driving = buildDriving(snapshot)
+
+        val decision = try {
+            RoastDecisionEngine.evaluate(snapshot)
+        } catch (_: Throwable) {
+            null
+        }
 
         val contextPreview = RoastAiContexts.buildMinimal(
             intent = RoastAiIntentType.REALTIME_COACHING,
-            userPrompt = "Preview current AI context",
+            userPrompt = "AI Context Preview",
             environmentProfile = EnvironmentProfileEngine.current(),
             environmentCompensation = EnvironmentCompensationEngine.evaluate()
         ).copy(
@@ -66,19 +66,7 @@ No active roast session.
         textView.text = contextPreview.summary()
     }
 
-    private fun tryBuildDecision(
-        snapshot: RoastSessionBusSnapshot
-    ): DecisionEngine.DecisionResult? {
-
-        return try {
-            // 直接使用系统现有决策结果
-            RoastDecisionEngine.evaluate(snapshot)
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    private fun tryBuildStability(
+    private fun buildStability(
         snapshot: RoastSessionBusSnapshot
     ): RoastStabilityResult? {
 
@@ -104,7 +92,7 @@ No active roast session.
         }
     }
 
-    private fun tryBuildDriving(
+    private fun buildDriving(
         snapshot: RoastSessionBusSnapshot
     ): RoastDrivingAdvice? {
 
