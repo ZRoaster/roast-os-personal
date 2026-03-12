@@ -164,6 +164,13 @@ object RoastStudioPage {
         root.addView(aiContextCard)
         root.addView(UiKit.spacer(context))
 
+        val aiPromptCard = UiKit.card(context)
+        val aiPromptPanel = RoastAiPromptPreviewPanel(context)
+        aiPromptCard.addView(UiKit.cardTitle(context, "AI PROMPT"))
+        aiPromptCard.addView(aiPromptPanel)
+        root.addView(aiPromptCard)
+        root.addView(UiKit.spacer(context))
+
         val explorationCard = UiKit.card(context)
         val explorationPanel = RoastExplorationPanel(context)
         explorationCard.addView(UiKit.cardTitle(context, "EXPLORATION"))
@@ -254,6 +261,7 @@ ${formatRisk(snapshot.companion.riskLevel)}
             environmentPanel.update()
             environmentCompensationPanel.update()
             aiContextPanel.update()
+            aiPromptPanel.update()
             explorationPanel.update()
             learningPanel.update()
             knowledgePanel.update()
