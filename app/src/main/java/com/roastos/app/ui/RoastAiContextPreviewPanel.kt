@@ -71,16 +71,8 @@ No active roast session.
     ): DecisionEngine.DecisionResult? {
 
         return try {
-
-            val result = RoastDecisionEngine.evaluate(snapshot)
-
-            DecisionEngine.DecisionResult(
-                suggestion = result.heatAction,
-                severity = result.confidence.toString(),
-                reason = result.rationale,
-                confidence = result.confidence
-            )
-
+            // 直接使用系统现有决策结果
+            RoastDecisionEngine.evaluate(snapshot)
         } catch (_: Throwable) {
             null
         }
