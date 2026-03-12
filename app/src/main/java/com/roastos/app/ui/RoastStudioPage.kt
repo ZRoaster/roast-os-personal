@@ -40,6 +40,7 @@ object RoastStudioPage {
         val openStylesBtn = UiKit.secondaryButton(context, "OPEN STYLES")
         val openMyStylesBtn = UiKit.secondaryButton(context, "OPEN MY STYLES")
         val openExperimentsBtn = UiKit.secondaryButton(context, "OPEN EXPERIMENTS")
+        val openKnowledgeEvolutionBtn = UiKit.secondaryButton(context, "OPEN KNOWLEDGE EVOLUTION")
 
         controlCard.addView(UiKit.cardTitle(context, "CONTROL"))
         controlCard.addView(startBtn)
@@ -51,6 +52,7 @@ object RoastStudioPage {
         controlCard.addView(openStylesBtn)
         controlCard.addView(openMyStylesBtn)
         controlCard.addView(openExperimentsBtn)
+        controlCard.addView(openKnowledgeEvolutionBtn)
 
         root.addView(controlCard)
         root.addView(UiKit.spacer(context))
@@ -282,6 +284,10 @@ ${cup.brewNote}
 
         openExperimentsBtn.setOnClickListener {
             RoastExperimentPage.show(context, container)
+        }
+
+        openKnowledgeEvolutionBtn.setOnClickListener {
+            RoastKnowledgeEvolutionPage.show(context, container)
         }
 
         handler.post(object : Runnable {
