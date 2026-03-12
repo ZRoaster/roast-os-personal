@@ -113,6 +113,9 @@ data class RoastAiContext(
 
     val styleGoal: RoastAiStyleGoal? = null,
 
+    val environmentProfile: EnvironmentProfile? = null,
+    val environmentCompensation: EnvironmentCompensationResult? = null,
+
     val userPrompt: String = "",
     val operatorNote: String = "",
 
@@ -159,6 +162,12 @@ ${executionSummary?.overallStatus ?: "-"}
 
 Style Goal
 ${styleGoal?.styleName ?: "-"}
+
+Environment
+${environmentProfile?.let { environmentBlock(it) } ?: "-"}
+
+Compensation
+${environmentCompensation?.summaryText ?: "-"}
 
 User Prompt
 ${if (userPrompt.isBlank()) "-" else userPrompt}
@@ -217,6 +226,12 @@ ${executionSummary?.summary ?: "-"}
 Style Goal
 ${styleGoal?.summary() ?: "-"}
 
+Environment
+${environmentProfile?.let { environmentBlock(it) } ?: "-"}
+
+Environment Compensation
+${environmentCompensation?.summaryText ?: "-"}
+
 User Prompt
 ${if (userPrompt.isBlank()) "-" else userPrompt}
 
@@ -253,6 +268,25 @@ ${"%.1f".format(state.environmentTemp)}℃ / ${"%.0f".format(state.environmentHu
         """.trimIndent()
     }
 
+    private fun environmentBlock(profile: EnvironmentProfile): String {
+        return """
+Altitude
+${profile.altitudeMeters ?: "-"}
+
+Ambient Temp
+${profile.ambientTempC ?: "-"}
+
+Humidity
+${profile.ambientHumidityRh ?: "-"}
+
+Pressure
+${profile.barometricPressureHpa ?: "-"}
+
+Note
+${profile.note ?: "-"}
+        """.trimIndent()
+    }
+
     private fun decisionBlock(result: DecisionEngine.DecisionResult): String {
         return """
 Suggestion
@@ -283,7 +317,9 @@ object RoastAiContexts {
         styleGoal: RoastAiStyleGoal? = null,
         userPrompt: String = "",
         operatorNote: String = "",
-        attachments: List<RoastAiAttachment> = emptyList()
+        attachments: List<RoastAiAttachment> = emptyList(),
+        environmentProfile: EnvironmentProfile? = EnvironmentProfileEngine.current(),
+        environmentCompensation: EnvironmentCompensationResult? = EnvironmentCompensationEngine.evaluate()
     ): RoastAiContext {
         return RoastAiContext(
             sessionId = buildSessionId("realtime"),
@@ -299,6 +335,8 @@ object RoastAiContexts {
             controlPlan = controlPlan,
             executionSummary = executionSummary,
             styleGoal = styleGoal,
+            environmentProfile = environmentProfile,
+            environmentCompensation = environmentCompensation,
             userPrompt = userPrompt,
             operatorNote = operatorNote,
             attachments = attachments
@@ -313,7 +351,9 @@ object RoastAiContexts {
         stabilityResult: RoastStabilityResult?,
         decisionResult: DecisionEngine.DecisionResult?,
         userPrompt: String,
-        attachments: List<RoastAiAttachment> = emptyList()
+        attachments: List<RoastAiAttachment> = emptyList(),
+        environmentProfile: EnvironmentProfile? = EnvironmentProfileEngine.current(),
+        environmentCompensation: EnvironmentCompensationResult? = EnvironmentCompensationEngine.evaluate()
     ): RoastAiContext {
         return RoastAiContext(
             sessionId = buildSessionId("diagnosis"),
@@ -329,6 +369,8 @@ object RoastAiContexts {
             controlPlan = null,
             executionSummary = null,
             styleGoal = null,
+            environmentProfile = environmentProfile,
+            environmentCompensation = environmentCompensation,
             userPrompt = userPrompt,
             operatorNote = "",
             attachments = attachments
@@ -340,7 +382,9 @@ object RoastAiContexts {
         controlCapability: MachineControlCapability?,
         styleGoal: RoastAiStyleGoal,
         userPrompt: String,
-        attachments: List<RoastAiAttachment> = emptyList()
+        attachments: List<RoastAiAttachment> = emptyList(),
+        environmentProfile: EnvironmentProfile? = EnvironmentProfileEngine.current(),
+        environmentCompensation: EnvironmentCompensationResult? = EnvironmentCompensationEngine.evaluate()
     ): RoastAiContext {
         return RoastAiContext(
             sessionId = buildSessionId("style"),
@@ -356,6 +400,8 @@ object RoastAiContexts {
             controlPlan = null,
             executionSummary = null,
             styleGoal = styleGoal,
+            environmentProfile = environmentProfile,
+            environmentCompensation = environmentCompensation,
             userPrompt = userPrompt,
             operatorNote = "",
             attachments = attachments
@@ -367,7 +413,9 @@ object RoastAiContexts {
         styleGoal: RoastAiStyleGoal?,
         userPrompt: String,
         operatorNote: String = "",
-        attachments: List<RoastAiAttachment> = emptyList()
+        attachments: List<RoastAiAttachment> = emptyList(),
+        environmentProfile: EnvironmentProfile? = EnvironmentProfileEngine.current(),
+        environmentCompensation: EnvironmentCompensationResult? = EnvironmentCompensationEngine.evaluate()
     ): RoastAiContext {
         return RoastAiContext(
             sessionId = buildSessionId("brew"),
@@ -383,6 +431,8 @@ object RoastAiContexts {
             controlPlan = null,
             executionSummary = null,
             styleGoal = styleGoal,
+            environmentProfile = environmentProfile,
+            environmentCompensation = environmentCompensation,
             userPrompt = userPrompt,
             operatorNote = operatorNote,
             attachments = attachments
@@ -392,11 +442,15 @@ object RoastAiContexts {
     fun buildMinimal(
         intent: RoastAiIntentType,
         userPrompt: String,
-        attachments: List<RoastAiAttachment> = emptyList()
+        attachments: List<RoastAiAttachment> = emptyList(),
+        environmentProfile: EnvironmentProfile? = EnvironmentProfileEngine.current(),
+        environmentCompensation: EnvironmentCompensationResult? = EnvironmentCompensationEngine.evaluate()
     ): RoastAiContext {
         return RoastAiContext(
             sessionId = buildSessionId("minimal"),
             intent = intent,
+            environmentProfile = environmentProfile,
+            environmentCompensation = environmentCompensation,
             userPrompt = userPrompt,
             attachments = attachments
         )
