@@ -34,6 +34,7 @@ object RoastStudioPage {
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+        val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
         val openRecentBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
         val openLatestBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
         val openKnowledgeBtn = UiKit.secondaryButton(context, "OPEN KNOWLEDGE")
@@ -46,6 +47,7 @@ object RoastStudioPage {
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
+        controlCard.addView(openEnvironmentBtn)
         controlCard.addView(openRecentBtn)
         controlCard.addView(openLatestBtn)
         controlCard.addView(openKnowledgeBtn)
@@ -288,6 +290,10 @@ ${cup.brewNote}
 
         refreshBtn.setOnClickListener {
             render()
+        }
+
+        openEnvironmentBtn.setOnClickListener {
+            EnvironmentInputPage.show(context, container)
         }
 
         openRecentBtn.setOnClickListener {
