@@ -68,8 +68,7 @@ object RoastAiRealtimeContextBuilder {
                 DecisionEngine.DecisionResult(
                     suggestion = d.heatAction,
                     severity = d.confidence.toString(),
-                    reason = d.rationale,
-                    confidence = d.confidence
+                    reason = d.rationale
                 )
 
             } else null
