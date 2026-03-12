@@ -118,6 +118,13 @@ object RoastStudioPage {
         root.addView(experimentKnowledgeCard)
         root.addView(UiKit.spacer(context))
 
+        val knowledgeEvolutionCard = UiKit.card(context)
+        val knowledgeEvolutionPanel = RoastKnowledgeEvolutionPanel(context)
+        knowledgeEvolutionCard.addView(UiKit.cardTitle(context, "KNOWLEDGE EVOLUTION"))
+        knowledgeEvolutionCard.addView(knowledgeEvolutionPanel)
+        root.addView(knowledgeEvolutionCard)
+        root.addView(UiKit.spacer(context))
+
         val explorationCard = UiKit.card(context)
         val explorationPanel = RoastExplorationPanel(context)
         explorationCard.addView(UiKit.cardTitle(context, "EXPLORATION"))
@@ -202,6 +209,7 @@ ${formatRisk(snapshot.companion.riskLevel)}
             experimentPanel.update()
             experimentLearningPanel.update()
             experimentKnowledgePanel.update()
+            knowledgeEvolutionPanel.update()
             explorationPanel.update()
             learningPanel.update()
             knowledgePanel.update()
