@@ -29,7 +29,9 @@ object RoastAiRealtimeContextBuilder {
                         summary = "System stable"
                     )
                 }
-            } else null
+            } else {
+                null
+            }
         } catch (_: Throwable) {
             null
         }
@@ -47,23 +49,25 @@ object RoastAiRealtimeContextBuilder {
                         summary = "Hold current trajectory"
                     )
                 }
-            } else null
+            } else {
+                null
+            }
         } catch (_: Throwable) {
             null
         }
 
         val decision = try {
             if (snapshot != null) {
-
                 val d = RoastDecisionEngine.evaluate(snapshot)
 
                 DecisionEngine.DecisionResult(
                     suggestion = d.heatAction,
-                    reason = d.rationale,
-                    confidence = d.confidence
+                    severity = d.confidence.toString(),
+                    reason = d.rationale
                 )
-
-            } else null
+            } else {
+                null
+            }
         } catch (_: Throwable) {
             null
         }
