@@ -18,9 +18,10 @@ class RoastAiContextPreviewPanel(
     }
 
     fun update() {
-        val session = RoastAiSessionEngine.build(
-            userPrompt = "Preview current AI context"
-        )
+        val session = RoastAiSessionEngine.current()
+            ?: RoastAiSessionEngine.build(
+                userPrompt = "Preview current AI context"
+            )
 
         textView.text = session.context.summary()
     }
