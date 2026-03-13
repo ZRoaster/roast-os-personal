@@ -108,6 +108,13 @@ object RoastStudioPage {
         root.addView(calibrationHistoryCard)
         root.addView(UiKit.spacer(context))
 
+        val calibrationMatchCard = UiKit.card(context)
+        val calibrationMatchPanel = RoastCalibrationMatchPanel(context)
+        calibrationMatchCard.addView(UiKit.cardTitle(context, "CALIBRATION MATCH"))
+        calibrationMatchCard.addView(calibrationMatchPanel)
+        root.addView(calibrationMatchCard)
+        root.addView(UiKit.spacer(context))
+
         val companionCard = UiKit.card(context)
         val companionBody = UiKit.bodyText(context, "")
         companionCard.addView(UiKit.cardTitle(context, "COMPANION"))
@@ -281,6 +288,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             rorPredictionPanel.update()
             calibrationPanel.update()
             calibrationHistoryPanel.update()
+            calibrationMatchPanel.update()
 
             companionBody.text =
                 """
