@@ -52,11 +52,15 @@ object RoastOperatorPage {
         root.addView(UiKit.spacer(context))
 
         val controlCard = UiKit.card(context)
+        val startBtn = UiKit.primaryButton(context, "START ROAST")
+        val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
         val openStudioBtn = UiKit.secondaryButton(context, "OPEN STUDIO")
         val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
 
         controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
+        controlCard.addView(startBtn)
+        controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
         controlCard.addView(openStudioBtn)
         controlCard.addView(openEnvironmentBtn)
@@ -86,6 +90,18 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             predictionPanel.update()
         }
 
+        startBtn.setOnClickListener {
+            RoastSessionBus.startNewRoast()
+            running = true
+            render()
+        }
+
+        stopBtn.setOnClickListener {
+            RoastSessionBus.stopAndSave("HB M2SE")
+            running = false
+            render()
+        }
+
         refreshBtn.setOnClickListener {
             render()
         }
@@ -107,7 +123,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             }
         })
 
-        running = true
+        running = false
         render()
 
         scroll.addView(root)
