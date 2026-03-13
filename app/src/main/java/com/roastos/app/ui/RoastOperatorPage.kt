@@ -169,10 +169,21 @@ Save a roast history entry to compare current operation against the latest batch
 
                 val lastEnvText = "${oneDecimal(latest.envTemp)} ℃ / ${oneDecimal(latest.envRh)} %"
 
+                val lastTurning = formatElapsed(
+                    latest.actualTurningSec ?: latest.predictedTurningSec ?: 0,
+                    allowDash = latest.actualTurningSec == null && latest.predictedTurningSec == null
+                )
+
+                val lastYellow = formatElapsed(
+                    latest.actualYellowSec ?: latest.predictedYellowSec ?: 0,
+                    allowDash = latest.actualYellowSec == null && latest.predictedYellowSec == null
+                )
+
                 val lastFc = formatElapsed(
                     latest.actualFcSec ?: latest.predictedFcSec ?: 0,
                     allowDash = latest.actualFcSec == null && latest.predictedFcSec == null
                 )
+
                 val lastDrop = formatElapsed(
                     latest.actualDropSec ?: latest.predictedDropSec ?: 0,
                     allowDash = latest.actualDropSec == null && latest.predictedDropSec == null
@@ -187,8 +198,9 @@ Current  $currentEnvText
 Last     $lastEnvText
 
 Timeline Reference
-Current Elapsed   ${formatElapsed(session.lastElapsedSec)}
-Last FC / Drop    $lastFc / $lastDrop
+Current Elapsed        ${formatElapsed(session.lastElapsedSec)}
+Last Turning / Yellow  $lastTurning / $lastYellow
+Last FC / Drop         $lastFc / $lastDrop
 
 Health
 Current  $currentHealth
