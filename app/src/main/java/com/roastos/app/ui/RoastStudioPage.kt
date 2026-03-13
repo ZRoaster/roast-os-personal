@@ -81,13 +81,18 @@ object RoastStudioPage {
         root.addView(UiKit.spacer(context))
 
         val advisorCard = UiKit.card(context)
-val advisorPanel = RoastControlAdvisorPanel(context)
+        val advisorPanel = RoastControlAdvisorPanel(context)
+        advisorCard.addView(UiKit.cardTitle(context, "CONTROL ADVISOR"))
+        advisorCard.addView(advisorPanel)
+        root.addView(advisorCard)
+        root.addView(UiKit.spacer(context))
 
-advisorCard.addView(UiKit.cardTitle(context, "CONTROL ADVISOR"))
-advisorCard.addView(advisorPanel)
-
-root.addView(advisorCard)
-root.addView(UiKit.spacer(context))
+        val rorPredictionCard = UiKit.card(context)
+        val rorPredictionPanel = RoastRorPredictionPanel(context)
+        rorPredictionCard.addView(UiKit.cardTitle(context, "ROR PREDICTION"))
+        rorPredictionCard.addView(rorPredictionPanel)
+        root.addView(rorPredictionCard)
+        root.addView(UiKit.spacer(context))
 
         val companionCard = UiKit.card(context)
         val companionBody = UiKit.bodyText(context, "")
@@ -259,6 +264,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             healthBody.text = buildHealthText(snapshot.validation)
             decisionBody.text = buildDecisionPanel(decision)
             advisorPanel.update()
+            rorPredictionPanel.update()
 
             companionBody.text =
                 """
