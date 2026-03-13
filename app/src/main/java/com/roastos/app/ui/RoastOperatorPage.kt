@@ -127,14 +127,23 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
         }
 
         openRecentBtn.setOnClickListener {
-            RecentRoastListPage.show(context, container)
+            RecentRoastListPage.show(
+                context = context,
+                container = container,
+                onBack = {
+                    show(context, container)
+                }
+            )
         }
 
         openLatestBtn.setOnClickListener {
             HistoryDetailPage.show(
                 context = context,
                 container = container,
-                entry = RoastHistoryEngine.latest()
+                entry = RoastHistoryEngine.latest(),
+                onBack = {
+                    show(context, container)
+                }
             )
         }
 
