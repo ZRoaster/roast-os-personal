@@ -60,6 +60,24 @@ object RoastComparePage {
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "KEY DIFFERENCES",
+                leftLabel = "TAGS",
+                leftValue = buildKeyDifferences(left, right),
+                rightLabel = "SELECTED",
+                rightValue = """
+A
+${left.batchId}
+
+B
+${right.batchId}
+                """.trimIndent()
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "COMPARE SUMMARY",
                 leftLabel = "SUMMARY",
                 leftValue = buildCompareSummary(left, right),
@@ -203,6 +221,165 @@ $rightValue
         )
 
         return card
+    }
+
+    private fun buildKeyDifferences(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val tags = mutableListOf<String>()
+
+        buildTimeTag(
+            label = "FASTER TURNING",
+            leftSec = left.actualTurningSec ?: left.predictedTurningSec,
+            rightSec = right.actualTurningSec ?: right.predictedTurningSec,
+            detailBase = "Turning"
+        )?.let { tags += it }
+
+        buildTimeTag(
+            label = "FASTER YELLOW",
+            leftSec = left.actualYellowSec ?: left.predictedYellowSec,
+            rightSec = right.actualYellowSec ?: right.predictedYellowSec,
+            detailBase = "Yellow"
+        )?.let { tags += it }
+
+        buildTimeTag(
+            label = "FASTER FC",
+            leftSec = left.actualFcSec ?: left.predictedFcSec,
+            rightSec = right.actualFcSec ?: right.predictedFcSec,
+            detailBase = "First crack"
+        )?.let { tags += it }
+
+        buildTimeTag(
+            label = "FASTER DROP",
+            leftSec = left.actualDropSec ?: left.predictedDropSec,
+            rightSec = right.actualDropSec ?: right.predictedDropSec,
+            detailBase = "Drop"
+        )?.let { tags += it }
+
+        buildHigherDoubleTag(
+            label = "HIGHER PRE-FC ROR",
+            leftValue = left.actualPreFcRor,
+            rightValue = right.actualPreFcRor,
+            unit = "℃/min",
+            detailPrefix = "Pre-FC RoR"
+        )?.let { tags += it }
+
+        buildHigherDoubleTag(
+            label = "HIGHER ENV TEMP",
+            leftValue = left.envTemp,
+            rightValue = right.envTemp,
+            unit = "℃",
+            detailPrefix = "Env temp"
+        )?.let { tags += it }
+
+        buildHigherDoubleTag(
+            label = "HIGHER ENV RH",
+            leftValue = left.envRh,
+            rightValue = right.envRh,
+            unit = "%",
+            detailPrefix = "Env RH"
+        )?.let { tags += it }
+
+        buildRiskTag(
+            leftHeadline = left.roastHealthHeadline,
+            rightHeadline = right.roastHealthHeadline
+        )?.let { tags += it }
+
+        return if (tags.isEmpty()) {
+            """
+NO STRONG DIFFERENCE
+Current records do not show a strong difference under the active rules.
+            """.trimIndent()
+        } else {
+            tags.joinToString("\n\n")
+        }
+    }
+
+    private fun buildTimeTag(
+        label: String,
+        leftSec: Int?,
+        rightSec: Int?,
+        detailBase: String
+    ): String? {
+        if (leftSec == null || rightSec == null) return null
+        val diff = leftSec - rightSec
+        if (abs(diff) < 5) return null
+
+        return if (diff < 0) {
+            """
+$label
+A reaches $detailBase ${abs(diff)}s earlier than B.
+            """.trimIndent()
+        } else {
+            """
+$label
+B reaches $detailBase ${abs(diff)}s earlier than A.
+            """.trimIndent()
+        }
+    }
+
+    private fun buildHigherDoubleTag(
+        label: String,
+        leftValue: Double?,
+        rightValue: Double?,
+        unit: String,
+        detailPrefix: String
+    ): String? {
+        if (leftValue == null || rightValue == null) return null
+        val diff = leftValue - rightValue
+        if (abs(diff) < 0.2) return null
+
+        return if (diff > 0) {
+            """
+$label
+A $detailPrefix is ${formatOneDecimal(abs(diff))}$unit higher than B.
+            """.trimIndent()
+        } else {
+            """
+$label
+B $detailPrefix is ${formatOneDecimal(abs(diff))}$unit higher than A.
+            """.trimIndent()
+        }
+    }
+
+    private fun buildRiskTag(
+        leftHeadline: String,
+        rightHeadline: String
+    ): String? {
+        val leftScore = riskScore(leftHeadline)
+        val rightScore = riskScore(rightHeadline)
+
+        if (leftScore == rightScore) return null
+        if (leftScore <= 0 && rightScore <= 0) return null
+
+        return if (leftScore > rightScore) {
+            """
+HIGHER RISK
+A shows a higher roast health risk headline than B.
+            """.trimIndent()
+        } else {
+            """
+HIGHER RISK
+B shows a higher roast health risk headline than A.
+            """.trimIndent()
+        }
+    }
+
+    private fun riskScore(headline: String): Int {
+        val text = headline.lowercase(Locale.getDefault())
+
+        return when {
+            "高风险" in headline -> 4
+            "中风险" in headline -> 3
+            "需留意" in headline -> 2
+            "低风险" in headline -> 1
+            "high" in text -> 4
+            "medium" in text -> 3
+            "watch" in text -> 2
+            "low" in text -> 1
+            else -> 0
+        }
     }
 
     private fun buildCompareSummary(
