@@ -268,6 +268,7 @@ ${formatRisk(snapshot.companion.riskLevel)}
             environmentPanel.update()
             environmentCompensationPanel.update()
 
+            RoastAiSessionEngine.reset()
             RoastAiSessionEngine.build()
 
             aiContextPanel.update()
