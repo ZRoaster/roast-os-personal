@@ -10,6 +10,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val restoredMachine = MachineStateStorage.load(this)
+        if (restoredMachine != null) {
+            RoastStateModel.machine = restoredMachine
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
