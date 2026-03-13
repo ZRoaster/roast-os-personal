@@ -18,8 +18,7 @@ class RoastAiAssistantPanel(
     }
 
     fun update() {
-        val session = RoastAiSessionEngine.current()
-            ?: RoastAiSessionEngine.build()
+        val session = RoastAiSessionEngine.buildIfNeeded()
 
         textView.text = session.assistantOutput.summaryText()
     }
