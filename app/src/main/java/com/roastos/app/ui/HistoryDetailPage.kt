@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
-import com.roastos.app.HistoryDetailPage as _UnusedAlias
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.RoastStyleFromBatchEngine
 import com.roastos.app.UiKit
