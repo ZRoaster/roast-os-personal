@@ -30,6 +30,13 @@ object RoastStudioPage {
         root.addView(overviewCard)
         root.addView(UiKit.spacer(context))
 
+        val executiveSummaryCard = UiKit.card(context)
+        val executiveSummaryPanel = RoastExecutiveSummaryPanel(context)
+        executiveSummaryCard.addView(UiKit.cardTitle(context, "EXECUTIVE SUMMARY"))
+        executiveSummaryCard.addView(executiveSummaryPanel)
+        root.addView(executiveSummaryCard)
+        root.addView(UiKit.spacer(context))
+
         val controlCard = UiKit.card(context)
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
@@ -289,6 +296,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
 
             stylePanel.update()
 
+            executiveSummaryPanel.update()
             healthBody.text = buildHealthText(snapshot.validation)
             decisionBody.text = buildDecisionPanel(decision)
             advisorPanel.update()
