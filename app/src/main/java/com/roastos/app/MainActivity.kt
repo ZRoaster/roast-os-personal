@@ -10,6 +10,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        RoastHistoryEngine.initialize(this)
+
         val restoredMachine = MachineStateStorage.load(this)
         if (restoredMachine != null) {
             RoastStateModel.machine = restoredMachine
