@@ -60,6 +60,24 @@ object RoastComparePage {
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "OPERATION HINTS",
+                leftLabel = "HINTS",
+                leftValue = buildOperationHints(left, right),
+                rightLabel = "SELECTED",
+                rightValue = """
+A
+${left.batchId}
+
+B
+${right.batchId}
+                """.trimIndent()
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "KEY DIFFERENCES",
                 leftLabel = "TAGS",
                 leftValue = buildKeyDifferences(left, right),
@@ -221,6 +239,129 @@ $rightValue
         )
 
         return card
+    }
+
+    private fun buildOperationHints(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val hints = mutableListOf<String>()
+
+        val fcA = left.actualFcSec ?: left.predictedFcSec
+        val fcB = right.actualFcSec ?: right.predictedFcSec
+        val fcDiff = diffIfBothPresent(fcA, fcB)
+        if (fcDiff != null && abs(fcDiff) >= 10) {
+            hints += if (fcDiff < 0) {
+                """
+Focus 1
+A reaches first crack much earlier than B.
+Next roast should verify whether mid-late phase energy was intentionally higher in A.
+                """.trimIndent()
+            } else {
+                """
+Focus 1
+B reaches first crack much earlier than A.
+Next roast should verify whether mid-late phase energy was intentionally higher in B.
+                """.trimIndent()
+            }
+        }
+
+        val dropA = left.actualDropSec ?: left.predictedDropSec
+        val dropB = right.actualDropSec ?: right.predictedDropSec
+        val dropDiff = diffIfBothPresent(dropA, dropB)
+        if (dropDiff != null && abs(dropDiff) >= 10) {
+            hints += if (dropDiff < 0) {
+                """
+Focus ${hints.size + 1}
+A drops earlier than B by a clear margin.
+Next roast should confirm whether the finish window was deliberately shortened in A.
+                """.trimIndent()
+            } else {
+                """
+Focus ${hints.size + 1}
+B drops earlier than A by a clear margin.
+Next roast should confirm whether the finish window was deliberately shortened in B.
+                """.trimIndent()
+            }
+        }
+
+        val rorA = left.actualPreFcRor
+        val rorB = right.actualPreFcRor
+        val rorDiff = diffIfBothPresent(rorA, rorB)
+        if (rorDiff != null && abs(rorDiff) >= 0.5) {
+            hints += if (rorDiff > 0) {
+                """
+Focus ${hints.size + 1}
+A shows clearly higher pre-FC RoR than B.
+Next roast should pay attention to whether this stronger momentum was intentional and repeatable.
+                """.trimIndent()
+            } else {
+                """
+Focus ${hints.size + 1}
+B shows clearly higher pre-FC RoR than A.
+Next roast should pay attention to whether this stronger momentum was intentional and repeatable.
+                """.trimIndent()
+            }
+        }
+
+        val envTempDiff = left.envTemp - right.envTemp
+        val envRhDiff = left.envRh - right.envRh
+        if (abs(envTempDiff) >= 1.0 || abs(envRhDiff) >= 5.0) {
+            hints += """
+Focus ${hints.size + 1}
+Ambient conditions differ clearly between A and B.
+Do not compare heat application or phase timing without accounting for the environment shift first.
+            """.trimIndent()
+        }
+
+        val riskA = riskScore(left.roastHealthHeadline)
+        val riskB = riskScore(right.roastHealthHeadline)
+        if (riskA != riskB && maxOf(riskA, riskB) > 0) {
+            hints += if (riskA > riskB) {
+                """
+Focus ${hints.size + 1}
+A shows a higher roast health risk headline than B.
+Next roast should review late-stage stability in A before repeating the same finish pattern.
+                """.trimIndent()
+            } else {
+                """
+Focus ${hints.size + 1}
+B shows a higher roast health risk headline than A.
+Next roast should review late-stage stability in B before repeating the same finish pattern.
+                """.trimIndent()
+            }
+        }
+
+        val yellowA = left.actualYellowSec ?: left.predictedYellowSec
+        val yellowB = right.actualYellowSec ?: right.predictedYellowSec
+        val yellowDiff = diffIfBothPresent(yellowA, yellowB)
+        if (yellowDiff != null && abs(yellowDiff) >= 10 && hints.size < 5) {
+            hints += if (yellowDiff < 0) {
+                """
+Focus ${hints.size + 1}
+A reaches yellow earlier than B.
+Next roast should check whether early drying pace was intentionally faster in A.
+                """.trimIndent()
+            } else {
+                """
+Focus ${hints.size + 1}
+B reaches yellow earlier than A.
+Next roast should check whether early drying pace was intentionally faster in B.
+                """.trimIndent()
+            }
+        }
+
+        return if (hints.isEmpty()) {
+            """
+Focus 1
+No strong operational gap is detected under the current rules.
+
+Focus 2
+Treat these two batches as broadly comparable and inspect the detailed sections for smaller differences.
+            """.trimIndent()
+        } else {
+            hints.take(5).joinToString("\n\n")
+        }
     }
 
     private fun buildKeyDifferences(
@@ -504,99 +645,4 @@ B shows a higher roast health risk headline than A.
         return when {
             diff == 0 -> "$label is the same."
             diff < 0 -> "A $label is ${abs(diff)}s earlier than B."
-            else -> "B $label is ${abs(diff)}s earlier than A."
-        }
-    }
-
-    private fun buildBatchOverview(entry: RoastHistoryEntry): String {
-        return """
-Batch ID
-${entry.batchId}
-
-Title
-${entry.title}
-
-Created
-${formatDateTime(entry.createdAtMillis)}
-
-Status
-${entry.batchStatus}
-
-Process
-${entry.process}
-        """.trimIndent()
-    }
-
-    private fun buildMaterial(entry: RoastHistoryEntry): String {
-        return """
-Density
-${entry.density}
-
-Moisture
-${entry.moisture}
-
-AW
-${entry.aw}
-
-Pre-FC RoR
-${formatRor(entry.actualPreFcRor)}
-        """.trimIndent()
-    }
-
-    private fun buildEnvironment(entry: RoastHistoryEntry): String {
-        return """
-Env Temp
-${entry.envTemp} ℃
-
-Env RH
-${entry.envRh} %
-        """.trimIndent()
-    }
-
-    private fun buildTimeline(entry: RoastHistoryEntry): String {
-        return """
-Turning
-${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)}
-
-Yellow
-${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
-
-First Crack
-${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
-
-Drop
-${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
-        """.trimIndent()
-    }
-
-    private fun buildRoastHealth(entry: RoastHistoryEntry): String {
-        return """
-Headline
-${entry.roastHealthHeadline}
-
-Detail
-${entry.roastHealthDetail}
-        """.trimIndent()
-    }
-
-    private fun formatSec(sec: Int?): String {
-        if (sec == null) return "-"
-        val m = sec / 60
-        val s = sec % 60
-        return "%d:%02d".format(m, s)
-    }
-
-    private fun formatRor(value: Double?): String {
-        if (value == null) return "-"
-        return String.format(Locale.getDefault(), "%.1f ℃/min", value)
-    }
-
-    private fun formatOneDecimal(value: Double): String {
-        return String.format(Locale.getDefault(), "%.1f", value)
-    }
-
-    private fun formatDateTime(ms: Long): String {
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        return formatter.format(Date(ms))
-    }
-}
+            else -> "B $label is ${abs(d
