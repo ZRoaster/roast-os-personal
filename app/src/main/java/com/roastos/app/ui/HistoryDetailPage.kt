@@ -391,6 +391,9 @@ ${if (entry.evaluation != null) "Saved" else "Not saved"}
 Environment
 ${entry.envTemp} ℃ / ${entry.envRh} %
 
+Turning / Yellow
+${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)} / ${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
+
 FC / Drop
 ${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
 
