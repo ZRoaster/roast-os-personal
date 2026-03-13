@@ -3,7 +3,7 @@ package com.roastos.app
 import android.os.Bundle
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
-import com.roastos.app.ui.RoastStudioPage
+import com.roastos.app.ui.RoastOperatorPage
 
 class MainActivity : AppCompatActivity() {
 
@@ -24,6 +24,6 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(root)
 
-        RoastStudioPage.show(this, root)
+        RoastOperatorPage.show(this, root)
     }
 }
