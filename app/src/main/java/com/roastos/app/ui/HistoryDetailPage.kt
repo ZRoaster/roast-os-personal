@@ -4,7 +4,10 @@ import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
-import com.roastos.app.*
+import com.roastos.app.HistoryDetailPage as _UnusedAlias
+import com.roastos.app.RoastHistoryEntry
+import com.roastos.app.RoastStyleFromBatchEngine
+import com.roastos.app.UiKit
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,7 +53,6 @@ object HistoryDetailPage {
 
             scroll.addView(root)
             container.addView(scroll)
-
             return
         }
 
@@ -94,10 +96,9 @@ ${entry.envTemp} ℃ / ${entry.envRh} %
         root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
-        val timelineCard = UiKit.card()
+        val timelineCard = UiKit.card(context)
 
         timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
-
         timelineCard.addView(
             UiKit.bodyText(
                 context,
@@ -120,7 +121,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        val reportCard = UiKit.card()
+        val reportCard = UiKit.card(context)
 
         reportCard.addView(UiKit.cardTitle(context, "REPORT"))
         reportCard.addView(
@@ -133,7 +134,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(reportCard)
         root.addView(UiKit.spacer(context))
 
-        val diagnosisCard = UiKit.card()
+        val diagnosisCard = UiKit.card(context)
 
         diagnosisCard.addView(UiKit.cardTitle(context, "DIAGNOSIS"))
         diagnosisCard.addView(
@@ -146,7 +147,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(diagnosisCard)
         root.addView(UiKit.spacer(context))
 
-        val correctionCard = UiKit.card()
+        val correctionCard = UiKit.card(context)
 
         correctionCard.addView(UiKit.cardTitle(context, "CORRECTION"))
         correctionCard.addView(
@@ -159,12 +160,8 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(correctionCard)
         root.addView(UiKit.spacer(context))
 
-        val styleCard = UiKit.card()
-
-        val createStyleBtn = UiKit.primaryButton(
-            context,
-            "CREATE MY STYLE"
-        )
+        val styleCard = UiKit.card(context)
+        val createStyleBtn = UiKit.primaryButton(context, "CREATE MY STYLE")
 
         styleCard.addView(UiKit.cardTitle(context, "STYLE"))
         styleCard.addView(createStyleBtn)
@@ -172,7 +169,6 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(styleCard)
 
         createStyleBtn.setOnClickListener {
-
             val suggestedName =
                 RoastStyleFromBatchEngine.suggestStyleName(entry.batchId)
 
@@ -198,12 +194,9 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
     }
 
     private fun formatSec(sec: Int?): String {
-
         if (sec == null) return "-"
-
         val m = sec / 60
         val s = sec % 60
-
         return "%d:%02d".format(m, s)
     }
 
