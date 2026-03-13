@@ -3,6 +3,7 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.RoastEvaluation
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.UiKit
 import java.text.SimpleDateFormat
@@ -114,6 +115,18 @@ ${right.batchId}
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "EVALUATION DIFFERENCES",
+                leftLabel = "DIFF",
+                leftValue = buildEvaluationDifferences(left.evaluation, right.evaluation),
+                rightLabel = "STATE",
+                rightValue = buildEvaluationState(left.evaluation, right.evaluation)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "BATCH OVERVIEW",
                 leftLabel = "A",
                 leftValue = buildBatchOverview(left),
@@ -167,6 +180,18 @@ ${right.batchId}
                 leftValue = buildRoastHealth(left),
                 rightLabel = "B",
                 rightValue = buildRoastHealth(right)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
+                title = "EVALUATION SUMMARY",
+                leftLabel = "A",
+                leftValue = buildEvaluationSummary(left.evaluation),
+                rightLabel = "B",
+                rightValue = buildEvaluationSummary(right.evaluation)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -435,6 +460,134 @@ Current records do not show a strong difference under the active rules.
         }
     }
 
+    private fun buildEvaluationDifferences(
+        left: RoastEvaluation?,
+        right: RoastEvaluation?
+    ): String {
+        if (left == null && right == null) {
+            return "No evaluation saved for either batch."
+        }
+        if (left != null && right == null) {
+            return "Only A has saved evaluation."
+        }
+        if (left == null && right != null) {
+            return "Only B has saved evaluation."
+        }
+
+        val a = left!!
+        val b = right!!
+        val parts = mutableListOf<String>()
+
+        compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
+        compareDoubleEval("Ground color", a.groundColor, b.groundColor)?.let { parts += it }
+        compareDoubleEval("Roasted AW", a.roastedAw, b.roastedAw)?.let { parts += it }
+
+        compareIntEval("Sweetness", a.sweetness, b.sweetness)?.let { parts += it }
+        compareIntEval("Acidity", a.acidity, b.acidity)?.let { parts += it }
+        compareIntEval("Body", a.body, b.body)?.let { parts += it }
+        compareIntEval("Flavor clarity", a.flavorClarity, b.flavorClarity)?.let { parts += it }
+        compareIntEval("Balance", a.balance, b.balance)?.let { parts += it }
+
+        if (a.notes.isNotBlank() && b.notes.isBlank()) {
+            parts += "Only A has notes."
+        } else if (a.notes.isBlank() && b.notes.isNotBlank()) {
+            parts += "Only B has notes."
+        } else if (a.notes.isNotBlank() && b.notes.isNotBlank() && a.notes != b.notes) {
+            parts += "A and B both have notes, and the note text differs."
+        }
+
+        return if (parts.isEmpty()) {
+            "Saved evaluations are broadly similar under current rules."
+        } else {
+            parts.joinToString("\n")
+        }
+    }
+
+    private fun buildEvaluationState(
+        left: RoastEvaluation?,
+        right: RoastEvaluation?
+    ): String {
+        return """
+A
+${if (left == null) "No saved evaluation" else "Saved evaluation"}
+
+B
+${if (right == null) "No saved evaluation" else "Saved evaluation"}
+        """.trimIndent()
+    }
+
+    private fun compareIntEval(
+        label: String,
+        left: Int?,
+        right: Int?
+    ): String? {
+        if (left == null || right == null) return null
+        val diff = left - right
+        if (diff == 0) return null
+
+        return if (diff > 0) {
+            "A $label is higher by ${abs(diff)}."
+        } else {
+            "B $label is higher by ${abs(diff)}."
+        }
+    }
+
+    private fun compareDoubleEval(
+        label: String,
+        left: Double?,
+        right: Double?
+    ): String? {
+        if (left == null || right == null) return null
+        val diff = left - right
+        if (abs(diff) < 0.05) return null
+
+        return if (diff > 0) {
+            "A $label is higher by ${formatOneDecimal(abs(diff))}."
+        } else {
+            "B $label is higher by ${formatOneDecimal(abs(diff))}."
+        }
+    }
+
+    private fun buildEvaluationSummary(
+        evaluation: RoastEvaluation?
+    ): String {
+        if (evaluation == null) {
+            return """
+Saved Evaluation
+No evaluation saved yet.
+            """.trimIndent()
+        }
+
+        return """
+Bean Color
+${evaluation.beanColor ?: "-"}
+
+Ground Color
+${evaluation.groundColor ?: "-"}
+
+Roasted AW
+${evaluation.roastedAw ?: "-"}
+
+Sweetness
+${evaluation.sweetness ?: "-"}
+
+Acidity
+${evaluation.acidity ?: "-"}
+
+Body
+${evaluation.body ?: "-"}
+
+Flavor Clarity
+${evaluation.flavorClarity ?: "-"}
+
+Balance
+${evaluation.balance ?: "-"}
+
+Notes
+${evaluation.notes.ifBlank { "-" }}
+        """.trimIndent()
+    }
+
     private fun buildTimeTag(
         label: String,
         leftSec: Int?,
@@ -509,7 +662,7 @@ B shows a higher roast health risk headline than A.
         val text = headline.lowercase(Locale.getDefault())
 
         return when {
-            "高风险" in headline -> 4
+          "高风险" in headline -> 4
             "中风险" in headline -> 3
             "需留意" in headline -> 2
             "低风险" in headline -> 1
