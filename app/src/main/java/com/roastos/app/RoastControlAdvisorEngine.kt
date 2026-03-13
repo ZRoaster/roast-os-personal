@@ -50,6 +50,7 @@ object RoastControlAdvisorEngine {
         val control = RoastControlModel.evaluate(snapshot)
         val ai = RoastAiAssistantEngine.generate()
         val prediction = RoastRorPredictionEngine.evaluate(snapshot)
+        val calibrationMatch = RoastCalibrationMatcherEngine.matchBest()
 
         val finalHeat = buildHeatAdvice(decision, control, prediction)
         val finalAirflow = buildAirflowAdvice(decision, control, prediction)
@@ -61,7 +62,8 @@ object RoastControlAdvisorEngine {
             decision = decision,
             control = control,
             ai = ai,
-            prediction = prediction
+            prediction = prediction,
+            calibrationMatch = calibrationMatch
         )
 
         return RoastControlAdvisorOutput(
@@ -144,7 +146,8 @@ object RoastControlAdvisorEngine {
         decision: RoastDecision,
         control: RoastControlAdjustment,
         ai: RoastAiAssistantOutput,
-        prediction: RoastRorPrediction
+        prediction: RoastRorPrediction,
+        calibrationMatch: RoastCalibrationMatchResult
     ): String {
 
         val parts = mutableListOf<String>()
@@ -163,6 +166,15 @@ object RoastControlAdvisorEngine {
             parts += "Estimated First Crack Window: ${formatSec(it)}"
         }
 
+        calibrationMatch.matchedProfile?.let { matched ->
+            parts += "Matched Calibration: ${matched.machineName} / ${matched.calibrationId}"
+            parts += "Calibration Match Score: ${formatScore(calibrationMatch.score)}"
+        }
+
+        if (calibrationMatch.reason.isNotBlank()) {
+            parts += "Calibration Match Reason: ${calibrationMatch.reason}"
+        }
+
         if (ai.summary.isNotBlank()) {
             parts += "AI Assistant: ${ai.summary}"
         }
@@ -178,5 +190,9 @@ object RoastControlAdvisorEngine {
         val m = value / 60
         val s = value % 60
         return "%d:%02d".format(m, s)
+    }
+
+    private fun formatScore(value: Double): String {
+        return "%.2f".format(value)
     }
 }
