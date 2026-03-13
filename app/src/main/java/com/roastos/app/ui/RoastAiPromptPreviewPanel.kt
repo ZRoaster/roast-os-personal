@@ -18,15 +18,10 @@ class RoastAiPromptPreviewPanel(
     }
 
     fun update() {
-        val session = RoastAiSessionEngine.current()
-            ?: RoastAiSessionEngine.build(
-                userPrompt = "Preview current AI prompt"
-            )
+        val session = RoastAiSessionEngine.buildIfNeeded(
+            userPrompt = "Preview AI prompt"
+        )
 
-        textView.text = """
-AI Prompt Preview
-
-${session.prompt}
-        """.trimIndent()
+        textView.text = session.prompt
     }
 }
