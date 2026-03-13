@@ -5,7 +5,16 @@ object MachineDynamicsEngine {
     private var currentProfile: MachineCalibrationProfile? = null
 
     fun current(): MachineCalibrationProfile {
-        return currentProfile ?: defaultProfile().also {
+        val manual = currentProfile
+        if (manual != null) return manual
+
+        val matched = matchedProfileOrNull()
+        if (matched != null) {
+            currentProfile = matched
+            return matched
+        }
+
+        return defaultProfile().also {
             currentProfile = it
         }
     }
@@ -19,7 +28,7 @@ object MachineDynamicsEngine {
     }
 
     fun reset() {
-        currentProfile = defaultProfile()
+        currentProfile = null
     }
 
     fun defaultProfile(): MachineCalibrationProfile {
@@ -68,6 +77,7 @@ object MachineDynamicsEngine {
     fun adjustedSummary(): String {
         val adjusted = currentAdjustedForEnvironment()
         val envComp = EnvironmentCompensationEngine.evaluate()
+        val matched = matchedProfileOrNull()
 
         return """
 Machine Dynamics Adjusted
@@ -77,6 +87,9 @@ ${adjusted.machineName}
 
 Calibration ID
 ${adjusted.calibrationId}
+
+Matched Calibration
+${matched?.calibrationId ?: "manual/default"}
 
 Adjusted Environment
 Altitude: ${adjusted.calibrationEnvironment.altitudeMeters ?: "-"} m
@@ -162,8 +175,25 @@ Pressure: ${formatOffset(envComp.pressureOffset)}
                 ambientHumidityRh = ambientHumidityRh ?: base.calibrationEnvironment.ambientHumidityRh
             ),
             delays = adjustedDelays,
-            note = "Environment-adjusted profile"
+            note = buildAdjustedNote(base, matchedProfileOrNull())
         )
+    }
+
+    private fun matchedProfileOrNull(): MachineCalibrationProfile? {
+        return RoastCalibrationMatcherEngine
+            .matchBest(machineId = "hb_m2se_default")
+            .matchedProfile
+    }
+
+    private fun buildAdjustedNote(
+        base: MachineCalibrationProfile,
+        matched: MachineCalibrationProfile?
+    ): String {
+        return when {
+            currentProfile != null -> "Environment-adjusted profile from manual/current calibration"
+            matched != null -> "Environment-adjusted profile from matched calibration ${matched.calibrationId}"
+            else -> "Environment-adjusted profile from default calibration"
+        }
     }
 
     private fun adjustDelay(
