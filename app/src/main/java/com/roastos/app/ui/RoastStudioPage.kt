@@ -267,9 +267,13 @@ ${formatRisk(snapshot.companion.riskLevel)}
             machineDynamicsPanel.update()
             environmentPanel.update()
             environmentCompensationPanel.update()
+
+            RoastAiSessionEngine.build()
+
             aiContextPanel.update()
             aiPromptPanel.update()
             aiAssistantPanel.update()
+
             explorationPanel.update()
             learningPanel.update()
             knowledgePanel.update()
