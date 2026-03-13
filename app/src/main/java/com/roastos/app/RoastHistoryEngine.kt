@@ -1,5 +1,7 @@
 package com.roastos.app
 
+import android.content.Context
+
 data class RoastEvaluation(
     val beanColor: Double?,
     val groundColor: Double?,
@@ -70,6 +72,18 @@ object RoastHistoryEngine {
     private const val MAX_HISTORY_COUNT = 200
 
     private val entries = mutableListOf<RoastHistoryEntry>()
+    private var appContext: Context? = null
+
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+
+        val restored = RoastHistoryStorage.load(appContext!!)
+            .sortedByDescending { it.createdAtMillis }
+            .take(MAX_HISTORY_COUNT)
+
+        entries.clear()
+        entries.addAll(restored)
+    }
 
     fun all(): List<RoastHistoryEntry> {
         return entries.sortedByDescending { it.createdAtMillis }
@@ -115,7 +129,7 @@ object RoastHistoryEngine {
 
         val entry = RoastHistoryEntry(
             batchId = batchId,
-            createdAtMillis = createdAtMillis,
+            createdAtMillis = existing?.createdAtMillis ?: createdAtMillis,
             title = report.title,
 
             process = plannerInput?.process ?: "",
@@ -163,6 +177,7 @@ object RoastHistoryEngine {
         }
 
         trimToMaxSize()
+        persist()
 
         return RoastHistorySaveResult(
             saved = true,
@@ -186,21 +201,21 @@ object RoastHistoryEngine {
 
         val entry = RoastHistoryEntry(
             batchId = log.batchId,
-            createdAtMillis = System.currentTimeMillis(),
-            title = "Roast ${log.batchId}",
+            createdAtMillis = existing?.createdAtMillis ?: System.currentTimeMillis(),
+            title = existing?.title ?: "Roast ${log.batchId}",
 
             process = machineName,
-            density = 0.0,
-            moisture = 0.0,
-            aw = 0.0,
+            density = existing?.density ?: 0.0,
+            moisture = existing?.moisture ?: 0.0,
+            aw = existing?.aw ?: 0.0,
 
-            envTemp = 0.0,
-            envRh = 0.0,
+            envTemp = existing?.envTemp ?: 0.0,
+            envRh = existing?.envRh ?: 0.0,
 
-            predictedTurningSec = null,
-            predictedYellowSec = null,
-            predictedFcSec = null,
-            predictedDropSec = null,
+            predictedTurningSec = existing?.predictedTurningSec,
+            predictedYellowSec = existing?.predictedYellowSec,
+            predictedFcSec = existing?.predictedFcSec,
+            predictedDropSec = existing?.predictedDropSec,
 
             actualTurningSec = log.turningPointSec,
             actualYellowSec = log.dryEndSec,
@@ -237,6 +252,7 @@ object RoastHistoryEngine {
         }
 
         trimToMaxSize()
+        persist()
 
         return RoastHistorySaveResult(
             saved = true,
@@ -275,6 +291,7 @@ object RoastHistoryEngine {
 
         val updated = entries[index].copy(evaluation = evaluation)
         entries[index] = updated
+        persist()
 
         return RoastHistorySaveResult(
             saved = true,
@@ -298,6 +315,7 @@ object RoastHistoryEngine {
 
         val updated = entries[index].copy(evaluation = null)
         entries[index] = updated
+        persist()
 
         return RoastHistorySaveResult(
             saved = true,
@@ -309,6 +327,10 @@ object RoastHistoryEngine {
 
     fun delete(batchId: String): RoastHistoryDeleteResult {
         val removed = entries.removeAll { it.batchId == batchId }
+
+        if (removed) {
+            persist()
+        }
 
         return RoastHistoryDeleteResult(
             deleted = removed,
@@ -323,6 +345,8 @@ object RoastHistoryEngine {
 
     fun clear(): RoastHistoryDeleteResult {
         entries.clear()
+        persist()
+
         return RoastHistoryDeleteResult(
             deleted = true,
             totalCount = 0,
@@ -367,6 +391,11 @@ ${latest?.roastHealthHeadline ?: "-"}
 Latest Evaluation
 ${if (latest?.evaluation != null) "Saved" else "Not saved"}
         """.trimIndent()
+    }
+
+    private fun persist() {
+        val context = appContext ?: return
+        RoastHistoryStorage.save(context, entries)
     }
 
     private fun trimToMaxSize() {
@@ -521,6 +550,6 @@ ${if (latest?.evaluation != null) "Saved" else "Not saved"}
     }
 
     private fun oneDecimal(value: Double): String {
-        return "%.1f".format(value)
+        return String.format("%.1f", value)
     }
 }
