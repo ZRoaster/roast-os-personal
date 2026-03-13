@@ -30,6 +30,20 @@ object RoastOperatorPage {
         root.addView(statusCard)
         root.addView(UiKit.spacer(context))
 
+        val snapshotCard = UiKit.card(context)
+        val snapshotBody = UiKit.bodyText(context, "")
+        val openLastDetailBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
+        val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
+
+        snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
+        snapshotCard.addView(snapshotBody)
+        snapshotCard.addView(UiKit.spacer(context))
+        snapshotCard.addView(openLastDetailBtn)
+        snapshotCard.addView(openRecentBtnTop)
+
+        root.addView(snapshotCard)
+        root.addView(UiKit.spacer(context))
+
         val actionFocusCard = UiKit.card(context)
         val actionFocusPanel = RoastActionFocusPanel(context)
         actionFocusCard.addView(UiKit.cardTitle(context, "ACTION FOCUS"))
@@ -77,6 +91,51 @@ object RoastOperatorPage {
         controlCard.addView(openLatestBtn)
         root.addView(controlCard)
 
+        fun renderLastSnapshot() {
+            val latest = RoastHistoryEngine.latest()
+
+            snapshotBody.text = if (latest == null) {
+                """
+Batch
+-
+
+Status / Health
+- / -
+
+Evaluation
+Not saved
+
+FC / Drop
+- / -
+
+Created
+-
+                """.trimIndent()
+            } else {
+                val fc = formatElapsed(latest.actualFcSec ?: latest.predictedFcSec ?: 0, allowDash = latest.actualFcSec == null && latest.predictedFcSec == null)
+                val drop = formatElapsed(latest.actualDropSec ?: latest.predictedDropSec ?: 0, allowDash = latest.actualDropSec == null && latest.predictedDropSec == null)
+
+                """
+Batch
+${latest.batchId}
+
+Status / Health
+${latest.batchStatus} / ${latest.roastHealthHeadline}
+
+Evaluation
+${if (latest.evaluation != null) "Saved" else "Not saved"}
+
+FC / Drop
+$fc / $drop
+
+Created
+${formatDateTime(latest.createdAtMillis)}
+                """.trimIndent()
+            }
+
+            openLastDetailBtn.isEnabled = latest != null
+        }
+
         fun render() {
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
@@ -96,6 +155,7 @@ PHASE    ${snapshot.companion.phaseLabel}
 HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
+            renderLastSnapshot()
             actionFocusPanel.update()
             executivePanel.update()
             advisorPanel.update()
@@ -136,7 +196,28 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             )
         }
 
+        openRecentBtnTop.setOnClickListener {
+            RecentRoastListPage.show(
+                context = context,
+                container = container,
+                onBack = {
+                    show(context, container)
+                }
+            )
+        }
+
         openLatestBtn.setOnClickListener {
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = RoastHistoryEngine.latest(),
+                onBack = {
+                    show(context, container)
+                }
+            )
+        }
+
+        openLastDetailBtn.setOnClickListener {
             HistoryDetailPage.show(
                 context = context,
                 container = container,
@@ -178,10 +259,17 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
     }
 
     private fun formatElapsed(
-        sec: Int
+        sec: Int,
+        allowDash: Boolean = false
     ): String {
+        if (allowDash && sec <= 0) return "-"
         val m = sec / 60
         val s = sec % 60
         return "%d:%02d".format(m, s)
+    }
+
+    private fun formatDateTime(ms: Long): String {
+        return java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(ms))
     }
 }
