@@ -2,6 +2,10 @@ package com.roastos.app.ui
 
 import android.app.AlertDialog
 import android.content.Context
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
@@ -13,6 +17,12 @@ import java.util.Date
 import java.util.Locale
 
 object RecentRoastListPage {
+
+    private const val FILTER_ALL = "ALL"
+    private const val FILTER_IDLE = "IDLE"
+    private const val FILTER_RUNNING = "RUNNING"
+    private const val FILTER_STOPPED = "STOPPED"
+    private const val FILTER_FINISHED = "FINISHED"
 
     fun show(
         context: Context,
@@ -39,20 +49,84 @@ object RecentRoastListPage {
         root.addView(topCard)
         root.addView(UiKit.spacer(context))
 
-        val entries = RoastHistoryEngine.all()
+        val filterCard = UiKit.card(context)
+        val searchInput = EditText(context).apply {
+            hint = "Search batch / title / process"
+            inputType = InputType.TYPE_CLASS_TEXT
+            setSingleLine(true)
+        }
 
-        if (entries.isEmpty()) {
-            val emptyCard = UiKit.card(context)
-            emptyCard.addView(UiKit.cardTitle(context, "NO HISTORY"))
-            emptyCard.addView(
-                UiKit.bodyText(
-                    context,
-                    "No roast history yet."
+        val resultCountText = UiKit.bodyText(context, "")
+
+        val filterButtonRow1 = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val filterButtonRow2 = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val allBtn = UiKit.secondaryButton(context, FILTER_ALL)
+        val idleBtn = UiKit.secondaryButton(context, FILTER_IDLE)
+        val runningBtn = UiKit.secondaryButton(context, FILTER_RUNNING)
+        val stoppedBtn = UiKit.secondaryButton(context, FILTER_STOPPED)
+        val finishedBtn = UiKit.secondaryButton(context, FILTER_FINISHED)
+
+        filterButtonRow1.addView(allBtn)
+        filterButtonRow1.addView(idleBtn)
+        filterButtonRow1.addView(runningBtn)
+
+        filterButtonRow2.addView(stoppedBtn)
+        filterButtonRow2.addView(finishedBtn)
+
+        filterCard.addView(UiKit.cardTitle(context, "FILTER"))
+        filterCard.addView(searchInput)
+        filterCard.addView(UiKit.spacer(context))
+        filterCard.addView(filterButtonRow1)
+        filterCard.addView(filterButtonRow2)
+        filterCard.addView(UiKit.spacer(context))
+        filterCard.addView(resultCountText)
+
+        root.addView(filterCard)
+        root.addView(UiKit.spacer(context))
+
+        val listHost = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        root.addView(listHost)
+
+        val allEntries = RoastHistoryEngine.all()
+        var selectedFilter = FILTER_ALL
+
+        fun applyFilter() {
+            val keyword = searchInput.text?.toString()?.trim().orEmpty()
+
+            val filtered = allEntries.filter { entry ->
+                matchesKeyword(entry, keyword) && matchesStatus(entry, selectedFilter)
+            }
+
+            resultCountText.text = "Showing ${filtered.size} / ${allEntries.size}"
+
+            listHost.removeAllViews()
+
+            if (filtered.isEmpty()) {
+                val emptyCard = UiKit.card(context)
+                emptyCard.addView(UiKit.cardTitle(context, "NO MATCH"))
+                emptyCard.addView(
+                    UiKit.bodyText(
+                        context,
+                        if (allEntries.isEmpty()) {
+                            "No roast history yet."
+                        } else {
+                            "No roast history matched current search/filter."
+                        }
+                    )
                 )
-            )
-            root.addView(emptyCard)
-        } else {
-            entries.forEachIndexed { index, entry ->
+                listHost.addView(emptyCard)
+                return
+            }
+
+            filtered.forEachIndexed { index, entry ->
                 val itemCard = UiKit.card(context)
                 val itemTitle = UiKit.cardTitle(context, "ROAST ${index + 1}")
                 val itemBody = UiKit.bodyText(context, buildCompactEntryText(entry))
@@ -78,13 +152,32 @@ object RecentRoastListPage {
                 itemCard.addView(UiKit.spacer(context))
                 itemCard.addView(openBtn)
 
-                root.addView(itemCard)
+                listHost.addView(itemCard)
 
-                if (index != entries.lastIndex) {
-                    root.addView(UiKit.spacer(context))
+                if (index != filtered.lastIndex) {
+                    listHost.addView(UiKit.spacer(context))
                 }
             }
         }
+
+        fun setFilter(filter: String) {
+            selectedFilter = filter
+            applyFilter()
+        }
+
+        allBtn.setOnClickListener { setFilter(FILTER_ALL) }
+        idleBtn.setOnClickListener { setFilter(FILTER_IDLE) }
+        runningBtn.setOnClickListener { setFilter(FILTER_RUNNING) }
+        stoppedBtn.setOnClickListener { setFilter(FILTER_STOPPED) }
+        finishedBtn.setOnClickListener { setFilter(FILTER_FINISHED) }
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                applyFilter()
+            }
+        })
 
         backBtn.setOnClickListener {
             onBack?.invoke() ?: RoastStudioPage.show(context, container)
@@ -113,8 +206,31 @@ object RecentRoastListPage {
                 .show()
         }
 
+        applyFilter()
+
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun matchesKeyword(
+        entry: RoastHistoryEntry,
+        keyword: String
+    ): Boolean {
+        if (keyword.isBlank()) return true
+
+        val q = keyword.lowercase(Locale.getDefault())
+
+        return entry.batchId.lowercase(Locale.getDefault()).contains(q) ||
+            entry.title.lowercase(Locale.getDefault()).contains(q) ||
+            entry.process.lowercase(Locale.getDefault()).contains(q)
+    }
+
+    private fun matchesStatus(
+        entry: RoastHistoryEntry,
+        selectedFilter: String
+    ): Boolean {
+        if (selectedFilter == FILTER_ALL) return true
+        return entry.batchStatus.trim().equals(selectedFilter, ignoreCase = true)
     }
 
     private fun buildCompactEntryText(
@@ -123,6 +239,12 @@ object RecentRoastListPage {
         return """
 Batch
 ${entry.batchId}
+
+Title
+${entry.title}
+
+Process
+${entry.process}
 
 Status
 ${entry.batchStatus}
