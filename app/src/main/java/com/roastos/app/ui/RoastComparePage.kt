@@ -285,9 +285,7 @@ Next roast should confirm whether the finish window was deliberately shortened i
             }
         }
 
-        val rorA = left.actualPreFcRor
-        val rorB = right.actualPreFcRor
-        val rorDiff = diffIfBothPresent(rorA, rorB)
+        val rorDiff = diffIfBothPresent(left.actualPreFcRor, right.actualPreFcRor)
         if (rorDiff != null && abs(rorDiff) >= 0.5) {
             hints += if (rorDiff > 0) {
                 """
@@ -572,17 +570,29 @@ B shows a higher roast health risk headline than A.
     ): String {
         val parts = mutableListOf<String>()
 
-        compareSecLine("Turning", left.actualTurningSec ?: left.predictedTurningSec, right.actualTurningSec ?: right.predictedTurningSec)
-            ?.let { parts += it }
+        compareSecLine(
+            "Turning",
+            left.actualTurningSec ?: left.predictedTurningSec,
+            right.actualTurningSec ?: right.predictedTurningSec
+        )?.let { parts += it }
 
-        compareSecLine("Yellow", left.actualYellowSec ?: left.predictedYellowSec, right.actualYellowSec ?: right.predictedYellowSec)
-            ?.let { parts += it }
+        compareSecLine(
+            "Yellow",
+            left.actualYellowSec ?: left.predictedYellowSec,
+            right.actualYellowSec ?: right.predictedYellowSec
+        )?.let { parts += it }
 
-        compareSecLine("First Crack", left.actualFcSec ?: left.predictedFcSec, right.actualFcSec ?: right.predictedFcSec)
-            ?.let { parts += it }
+        compareSecLine(
+            "First Crack",
+            left.actualFcSec ?: left.predictedFcSec,
+            right.actualFcSec ?: right.predictedFcSec
+        )?.let { parts += it }
 
-        compareSecLine("Drop", left.actualDropSec ?: left.predictedDropSec, right.actualDropSec ?: right.predictedDropSec)
-            ?.let { parts += it }
+        compareSecLine(
+            "Drop",
+            left.actualDropSec ?: left.predictedDropSec,
+            right.actualDropSec ?: right.predictedDropSec
+        )?.let { parts += it }
 
         return if (parts.isEmpty()) {
             "No comparable timeline data."
@@ -645,4 +655,109 @@ B shows a higher roast health risk headline than A.
         return when {
             diff == 0 -> "$label is the same."
             diff < 0 -> "A $label is ${abs(diff)}s earlier than B."
-            else -> "B $label is ${abs(d
+            else -> "B $label is ${abs(diff)}s earlier than A."
+        }
+    }
+
+    private fun diffIfBothPresent(a: Int?, b: Int?): Int? {
+        if (a == null || b == null) return null
+        return a - b
+    }
+
+    private fun diffIfBothPresent(a: Double?, b: Double?): Double? {
+        if (a == null || b == null) return null
+        return a - b
+    }
+
+    private fun buildBatchOverview(entry: RoastHistoryEntry): String {
+        return """
+Batch ID
+${entry.batchId}
+
+Title
+${entry.title}
+
+Created
+${formatDateTime(entry.createdAtMillis)}
+
+Status
+${entry.batchStatus}
+
+Process
+${entry.process}
+        """.trimIndent()
+    }
+
+    private fun buildMaterial(entry: RoastHistoryEntry): String {
+        return """
+Density
+${entry.density}
+
+Moisture
+${entry.moisture}
+
+AW
+${entry.aw}
+
+Pre-FC RoR
+${formatRor(entry.actualPreFcRor)}
+        """.trimIndent()
+    }
+
+    private fun buildEnvironment(entry: RoastHistoryEntry): String {
+        return """
+Env Temp
+${entry.envTemp} ℃
+
+Env RH
+${entry.envRh} %
+        """.trimIndent()
+    }
+
+    private fun buildTimeline(entry: RoastHistoryEntry): String {
+        return """
+Turning
+${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)}
+
+Yellow
+${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
+
+First Crack
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
+
+Drop
+${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+        """.trimIndent()
+    }
+
+    private fun buildRoastHealth(entry: RoastHistoryEntry): String {
+        return """
+Headline
+${entry.roastHealthHeadline}
+
+Detail
+${entry.roastHealthDetail}
+        """.trimIndent()
+    }
+
+    private fun formatSec(sec: Int?): String {
+        if (sec == null) return "-"
+        val m = sec / 60
+        val s = sec % 60
+        return "%d:%02d".format(m, s)
+    }
+
+    private fun formatRor(value: Double?): String {
+        if (value == null) return "-"
+        return String.format(Locale.getDefault(), "%.1f ℃/min", value)
+    }
+
+    private fun formatOneDecimal(value: Double): String {
+        return String.format(Locale.getDefault(), "%.1f", value)
+    }
+
+    private fun formatDateTime(ms: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return formatter.format(Date(ms))
+    }
+}
