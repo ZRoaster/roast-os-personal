@@ -5,13 +5,17 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import com.roastos.app.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object HistoryDetailPage {
 
     fun show(
         context: Context,
         container: LinearLayout,
-        entry: RoastHistoryEntry?
+        entry: RoastHistoryEntry?,
+        onBack: (() -> Unit)? = null
     ) {
 
         container.removeAllViews()
@@ -41,7 +45,7 @@ object HistoryDetailPage {
             root.addView(emptyCard)
 
             backBtn.setOnClickListener {
-                RoastStudioPage.show(context, container)
+                onBack?.invoke() ?: RoastStudioPage.show(context, container)
             }
 
             scroll.addView(root)
@@ -59,6 +63,15 @@ object HistoryDetailPage {
                 """
 Batch ID
 ${entry.batchId}
+
+Title
+${entry.title}
+
+Created
+${formatDateTime(entry.createdAtMillis)}
+
+Status
+${entry.batchStatus}
 
 Process
 ${entry.process}
@@ -81,7 +94,7 @@ ${entry.envTemp} ℃ / ${entry.envRh} %
         root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
-        val timelineCard = UiKit.card(context)
+        val timelineCard = UiKit.card()
 
         timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
 
@@ -107,7 +120,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        val reportCard = UiKit.card(context)
+        val reportCard = UiKit.card()
 
         reportCard.addView(UiKit.cardTitle(context, "REPORT"))
         reportCard.addView(
@@ -120,7 +133,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(reportCard)
         root.addView(UiKit.spacer(context))
 
-        val diagnosisCard = UiKit.card(context)
+        val diagnosisCard = UiKit.card()
 
         diagnosisCard.addView(UiKit.cardTitle(context, "DIAGNOSIS"))
         diagnosisCard.addView(
@@ -133,7 +146,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(diagnosisCard)
         root.addView(UiKit.spacer(context))
 
-        val correctionCard = UiKit.card(context)
+        val correctionCard = UiKit.card()
 
         correctionCard.addView(UiKit.cardTitle(context, "CORRECTION"))
         correctionCard.addView(
@@ -146,7 +159,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(correctionCard)
         root.addView(UiKit.spacer(context))
 
-        val styleCard = UiKit.card(context)
+        val styleCard = UiKit.card()
 
         val createStyleBtn = UiKit.primaryButton(
             context,
@@ -177,7 +190,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         }
 
         backBtn.setOnClickListener {
-            RoastStudioPage.show(context, container)
+            onBack?.invoke() ?: RoastStudioPage.show(context, container)
         }
 
         scroll.addView(root)
@@ -192,5 +205,10 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         val s = sec % 60
 
         return "%d:%02d".format(m, s)
+    }
+
+    private fun formatDateTime(ms: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return formatter.format(Date(ms))
     }
 }
