@@ -1,8 +1,10 @@
 package com.roastos.app.ui
 
+import android.app.AlertDialog
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Toast
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.UiKit
@@ -17,7 +19,6 @@ object RecentRoastListPage {
         container: LinearLayout,
         onBack: (() -> Unit)? = null
     ) {
-
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -29,9 +30,11 @@ object RecentRoastListPage {
 
         val topCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
+        val clearAllBtn = UiKit.secondaryButton(context, "CLEAR ALL HISTORY")
 
         topCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
         topCard.addView(backBtn)
+        topCard.addView(clearAllBtn)
 
         root.addView(topCard)
         root.addView(UiKit.spacer(context))
@@ -50,7 +53,6 @@ object RecentRoastListPage {
             root.addView(emptyCard)
         } else {
             entries.forEachIndexed { index, entry ->
-
                 val itemCard = UiKit.card(context)
                 val itemTitle = UiKit.cardTitle(context, "ROAST ${index + 1}")
                 val itemBody = UiKit.bodyText(context, buildCompactEntryText(entry))
@@ -86,6 +88,29 @@ object RecentRoastListPage {
 
         backBtn.setOnClickListener {
             onBack?.invoke() ?: RoastStudioPage.show(context, container)
+        }
+
+        clearAllBtn.setOnClickListener {
+            if (RoastHistoryEngine.count() == 0) {
+                Toast.makeText(context, "No history to clear", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            AlertDialog.Builder(context)
+                .setTitle("Clear all history?")
+                .setMessage("This will permanently remove all saved roast history on this device.")
+                .setPositiveButton("CLEAR") { _, _ ->
+                    val result = RoastHistoryEngine.clear()
+                    Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+
+                    show(
+                        context = context,
+                        container = container,
+                        onBack = onBack
+                    )
+                }
+                .setNegativeButton("CANCEL", null)
+                .show()
         }
 
         scroll.addView(root)
