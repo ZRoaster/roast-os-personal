@@ -123,6 +123,10 @@ object RecentRoastListPage {
             return selectedBatchB?.let { RoastHistoryEngine.findByBatchId(it) }
         }
 
+        fun evaluationStatusText(entry: RoastHistoryEntry?): String {
+            return if (entry?.evaluation != null) "Saved" else "Not saved"
+        }
+
         fun refreshCompareState() {
             val a = selectedEntryA()
             val b = selectedEntryB()
@@ -130,9 +134,13 @@ object RecentRoastListPage {
             compareStateText.text = """
 A
 ${a?.batchId ?: "-"}
+Evaluation
+${evaluationStatusText(a)}
 
 B
 ${b?.batchId ?: "-"}
+Evaluation
+${evaluationStatusText(b)}
             """.trimIndent()
 
             openCompareBtn.isEnabled = a != null && b != null && a.batchId != b.batchId
@@ -365,6 +373,9 @@ ${entry.batchStatus}
 
 Health
 ${entry.roastHealthHeadline}
+
+Evaluation
+${if (entry.evaluation != null) "Saved" else "Not saved"}
 
 Created
 ${formatDateTime(entry.createdAtMillis)}
