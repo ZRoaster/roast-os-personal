@@ -24,6 +24,9 @@ object RecentRoastListPage {
     private const val FILTER_STOPPED = "STOPPED"
     private const val FILTER_FINISHED = "FINISHED"
 
+    private var selectedBatchA: String? = null
+    private var selectedBatchB: String? = null
+
     fun show(
         context: Context,
         container: LinearLayout,
@@ -47,6 +50,20 @@ object RecentRoastListPage {
         topCard.addView(clearAllBtn)
 
         root.addView(topCard)
+        root.addView(UiKit.spacer(context))
+
+        val compareCard = UiKit.card(context)
+        val compareStateText = UiKit.bodyText(context, "")
+        val clearCompareBtn = UiKit.secondaryButton(context, "CLEAR COMPARE")
+        val openCompareBtn = UiKit.primaryButton(context, "OPEN COMPARE")
+
+        compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
+        compareCard.addView(compareStateText)
+        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(clearCompareBtn)
+        compareCard.addView(openCompareBtn)
+
+        root.addView(compareCard)
         root.addView(UiKit.spacer(context))
 
         val filterCard = UiKit.card(context)
@@ -98,6 +115,29 @@ object RecentRoastListPage {
         val allEntries = RoastHistoryEngine.all()
         var selectedFilter = FILTER_ALL
 
+        fun selectedEntryA(): RoastHistoryEntry? {
+            return selectedBatchA?.let { RoastHistoryEngine.findByBatchId(it) }
+        }
+
+        fun selectedEntryB(): RoastHistoryEntry? {
+            return selectedBatchB?.let { RoastHistoryEngine.findByBatchId(it) }
+        }
+
+        fun refreshCompareState() {
+            val a = selectedEntryA()
+            val b = selectedEntryB()
+
+            compareStateText.text = """
+A
+${a?.batchId ?: "-"}
+
+B
+${b?.batchId ?: "-"}
+            """.trimIndent()
+
+            openCompareBtn.isEnabled = a != null && b != null && a.batchId != b.batchId
+        }
+
         fun applyFilter() {
             val keyword = searchInput.text?.toString()?.trim().orEmpty()
 
@@ -123,6 +163,7 @@ object RecentRoastListPage {
                     )
                 )
                 listHost.addView(emptyCard)
+                refreshCompareState()
                 return
             }
 
@@ -130,7 +171,39 @@ object RecentRoastListPage {
                 val itemCard = UiKit.card(context)
                 val itemTitle = UiKit.cardTitle(context, "ROAST ${index + 1}")
                 val itemBody = UiKit.bodyText(context, buildCompactEntryText(entry))
+                val selectABtn = UiKit.secondaryButton(
+                    context,
+                    if (selectedBatchA == entry.batchId) "SELECTED A" else "SELECT A"
+                )
+                val selectBBtn = UiKit.secondaryButton(
+                    context,
+                    if (selectedBatchB == entry.batchId) "SELECTED B" else "SELECT B"
+                )
                 val openBtn = UiKit.secondaryButton(context, "OPEN DETAIL")
+
+                selectABtn.setOnClickListener {
+                    selectedBatchA = entry.batchId
+                    if (selectedBatchB == entry.batchId) {
+                        selectedBatchB = null
+                    }
+                    show(
+                        context = context,
+                        container = container,
+                        onBack = onBack
+                    )
+                }
+
+                selectBBtn.setOnClickListener {
+                    selectedBatchB = entry.batchId
+                    if (selectedBatchA == entry.batchId) {
+                        selectedBatchA = null
+                    }
+                    show(
+                        context = context,
+                        container = container,
+                        onBack = onBack
+                    )
+                }
 
                 openBtn.setOnClickListener {
                     HistoryDetailPage.show(
@@ -150,6 +223,8 @@ object RecentRoastListPage {
                 itemCard.addView(itemTitle)
                 itemCard.addView(itemBody)
                 itemCard.addView(UiKit.spacer(context))
+                itemCard.addView(selectABtn)
+                itemCard.addView(selectBBtn)
                 itemCard.addView(openBtn)
 
                 listHost.addView(itemCard)
@@ -158,6 +233,8 @@ object RecentRoastListPage {
                     listHost.addView(UiKit.spacer(context))
                 }
             }
+
+            refreshCompareState()
         }
 
         fun setFilter(filter: String) {
@@ -194,6 +271,8 @@ object RecentRoastListPage {
                 .setMessage("This will permanently remove all saved roast history on this device.")
                 .setPositiveButton("CLEAR") { _, _ ->
                     val result = RoastHistoryEngine.clear()
+                    selectedBatchA = null
+                    selectedBatchB = null
                     Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
 
                     show(
@@ -206,6 +285,41 @@ object RecentRoastListPage {
                 .show()
         }
 
+        clearCompareBtn.setOnClickListener {
+            selectedBatchA = null
+            selectedBatchB = null
+            show(
+                context = context,
+                container = container,
+                onBack = onBack
+            )
+        }
+
+        openCompareBtn.setOnClickListener {
+            val left = selectedEntryA()
+            val right = selectedEntryB()
+
+            if (left == null || right == null) {
+                Toast.makeText(context, "Select A and B first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            RoastComparePage.show(
+                context = context,
+                container = container,
+                left = left,
+                right = right,
+                onBack = {
+                    show(
+                        context = context,
+                        container = container,
+                        onBack = onBack
+                    )
+                }
+            )
+        }
+
+        refreshCompareState()
         applyFilter()
 
         scroll.addView(root)
