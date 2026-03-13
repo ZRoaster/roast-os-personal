@@ -57,6 +57,8 @@ object RoastOperatorPage {
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
         val openStudioBtn = UiKit.secondaryButton(context, "OPEN STUDIO")
         val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
+        val openRecentBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
+        val openLatestBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
 
         controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
         controlCard.addView(startBtn)
@@ -64,6 +66,8 @@ object RoastOperatorPage {
         controlCard.addView(refreshBtn)
         controlCard.addView(openStudioBtn)
         controlCard.addView(openEnvironmentBtn)
+        controlCard.addView(openRecentBtn)
+        controlCard.addView(openLatestBtn)
         root.addView(controlCard)
 
         fun render() {
@@ -112,6 +116,18 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
+        }
+
+        openRecentBtn.setOnClickListener {
+            RecentRoastListPage.show(context, container)
+        }
+
+        openLatestBtn.setOnClickListener {
+            HistoryDetailPage.show(
+                context = context,
+                container = container,
+                entry = RoastHistoryEngine.latest()
+            )
         }
 
         handler.post(object : Runnable {
