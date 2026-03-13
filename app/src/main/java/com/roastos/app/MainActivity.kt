@@ -15,6 +15,8 @@ class MainActivity : AppCompatActivity() {
             RoastStateModel.machine = restoredMachine
         }
 
+        RoastMachineProfileSyncEngine.syncFromBestMatch()
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
