@@ -96,24 +96,19 @@ object RoastOperatorPage {
 
             snapshotBody.text = if (latest == null) {
                 """
-Batch
--
+No roast history yet.
 
-Status / Health
-- / -
-
-Evaluation
-Not saved
-
-FC / Drop
-- / -
-
-Created
--
+Save your first roast to see the latest snapshot here.
                 """.trimIndent()
             } else {
-                val fc = formatElapsed(latest.actualFcSec ?: latest.predictedFcSec ?: 0, allowDash = latest.actualFcSec == null && latest.predictedFcSec == null)
-                val drop = formatElapsed(latest.actualDropSec ?: latest.predictedDropSec ?: 0, allowDash = latest.actualDropSec == null && latest.predictedDropSec == null)
+                val fc = formatElapsed(
+                    latest.actualFcSec ?: latest.predictedFcSec ?: 0,
+                    allowDash = latest.actualFcSec == null && latest.predictedFcSec == null
+                )
+                val drop = formatElapsed(
+                    latest.actualDropSec ?: latest.predictedDropSec ?: 0,
+                    allowDash = latest.actualDropSec == null && latest.predictedDropSec == null
+                )
 
                 """
 Batch
@@ -124,6 +119,9 @@ ${latest.batchStatus} / ${latest.roastHealthHeadline}
 
 Evaluation
 ${if (latest.evaluation != null) "Saved" else "Not saved"}
+
+Environment
+${latest.envTemp} ℃ / ${latest.envRh} %
 
 FC / Drop
 $fc / $drop
