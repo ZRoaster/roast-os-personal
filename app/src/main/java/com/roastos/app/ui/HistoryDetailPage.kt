@@ -2,9 +2,12 @@ package com.roastos.app.ui
 
 import android.app.AlertDialog
 import android.content.Context
+import android.text.InputType
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
+import com.roastos.app.RoastEvaluation
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.RoastStyleFromBatchEngine
@@ -21,7 +24,6 @@ object HistoryDetailPage {
         entry: RoastHistoryEntry?,
         onBack: (() -> Unit)? = null
     ) {
-
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -165,6 +167,56 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(correctionCard)
         root.addView(UiKit.spacer(context))
 
+        val evaluationCard = UiKit.card(context)
+
+        val beanColorInput = decimalInput(context, "Bean Color")
+        val groundColorInput = decimalInput(context, "Ground Color")
+        val roastedAwInput = decimalInput(context, "Roasted AW")
+
+        val sweetnessInput = integerInput(context, "Sweetness")
+        val acidityInput = integerInput(context, "Acidity")
+        val bodyInput = integerInput(context, "Body")
+        val flavorClarityInput = integerInput(context, "Flavor Clarity")
+        val balanceInput = integerInput(context, "Balance")
+
+        val notesInput = EditText(context).apply {
+            hint = "Notes"
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            minLines = 3
+        }
+
+        fillEvaluation(entry.evaluation, beanColorInput, groundColorInput, roastedAwInput,
+            sweetnessInput, acidityInput, bodyInput, flavorClarityInput, balanceInput, notesInput)
+
+        val saveEvaluationBtn = UiKit.primaryButton(context, "SAVE EVALUATION")
+        val clearEvaluationBtn = UiKit.secondaryButton(context, "CLEAR EVALUATION")
+
+        evaluationCard.addView(UiKit.cardTitle(context, "EVALUATION"))
+        evaluationCard.addView(beanColorInput)
+        evaluationCard.addView(groundColorInput)
+        evaluationCard.addView(roastedAwInput)
+        evaluationCard.addView(sweetnessInput)
+        evaluationCard.addView(acidityInput)
+        evaluationCard.addView(bodyInput)
+        evaluationCard.addView(flavorClarityInput)
+        evaluationCard.addView(balanceInput)
+        evaluationCard.addView(notesInput)
+        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                buildEvaluationSummary(entry.evaluation)
+            )
+        )
+        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(saveEvaluationBtn)
+        evaluationCard.addView(clearEvaluationBtn)
+
+        root.addView(evaluationCard)
+        root.addView(UiKit.spacer(context))
+
         val styleCard = UiKit.card(context)
         val createStyleBtn = UiKit.primaryButton(context, "CREATE MY STYLE")
 
@@ -188,6 +240,66 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         dangerCard.addView(deleteBtn)
 
         root.addView(dangerCard)
+
+        saveEvaluationBtn.setOnClickListener {
+            val evaluation = RoastEvaluation(
+                beanColor = parseDoubleOrNull(beanColorInput.text?.toString()),
+                groundColor = parseDoubleOrNull(groundColorInput.text?.toString()),
+                roastedAw = parseDoubleOrNull(roastedAwInput.text?.toString()),
+                sweetness = parseIntOrNull(sweetnessInput.text?.toString()),
+                acidity = parseIntOrNull(acidityInput.text?.toString()),
+                body = parseIntOrNull(bodyInput.text?.toString()),
+                flavorClarity = parseIntOrNull(flavorClarityInput.text?.toString()),
+                balance = parseIntOrNull(balanceInput.text?.toString()),
+                notes = notesInput.text?.toString()?.trim().orEmpty()
+            )
+
+            val result = RoastHistoryEngine.saveEvaluation(entry.batchId, evaluation)
+
+            Toast.makeText(
+                context,
+                result.message,
+                Toast.LENGTH_LONG
+            ).show()
+
+            val updatedEntry = RoastHistoryEngine.findByBatchId(entry.batchId)
+            show(
+                context = context,
+                container = container,
+                entry = updatedEntry,
+                onBack = onBack
+            )
+        }
+
+        clearEvaluationBtn.setOnClickListener {
+            if (entry.evaluation == null) {
+                Toast.makeText(context, "No evaluation to clear", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            AlertDialog.Builder(context)
+                .setTitle("Clear evaluation?")
+                .setMessage("Saved evaluation data for this roast will be removed.")
+                .setPositiveButton("CLEAR") { _, _ ->
+                    val result = RoastHistoryEngine.clearEvaluation(entry.batchId)
+
+                    Toast.makeText(
+                        context,
+                        result.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    val updatedEntry = RoastHistoryEngine.findByBatchId(entry.batchId)
+                    show(
+                        context = context,
+                        container = container,
+                        entry = updatedEntry,
+                        onBack = onBack
+                    )
+                }
+                .setNegativeButton("CANCEL", null)
+                .show()
+        }
 
         createStyleBtn.setOnClickListener {
             val suggestedName =
@@ -233,6 +345,105 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
 
         scroll.addView(root)
         container.addView(scroll)
+    }
+
+    private fun decimalInput(
+        context: Context,
+        hint: String
+    ): EditText {
+        return EditText(context).apply {
+            this.hint = hint
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+        }
+    }
+
+    private fun integerInput(
+        context: Context,
+        hint: String
+    ): EditText {
+        return EditText(context).apply {
+            this.hint = hint
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+        }
+    }
+
+    private fun fillEvaluation(
+        evaluation: RoastEvaluation?,
+        beanColorInput: EditText,
+        groundColorInput: EditText,
+        roastedAwInput: EditText,
+        sweetnessInput: EditText,
+        acidityInput: EditText,
+        bodyInput: EditText,
+        flavorClarityInput: EditText,
+        balanceInput: EditText,
+        notesInput: EditText
+    ) {
+        beanColorInput.setText(evaluation?.beanColor?.toString().orEmpty())
+        groundColorInput.setText(evaluation?.groundColor?.toString().orEmpty())
+        roastedAwInput.setText(evaluation?.roastedAw?.toString().orEmpty())
+        sweetnessInput.setText(evaluation?.sweetness?.toString().orEmpty())
+        acidityInput.setText(evaluation?.acidity?.toString().orEmpty())
+        bodyInput.setText(evaluation?.body?.toString().orEmpty())
+        flavorClarityInput.setText(evaluation?.flavorClarity?.toString().orEmpty())
+        balanceInput.setText(evaluation?.balance?.toString().orEmpty())
+        notesInput.setText(evaluation?.notes.orEmpty())
+    }
+
+    private fun buildEvaluationSummary(
+        evaluation: RoastEvaluation?
+    ): String {
+        if (evaluation == null) {
+            return """
+Saved Evaluation
+No evaluation saved yet.
+            """.trimIndent()
+        }
+
+        return """
+Saved Evaluation
+
+Bean Color
+${evaluation.beanColor ?: "-"}
+
+Ground Color
+${evaluation.groundColor ?: "-"}
+
+Roasted AW
+${evaluation.roastedAw ?: "-"}
+
+Sweetness
+${evaluation.sweetness ?: "-"}
+
+Acidity
+${evaluation.acidity ?: "-"}
+
+Body
+${evaluation.body ?: "-"}
+
+Flavor Clarity
+${evaluation.flavorClarity ?: "-"}
+
+Balance
+${evaluation.balance ?: "-"}
+
+Notes
+${evaluation.notes.ifBlank { "-" }}
+        """.trimIndent()
+    }
+
+    private fun parseDoubleOrNull(value: String?): Double? {
+        val text = value?.trim().orEmpty()
+        if (text.isBlank()) return null
+        return text.toDoubleOrNull()
+    }
+
+    private fun parseIntOrNull(value: String?): Int? {
+        val text = value?.trim().orEmpty()
+        if (text.isBlank()) return null
+        return text.toIntOrNull()
     }
 
     private fun formatSec(sec: Int?): String {
