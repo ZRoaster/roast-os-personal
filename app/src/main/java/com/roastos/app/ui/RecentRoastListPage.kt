@@ -23,6 +23,7 @@ object RecentRoastListPage {
     private const val FILTER_RUNNING = "RUNNING"
     private const val FILTER_STOPPED = "STOPPED"
     private const val FILTER_FINISHED = "FINISHED"
+    private const val FILTER_ONLY_EVALUATED = "ONLY EVALUATED"
 
     private var selectedBatchA: String? = null
     private var selectedBatchB: String? = null
@@ -88,6 +89,7 @@ object RecentRoastListPage {
         val runningBtn = UiKit.secondaryButton(context, FILTER_RUNNING)
         val stoppedBtn = UiKit.secondaryButton(context, FILTER_STOPPED)
         val finishedBtn = UiKit.secondaryButton(context, FILTER_FINISHED)
+        val onlyEvaluatedBtn = UiKit.secondaryButton(context, FILTER_ONLY_EVALUATED)
 
         filterButtonRow1.addView(allBtn)
         filterButtonRow1.addView(idleBtn)
@@ -95,6 +97,7 @@ object RecentRoastListPage {
 
         filterButtonRow2.addView(stoppedBtn)
         filterButtonRow2.addView(finishedBtn)
+        filterButtonRow2.addView(onlyEvaluatedBtn)
 
         filterCard.addView(UiKit.cardTitle(context, "FILTER"))
         filterCard.addView(searchInput)
@@ -150,7 +153,9 @@ ${evaluationStatusText(b)}
             val keyword = searchInput.text?.toString()?.trim().orEmpty()
 
             val filtered = allEntries.filter { entry ->
-                matchesKeyword(entry, keyword) && matchesStatus(entry, selectedFilter)
+                matchesKeyword(entry, keyword) &&
+                    matchesStatus(entry, selectedFilter) &&
+                    matchesEvaluation(entry, selectedFilter)
             }
 
             resultCountText.text = "Showing ${filtered.size} / ${allEntries.size}"
@@ -255,6 +260,7 @@ ${evaluationStatusText(b)}
         runningBtn.setOnClickListener { setFilter(FILTER_RUNNING) }
         stoppedBtn.setOnClickListener { setFilter(FILTER_STOPPED) }
         finishedBtn.setOnClickListener { setFilter(FILTER_FINISHED) }
+        onlyEvaluatedBtn.setOnClickListener { setFilter(FILTER_ONLY_EVALUATED) }
 
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -351,8 +357,16 @@ ${evaluationStatusText(b)}
         entry: RoastHistoryEntry,
         selectedFilter: String
     ): Boolean {
-        if (selectedFilter == FILTER_ALL) return true
+        if (selectedFilter == FILTER_ALL || selectedFilter == FILTER_ONLY_EVALUATED) return true
         return entry.batchStatus.trim().equals(selectedFilter, ignoreCase = true)
+    }
+
+    private fun matchesEvaluation(
+        entry: RoastHistoryEntry,
+        selectedFilter: String
+    ): Boolean {
+        if (selectedFilter != FILTER_ONLY_EVALUATED) return true
+        return entry.evaluation != null
     }
 
     private fun buildCompactEntryText(
