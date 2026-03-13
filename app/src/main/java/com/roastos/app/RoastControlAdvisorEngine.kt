@@ -51,6 +51,7 @@ object RoastControlAdvisorEngine {
         val ai = RoastAiAssistantEngine.generate()
         val prediction = RoastRorPredictionEngine.evaluate(snapshot)
         val calibrationMatch = RoastCalibrationMatcherEngine.matchBest()
+        val machine = RoastStateModel.machine
 
         val finalHeat = buildHeatAdvice(decision, control, prediction)
         val finalAirflow = buildAirflowAdvice(decision, control, prediction)
@@ -63,7 +64,8 @@ object RoastControlAdvisorEngine {
             control = control,
             ai = ai,
             prediction = prediction,
-            calibrationMatch = calibrationMatch
+            calibrationMatch = calibrationMatch,
+            machine = machine
         )
 
         return RoastControlAdvisorOutput(
@@ -147,7 +149,8 @@ object RoastControlAdvisorEngine {
         control: RoastControlAdjustment,
         ai: RoastAiAssistantOutput,
         prediction: RoastRorPrediction,
-        calibrationMatch: RoastCalibrationMatchResult
+        calibrationMatch: RoastCalibrationMatchResult,
+        machine: RoastStateModel.MachineState
     ): String {
 
         val parts = mutableListOf<String>()
@@ -175,11 +178,30 @@ object RoastControlAdvisorEngine {
             parts += "Calibration Match Reason: ${calibrationMatch.reason}"
         }
 
+        parts += buildMachineStateBlock(machine)
+
         if (ai.summary.isNotBlank()) {
             parts += "AI Assistant: ${ai.summary}"
         }
 
         return parts.joinToString("\n\n")
+    }
+
+    private fun buildMachineStateBlock(
+        machine: RoastStateModel.MachineState
+    ): String {
+        return """
+Current Synced Machine State:
+Power Response Delay: ${formatDouble(machine.powerResponseDelay)} s
+Airflow Response Delay: ${formatDouble(machine.airflowResponseDelay)} s
+RPM Response Delay: ${formatDouble(machine.rpmResponseDelay)} s
+Thermal Mass: ${formatDouble(machine.thermalMass)}
+Heat Retention: ${formatDouble(machine.heatRetention)}
+Drum Mass: ${formatDouble(machine.drumMass)}
+Max Power: ${machine.maxPowerW} W
+Max Air: ${machine.maxAirPa} Pa
+Max RPM: ${machine.maxRpm}
+        """.trimIndent()
     }
 
     private fun formatSignedPercent(value: Int): String {
@@ -193,6 +215,10 @@ object RoastControlAdvisorEngine {
     }
 
     private fun formatScore(value: Double): String {
+        return "%.2f".format(value)
+    }
+
+    private fun formatDouble(value: Double): String {
         return "%.2f".format(value)
     }
 }
