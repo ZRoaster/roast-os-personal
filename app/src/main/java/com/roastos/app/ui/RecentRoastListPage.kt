@@ -24,6 +24,7 @@ object RecentRoastListPage {
     private const val FILTER_STOPPED = "STOPPED"
     private const val FILTER_FINISHED = "FINISHED"
     private const val FILTER_ONLY_EVALUATED = "ONLY EVALUATED"
+    private const val FILTER_ONLY_NOT_EVALUATED = "ONLY NOT EVALUATED"
 
     private var selectedBatchA: String? = null
     private var selectedBatchB: String? = null
@@ -84,12 +85,17 @@ object RecentRoastListPage {
             orientation = LinearLayout.HORIZONTAL
         }
 
+        val filterButtonRow3 = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
         val allBtn = UiKit.secondaryButton(context, FILTER_ALL)
         val idleBtn = UiKit.secondaryButton(context, FILTER_IDLE)
         val runningBtn = UiKit.secondaryButton(context, FILTER_RUNNING)
         val stoppedBtn = UiKit.secondaryButton(context, FILTER_STOPPED)
         val finishedBtn = UiKit.secondaryButton(context, FILTER_FINISHED)
         val onlyEvaluatedBtn = UiKit.secondaryButton(context, FILTER_ONLY_EVALUATED)
+        val onlyNotEvaluatedBtn = UiKit.secondaryButton(context, FILTER_ONLY_NOT_EVALUATED)
 
         filterButtonRow1.addView(allBtn)
         filterButtonRow1.addView(idleBtn)
@@ -97,13 +103,16 @@ object RecentRoastListPage {
 
         filterButtonRow2.addView(stoppedBtn)
         filterButtonRow2.addView(finishedBtn)
-        filterButtonRow2.addView(onlyEvaluatedBtn)
+
+        filterButtonRow3.addView(onlyEvaluatedBtn)
+        filterButtonRow3.addView(onlyNotEvaluatedBtn)
 
         filterCard.addView(UiKit.cardTitle(context, "FILTER"))
         filterCard.addView(searchInput)
         filterCard.addView(UiKit.spacer(context))
         filterCard.addView(filterButtonRow1)
         filterCard.addView(filterButtonRow2)
+        filterCard.addView(filterButtonRow3)
         filterCard.addView(UiKit.spacer(context))
         filterCard.addView(resultCountText)
 
@@ -261,6 +270,7 @@ ${evaluationStatusText(b)}
         stoppedBtn.setOnClickListener { setFilter(FILTER_STOPPED) }
         finishedBtn.setOnClickListener { setFilter(FILTER_FINISHED) }
         onlyEvaluatedBtn.setOnClickListener { setFilter(FILTER_ONLY_EVALUATED) }
+        onlyNotEvaluatedBtn.setOnClickListener { setFilter(FILTER_ONLY_NOT_EVALUATED) }
 
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -357,7 +367,12 @@ ${evaluationStatusText(b)}
         entry: RoastHistoryEntry,
         selectedFilter: String
     ): Boolean {
-        if (selectedFilter == FILTER_ALL || selectedFilter == FILTER_ONLY_EVALUATED) return true
+        if (
+            selectedFilter == FILTER_ALL ||
+            selectedFilter == FILTER_ONLY_EVALUATED ||
+            selectedFilter == FILTER_ONLY_NOT_EVALUATED
+        ) return true
+
         return entry.batchStatus.trim().equals(selectedFilter, ignoreCase = true)
     }
 
@@ -365,8 +380,11 @@ ${evaluationStatusText(b)}
         entry: RoastHistoryEntry,
         selectedFilter: String
     ): Boolean {
-        if (selectedFilter != FILTER_ONLY_EVALUATED) return true
-        return entry.evaluation != null
+        return when (selectedFilter) {
+            FILTER_ONLY_EVALUATED -> entry.evaluation != null
+            FILTER_ONLY_NOT_EVALUATED -> entry.evaluation == null
+            else -> true
+        }
     }
 
     private fun buildCompactEntryText(
