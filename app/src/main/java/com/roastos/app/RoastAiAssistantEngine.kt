@@ -43,15 +43,17 @@ object RoastAiAssistantEngine {
     ): RoastAiAssistantOutput {
 
         val comp = context.environmentCompensation
+        val control = RoastControlModel.evaluate()
 
         val dataCompleteness = evaluateCompleteness(context)
         val riskLevel = evaluateRisk(comp, dataCompleteness)
 
-        val heatAdvice = buildHeatAdvice(comp, dataCompleteness)
-        val airflowAdvice = buildAirflowAdvice(comp, dataCompleteness)
+        val heatAdvice = buildHeatAdvice(comp, control, dataCompleteness)
+        val airflowAdvice = buildAirflowAdvice(comp, control, dataCompleteness)
         val timingAdvice = buildTimingAdvice(comp, dataCompleteness)
         val summary = buildSummary(
             context = context,
+            control = control,
             completeness = dataCompleteness,
             heatAdvice = heatAdvice,
             airflowAdvice = airflowAdvice,
@@ -119,60 +121,88 @@ object RoastAiAssistantEngine {
 
     private fun buildHeatAdvice(
         comp: EnvironmentCompensationResult?,
+        control: RoastControlAdjustment,
         completeness: String
     ): String {
-        if (comp == null) {
-            return "No compensation data available; keep heat close to baseline."
+        val baseAdvice = if (comp == null) {
+            "No compensation data available; keep heat close to baseline."
+        } else {
+            when {
+                comp.heatRetentionOffset <= -1.0 ->
+                    "Heat retention looks weak. Support heat slightly more than baseline, but avoid abrupt increases."
+
+                comp.heatRetentionOffset <= -0.5 ->
+                    "Heat retention is a bit weak. Consider mild heat support if roast momentum fades."
+
+                comp.heatRetentionOffset >= 1.0 ->
+                    "Heat retention looks strong. Reduce the chance of overshooting by using slightly less heat than baseline."
+
+                comp.heatRetentionOffset >= 0.5 ->
+                    "Heat retention is slightly favorable. Avoid stacking too much heat into the next phase."
+
+                completeness == "low" ->
+                    "Use conservative baseline heat until more live roast data is available."
+
+                else ->
+                    "Keep heat near baseline."
+            }
         }
 
-        return when {
-            comp.heatRetentionOffset <= -1.0 ->
-                "Heat retention looks weak. Support heat slightly more than baseline, but avoid abrupt increases."
+        val controlLine = when {
+            control.recommendedHeatBiasPercent > 0 ->
+                "Control model adds heat bias ${formatSignedPercent(control.recommendedHeatBiasPercent)}."
 
-            comp.heatRetentionOffset <= -0.5 ->
-                "Heat retention is a bit weak. Consider mild heat support if roast momentum fades."
-
-            comp.heatRetentionOffset >= 1.0 ->
-                "Heat retention looks strong. Reduce the chance of overshooting by using slightly less heat than baseline."
-
-            comp.heatRetentionOffset >= 0.5 ->
-                "Heat retention is slightly favorable. Avoid stacking too much heat into the next phase."
-
-            completeness == "low" ->
-                "Use conservative baseline heat until more live roast data is available."
+            control.recommendedHeatBiasPercent < 0 ->
+                "Control model reduces heat by ${formatSignedPercent(control.recommendedHeatBiasPercent)}."
 
             else ->
-                "Keep heat near baseline."
+                "Control model keeps heat at baseline."
         }
+
+        return "$baseAdvice $controlLine"
     }
 
     private fun buildAirflowAdvice(
         comp: EnvironmentCompensationResult?,
+        control: RoastControlAdjustment,
         completeness: String
     ): String {
-        if (comp == null) {
-            return "No airflow compensation data available; keep airflow near normal reference."
+        val baseAdvice = if (comp == null) {
+            "No airflow compensation data available; keep airflow near normal reference."
+        } else {
+            when {
+                comp.airflowEfficiencyOffset <= -1.0 ->
+                    "Airflow efficiency looks clearly reduced. Consider slightly stronger airflow to maintain exhaust response."
+
+                comp.airflowEfficiencyOffset <= -0.5 ->
+                    "Airflow efficiency looks a bit reduced. Watch exhaust behavior and be ready to open airflow slightly."
+
+                comp.airflowEfficiencyOffset >= 1.0 ->
+                    "Airflow efficiency looks strong. Avoid over-venting and unnecessary drying acceleration."
+
+                comp.airflowEfficiencyOffset >= 0.5 ->
+                    "Airflow response is slightly favorable. Keep airflow measured and avoid over-correction."
+
+                completeness == "low" ->
+                    "Hold airflow near baseline until more roast feedback is available."
+
+                else ->
+                    "Keep airflow close to baseline."
+            }
         }
 
-        return when {
-            comp.airflowEfficiencyOffset <= -1.0 ->
-                "Airflow efficiency looks clearly reduced. Consider slightly stronger airflow to maintain exhaust response."
+        val controlLine = when {
+            control.recommendedAirflowBiasSteps > 0 ->
+                "Control model increases airflow by ${formatSignedStep(control.recommendedAirflowBiasSteps)} step."
 
-            comp.airflowEfficiencyOffset <= -0.5 ->
-                "Airflow efficiency looks a bit reduced. Watch exhaust behavior and be ready to open airflow slightly."
-
-            comp.airflowEfficiencyOffset >= 1.0 ->
-                "Airflow efficiency looks strong. Avoid over-venting and unnecessary drying acceleration."
-
-            comp.airflowEfficiencyOffset >= 0.5 ->
-                "Airflow response is slightly favorable. Keep airflow measured and avoid over-correction."
-
-            completeness == "low" ->
-                "Hold airflow near baseline until more roast feedback is available."
+            control.recommendedAirflowBiasSteps < 0 ->
+                "Control model decreases airflow by ${formatSignedStep(control.recommendedAirflowBiasSteps)} step."
 
             else ->
-                "Keep airflow close to baseline."
+                "Control model keeps airflow at baseline."
         }
+
+        return "$baseAdvice $controlLine"
     }
 
     private fun buildTimingAdvice(
@@ -206,6 +236,7 @@ object RoastAiAssistantEngine {
 
     private fun buildSummary(
         context: RoastAiContext,
+        control: RoastControlAdjustment,
         completeness: String,
         heatAdvice: String,
         airflowAdvice: String,
@@ -227,9 +258,22 @@ Altitude: ${env?.altitudeMeters ?: "-"} m
 Context completeness: $completeness
 $promptLine
 
+Control Model
+Heat Bias: ${formatSignedPercent(control.recommendedHeatBiasPercent)}
+Airflow Bias: ${formatSignedStep(control.recommendedAirflowBiasSteps)}
+Reason: ${control.reason}
+
 $heatAdvice
 $airflowAdvice
 $timingAdvice
         """.trimIndent()
+    }
+
+    private fun formatSignedPercent(value: Int): String {
+        return if (value >= 0) "+${value}%" else "${value}%"
+    }
+
+    private fun formatSignedStep(value: Int): String {
+        return if (value >= 0) "+$value" else "$value"
     }
 }
