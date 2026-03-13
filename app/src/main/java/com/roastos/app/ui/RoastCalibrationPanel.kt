@@ -16,42 +16,42 @@ class RoastCalibrationPanel(
     private val summaryView = UiKit.bodyText(context, "")
 
     private val heatUpInput = EditText(context).apply {
-        hint = "Heat Up Delay (sec)"
+        hint = "e.g. 6.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val heatDownInput = EditText(context).apply {
-        hint = "Heat Down Delay (sec)"
+        hint = "e.g. 8.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val airflowInput = EditText(context).apply {
-        hint = "Airflow Delay (sec)"
+        hint = "e.g. 3.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val drumInput = EditText(context).apply {
-        hint = "Drum Delay (sec)"
+        hint = "e.g. 2.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val coolingInput = EditText(context).apply {
-        hint = "Cooling Delay (sec)"
+        hint = "e.g. 6.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val thermalInertiaInput = EditText(context).apply {
-        hint = "Thermal Inertia (0.0 - 1.0)"
+        hint = "e.g. 1.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val airflowInertiaInput = EditText(context).apply {
-        hint = "Airflow Inertia (0.0 - 1.0)"
+        hint = "e.g. 1.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
     private val drumInertiaInput = EditText(context).apply {
-        hint = "Drum Inertia (0.0 - 1.0)"
+        hint = "e.g. 1.0"
         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     }
 
@@ -66,15 +66,16 @@ class RoastCalibrationPanel(
         addView(summaryView)
         addView(UiKit.spacer(context))
 
-        addView(heatUpInput)
-        addView(heatDownInput)
-        addView(airflowInput)
-        addView(drumInput)
-        addView(coolingInput)
-        addView(thermalInertiaInput)
-        addView(airflowInertiaInput)
-        addView(drumInertiaInput)
-        addView(noteInput)
+        addLabeledField(context, "Heat Up Delay (sec)", heatUpInput)
+        addLabeledField(context, "Heat Down Delay (sec)", heatDownInput)
+        addLabeledField(context, "Airflow Delay (sec)", airflowInput)
+        addLabeledField(context, "Drum Delay (sec)", drumInput)
+        addLabeledField(context, "Cooling Delay (sec)", coolingInput)
+        addLabeledField(context, "Thermal Inertia", thermalInertiaInput)
+        addLabeledField(context, "Airflow Inertia", airflowInertiaInput)
+        addLabeledField(context, "Drum Inertia", drumInertiaInput)
+        addLabeledField(context, "Calibration Note", noteInput)
+
         addView(UiKit.spacer(context))
 
         val startBtn = UiKit.secondaryButton(context, "START CALIBRATION")
@@ -134,6 +135,16 @@ class RoastCalibrationPanel(
 
     fun update() {
         refreshFromDraft()
+    }
+
+    private fun addLabeledField(
+        context: Context,
+        label: String,
+        input: EditText
+    ) {
+        addView(UiKit.bodyText(context, label))
+        addView(input)
+        addView(UiKit.spacer(context))
     }
 
     private fun refreshFromDraft() {
