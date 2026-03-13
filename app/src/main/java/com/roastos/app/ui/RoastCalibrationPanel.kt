@@ -139,22 +139,54 @@ class RoastCalibrationPanel(
     private fun refreshFromDraft() {
         val draft = RoastCalibrationSessionEngine.current()
 
-        if (draft == null) {
-            summaryView.text = "No active calibration session."
+        if (draft != null) {
+            heatUpInput.setText(draft.heatUpDelaySec?.toString() ?: "")
+            heatDownInput.setText(draft.heatDownDelaySec?.toString() ?: "")
+            airflowInput.setText(draft.airflowDelaySec?.toString() ?: "")
+            drumInput.setText(draft.drumSpeedDelaySec?.toString() ?: "")
+            coolingInput.setText(draft.coolingResponseDelaySec?.toString() ?: "")
+            thermalInertiaInput.setText(draft.thermalInertiaScore?.toString() ?: "")
+            airflowInertiaInput.setText(draft.airflowInertiaScore?.toString() ?: "")
+            drumInertiaInput.setText(draft.drumInertiaScore?.toString() ?: "")
+            noteInput.setText(draft.note)
+
+            summaryView.text = draft.summaryText()
             return
         }
 
-        heatUpInput.setText(draft.heatUpDelaySec?.toString() ?: "")
-        heatDownInput.setText(draft.heatDownDelaySec?.toString() ?: "")
-        airflowInput.setText(draft.airflowDelaySec?.toString() ?: "")
-        drumInput.setText(draft.drumSpeedDelaySec?.toString() ?: "")
-        coolingInput.setText(draft.coolingResponseDelaySec?.toString() ?: "")
-        thermalInertiaInput.setText(draft.thermalInertiaScore?.toString() ?: "")
-        airflowInertiaInput.setText(draft.airflowInertiaScore?.toString() ?: "")
-        drumInertiaInput.setText(draft.drumInertiaScore?.toString() ?: "")
-        noteInput.setText(draft.note)
+        val machine = RoastStateModel.machine
 
-        summaryView.text = draft.summaryText()
+        heatUpInput.setText(machine.powerResponseDelay.toString())
+        heatDownInput.setText("")
+        airflowInput.setText(machine.airflowResponseDelay.toString())
+        drumInput.setText(machine.rpmResponseDelay.toString())
+        coolingInput.setText("")
+        thermalInertiaInput.setText(machine.thermalMass.toString())
+        airflowInertiaInput.setText(machine.heatRetention.toString())
+        drumInertiaInput.setText(machine.drumMass.toString())
+        noteInput.setText("")
+
+        summaryView.text = """
+Current machine state loaded from storage/runtime.
+
+Power Response Delay
+${machine.powerResponseDelay}s
+
+Airflow Response Delay
+${machine.airflowResponseDelay}s
+
+RPM Response Delay
+${machine.rpmResponseDelay}s
+
+Thermal Mass
+${machine.thermalMass}
+
+Heat Retention
+${machine.heatRetention}
+
+Drum Mass
+${machine.drumMass}
+        """.trimIndent()
     }
 
     private fun clearInputs() {
