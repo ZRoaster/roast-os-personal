@@ -22,23 +22,27 @@ object RoastDecisionEngine {
         val elapsed = session.lastElapsedSec
         val phase = snapshot.companion.phaseLabel
         val validation = snapshot.validation
+        val control = RoastControlModel.evaluate()
 
         if (session.status != RoastSessionStatus.RUNNING) {
-            return RoastDecision(
-                stage = phase,
-                priority = "待机",
-                heatAction = "无",
-                airflowAction = "无",
-                flavorDirection = "未开始",
-                rationale = "当前没有进行中的烘焙。",
-                confidence = "高"
+            return applyControlModel(
+                RoastDecision(
+                    stage = phase,
+                    priority = "待机",
+                    heatAction = "无",
+                    airflowAction = "无",
+                    flavorDirection = "未开始",
+                    rationale = "当前没有进行中的烘焙。",
+                    confidence = "高"
+                ),
+                control
             )
         }
 
         val topIssue = validation.issues.firstOrNull()
 
         if (topIssue != null) {
-            return when (topIssue.code) {
+            val base = when (topIssue.code) {
 
                 "stall" -> RoastDecision(
                     stage = phase,
@@ -97,14 +101,18 @@ object RoastDecisionEngine {
                     elapsed = elapsed
                 )
             }
+
+            return applyControlModel(base, control)
         }
 
-        return buildBaseDecision(
+        val base = buildBaseDecision(
             phase = phase,
             beanTemp = beanTemp,
             ror = ror,
             elapsed = elapsed
         )
+
+        return applyControlModel(base, control)
     }
 
     fun buildDisplayText(
@@ -256,6 +264,70 @@ ${d.confidence}
                 confidence = buildConfidence(ror, elapsed)
             )
         }
+    }
+
+    private fun applyControlModel(
+        decision: RoastDecision,
+        control: RoastControlAdjustment
+    ): RoastDecision {
+        val adjustedHeat = appendHeatBias(
+            base = decision.heatAction,
+            bias = control.recommendedHeatBiasPercent
+        )
+
+        val adjustedAirflow = appendAirflowBias(
+            base = decision.airflowAction,
+            bias = control.recommendedAirflowBiasSteps
+        )
+
+        val adjustedRationale = """
+${decision.rationale}
+
+控制模型修正
+Heat Bias: ${formatSignedPercent(control.recommendedHeatBiasPercent)}
+Airflow Bias: ${formatSignedStep(control.recommendedAirflowBiasSteps)}
+原因: ${control.reason}
+        """.trimIndent()
+
+        return decision.copy(
+            heatAction = adjustedHeat,
+            airflowAction = adjustedAirflow,
+            rationale = adjustedRationale
+        )
+    }
+
+    private fun appendHeatBias(
+        base: String,
+        bias: Int
+    ): String {
+        return if (bias == 0) {
+            "$base（Heat Bias 0%）"
+        } else {
+            "$base（Heat Bias ${formatSignedPercent(bias)}）"
+        }
+    }
+
+    private fun appendAirflowBias(
+        base: String,
+        bias: Int
+    ): String {
+        return if (bias == 0) {
+            "$base（Airflow Bias 0）"
+        } else {
+            "$base（Airflow Bias ${formatSignedStep(bias)}）"
+        }
+    }
+
+    private fun formatSignedPercent(
+        value: Int
+    ): String {
+        return if (value >= 0) "+${value}%" else "${value}%"
+    }
+
+    private fun formatSignedStep(
+        value: Int
+    ): String {
+        return if (value >= 0) "+$value" else "$value"
     }
 
     private fun buildConfidence(
