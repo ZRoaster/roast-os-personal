@@ -140,6 +140,7 @@ object RoastCalibrationSessionEngine {
         )
 
         MachineDynamicsEngine.save(profile)
+        RoastCalibrationHistoryEngine.record(profile)
         currentDraft = null
         return profile
     }
