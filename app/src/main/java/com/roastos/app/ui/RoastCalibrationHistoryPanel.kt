@@ -34,7 +34,10 @@ No calibration history yet.
 Machine
 ${profile.machineName}
 
-Calibrated
+Calibration ID
+${profile.calibrationId}
+
+Calibrated At
 ${profile.calibratedAtMillis}
 
 Environment
@@ -43,11 +46,11 @@ Humidity ${profile.calibrationEnvironment.ambientHumidityRh ?: "-"} %RH
 Altitude ${profile.calibrationEnvironment.altitudeMeters ?: "-"} m
 
 Delays
-Heat Up ${profile.delays.heatUpDelaySec}s
-Heat Down ${profile.delays.heatDownDelaySec}s
-Airflow ${profile.delays.airflowDelaySec}s
-Drum ${profile.delays.drumSpeedDelaySec}s
-Cooling ${profile.delays.coolingResponseDelaySec}s
+Heat Up ${profile.delays.heatUpDelaySec} s
+Heat Down ${profile.delays.heatDownDelaySec} s
+Airflow ${profile.delays.airflowDelaySec} s
+Drum ${profile.delays.drumSpeedDelaySec} s
+Cooling ${profile.delays.coolingResponseDelaySec} s
 
 Inertia
 Thermal ${profile.inertia.thermalInertiaScore}
