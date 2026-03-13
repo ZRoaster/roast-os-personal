@@ -23,13 +23,16 @@ $reason
 
 object RoastControlModel {
 
-    fun evaluate(): RoastControlAdjustment {
+    fun evaluate(
+        snapshot: RoastSessionBusSnapshot? = RoastSessionBus.peek()
+    ): RoastControlAdjustment {
         val envComp = EnvironmentCompensationEngine.evaluate()
         val dynamics = MachineDynamicsEngine.currentAdjustedForEnvironment()
+        val telemetry = snapshot?.let { RoastControlTelemetryModel.evaluate(it) }
 
-        val heatBias = buildHeatBias(envComp, dynamics)
-        val airflowBias = buildAirflowBias(envComp, dynamics)
-        val reason = buildReason(envComp, dynamics, heatBias, airflowBias)
+        val heatBias = buildHeatBias(envComp, dynamics, telemetry)
+        val airflowBias = buildAirflowBias(envComp, dynamics, telemetry)
+        val reason = buildReason(envComp, dynamics, telemetry, heatBias, airflowBias)
 
         return RoastControlAdjustment(
             recommendedHeatBiasPercent = heatBias,
@@ -40,7 +43,8 @@ object RoastControlModel {
 
     private fun buildHeatBias(
         env: EnvironmentCompensationResult,
-        dynamics: MachineCalibrationProfile
+        dynamics: MachineCalibrationProfile,
+        telemetry: RoastControlTelemetrySnapshot?
     ): Int {
         var score = 0.0
 
@@ -58,12 +62,37 @@ object RoastControlModel {
 
         score += (thermalInertia - 0.5) * -4.0
 
+        if (telemetry != null) {
+            when {
+                telemetry.currentRor < 3.0 -> score += 2.0
+                telemetry.currentRor < 4.0 -> score += 1.0
+                telemetry.currentRor > 10.0 -> score -= 2.0
+                telemetry.currentRor > 8.5 -> score -= 1.0
+            }
+
+            when (telemetry.phase) {
+                "Charge" -> score += 0.5
+                "Drying" -> score += 0.5
+                "First Crack" -> score -= 0.5
+                "Development" -> score -= 1.0
+            }
+
+            when (telemetry.topIssueCode) {
+                "stall" -> score += 3.0
+                "crash" -> score += 2.0
+                "flick" -> score -= 3.0
+                "high_energy" -> score -= 2.0
+                "low_energy" -> score += 2.0
+            }
+        }
+
         return score.roundToInt().coerceIn(-8, 8)
     }
 
     private fun buildAirflowBias(
         env: EnvironmentCompensationResult,
-        dynamics: MachineCalibrationProfile
+        dynamics: MachineCalibrationProfile,
+        telemetry: RoastControlTelemetrySnapshot?
     ): Int {
         var score = 0.0
 
@@ -78,12 +107,29 @@ object RoastControlModel {
 
         score += (airflowInertia - 0.4) * -2.0
 
+        if (telemetry != null) {
+            when (telemetry.phase) {
+                "Drying" -> score += 0.5
+                "Maillard" -> score += 0.0
+                "First Crack" -> score += 0.5
+                "Development" -> score += 1.0
+            }
+
+            when (telemetry.topIssueCode) {
+                "flick" -> score += 1.0
+                "high_energy" -> score += 1.0
+                "stall" -> score -= 1.0
+                "low_energy" -> score -= 1.0
+            }
+        }
+
         return score.roundToInt().coerceIn(-2, 2)
     }
 
     private fun buildReason(
         env: EnvironmentCompensationResult,
         dynamics: MachineCalibrationProfile,
+        telemetry: RoastControlTelemetrySnapshot?,
         heatBias: Int,
         airflowBias: Int
     ): String {
@@ -116,6 +162,19 @@ object RoastControlModel {
 
         if (airflowDelay >= 4.0) {
             parts += "machine airflow response looks slower"
+        }
+
+        if (telemetry != null) {
+            parts += "telemetry phase ${telemetry.phase.lowercase()}"
+            parts += "current ror ${String.format("%.1f", telemetry.currentRor)}"
+
+            if (telemetry.hasValidationIssue) {
+                parts += "validation severity ${telemetry.highestSeverity}"
+            }
+
+            telemetry.topIssueCode?.let {
+                parts += "top issue $it"
+            }
         }
 
         if (parts.isEmpty()) {
