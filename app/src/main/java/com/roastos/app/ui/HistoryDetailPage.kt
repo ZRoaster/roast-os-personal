@@ -63,6 +63,18 @@ object HistoryDetailPage {
             return
         }
 
+        val summaryCard = UiKit.card(context)
+        summaryCard.addView(UiKit.cardTitle(context, "SUMMARY"))
+        summaryCard.addView(
+            UiKit.bodyText(
+                context,
+                buildSummaryStrip(entry)
+            )
+        )
+
+        root.addView(summaryCard)
+        root.addView(UiKit.spacer(context))
+
         val batchCard = UiKit.card(context)
 
         batchCard.addView(UiKit.cardTitle(context, "BATCH"))
@@ -187,8 +199,18 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
             minLines = 3
         }
 
-        fillEvaluation(entry.evaluation, beanColorInput, groundColorInput, roastedAwInput,
-            sweetnessInput, acidityInput, bodyInput, flavorClarityInput, balanceInput, notesInput)
+        fillEvaluation(
+            entry.evaluation,
+            beanColorInput,
+            groundColorInput,
+            roastedAwInput,
+            sweetnessInput,
+            acidityInput,
+            bodyInput,
+            flavorClarityInput,
+            balanceInput,
+            notesInput
+        )
 
         val saveEvaluationBtn = UiKit.primaryButton(context, "SAVE EVALUATION")
         val clearEvaluationBtn = UiKit.secondaryButton(context, "CLEAR EVALUATION")
@@ -347,6 +369,30 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         container.addView(scroll)
     }
 
+    private fun buildSummaryStrip(
+        entry: RoastHistoryEntry
+    ): String {
+        return """
+Batch
+${entry.batchId}
+
+Status
+${entry.batchStatus}
+
+Health
+${entry.roastHealthHeadline}
+
+Evaluation
+${if (entry.evaluation != null) "Saved" else "Not saved"}
+
+FC / Drop
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+
+Pre-FC RoR
+${formatRor(entry.actualPreFcRor)}
+        """.trimIndent()
+    }
+
     private fun decimalInput(
         context: Context,
         hint: String
@@ -451,6 +497,11 @@ ${evaluation.notes.ifBlank { "-" }}
         val m = sec / 60
         val s = sec % 60
         return "%d:%02d".format(m, s)
+    }
+
+    private fun formatRor(value: Double?): String {
+        if (value == null) return "-"
+        return String.format(Locale.getDefault(), "%.1f ℃/min", value)
     }
 
     private fun formatDateTime(ms: Long): String {
