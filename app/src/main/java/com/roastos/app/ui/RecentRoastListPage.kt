@@ -6,12 +6,16 @@ import android.widget.ScrollView
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.UiKit
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object RecentRoastListPage {
 
     fun show(
         context: Context,
-        container: LinearLayout
+        container: LinearLayout,
+        onBack: (() -> Unit)? = null
     ) {
 
         container.removeAllViews()
@@ -24,7 +28,7 @@ object RecentRoastListPage {
         root.addView(UiKit.spacer(context))
 
         val topCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK TO STUDIO")
+        val backBtn = UiKit.secondaryButton(context, "BACK")
 
         topCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
         topCard.addView(backBtn)
@@ -56,7 +60,14 @@ object RecentRoastListPage {
                     HistoryDetailPage.show(
                         context = context,
                         container = container,
-                        entry = entry
+                        entry = entry,
+                        onBack = {
+                            show(
+                                context = context,
+                                container = container,
+                                onBack = onBack
+                            )
+                        }
                     )
                 }
 
@@ -74,7 +85,7 @@ object RecentRoastListPage {
         }
 
         backBtn.setOnClickListener {
-            RoastStudioPage.show(context, container)
+            onBack?.invoke() ?: RoastStudioPage.show(context, container)
         }
 
         scroll.addView(root)
@@ -94,15 +105,13 @@ ${entry.batchStatus}
 Health
 ${entry.roastHealthHeadline}
 
-Time
-${formatTime(entry.createdAtMillis)}
+Created
+${formatDateTime(entry.createdAtMillis)}
         """.trimIndent()
     }
 
-    private fun formatTime(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
+    private fun formatDateTime(ms: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return formatter.format(Date(ms))
     }
 }
