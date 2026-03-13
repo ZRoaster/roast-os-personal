@@ -10,15 +10,7 @@ object RoastAiSessionEngine {
 
     private var currentSnapshot: RoastAiSessionSnapshot? = null
 
-    fun current(): RoastAiSessionSnapshot {
-        return currentSnapshot ?: refresh()
-    }
-
-    fun peek(): RoastAiSessionSnapshot? {
-        return currentSnapshot
-    }
-
-    fun refresh(
+    fun build(
         userPrompt: String = "",
         operatorNote: String = ""
     ): RoastAiSessionSnapshot {
@@ -40,6 +32,10 @@ object RoastAiSessionEngine {
 
         currentSnapshot = snapshot
         return snapshot
+    }
+
+    fun current(): RoastAiSessionSnapshot? {
+        return currentSnapshot
     }
 
     fun reset() {
