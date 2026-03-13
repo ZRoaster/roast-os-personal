@@ -34,6 +34,16 @@ object RoastAiSessionEngine {
         return snapshot
     }
 
+    fun buildIfNeeded(
+        userPrompt: String = "",
+        operatorNote: String = ""
+    ): RoastAiSessionSnapshot {
+        return currentSnapshot ?: build(
+            userPrompt = userPrompt,
+            operatorNote = operatorNote
+        )
+    }
+
     fun current(): RoastAiSessionSnapshot? {
         return currentSnapshot
     }
