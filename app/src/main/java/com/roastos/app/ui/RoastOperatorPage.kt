@@ -44,6 +44,15 @@ object RoastOperatorPage {
         root.addView(snapshotCard)
         root.addView(UiKit.spacer(context))
 
+        val lastVsCurrentCard = UiKit.card(context)
+        val lastVsCurrentBody = UiKit.bodyText(context, "")
+
+        lastVsCurrentCard.addView(UiKit.cardTitle(context, "LAST VS CURRENT"))
+        lastVsCurrentCard.addView(lastVsCurrentBody)
+
+        root.addView(lastVsCurrentCard)
+        root.addView(UiKit.spacer(context))
+
         val actionFocusCard = UiKit.card(context)
         val actionFocusPanel = RoastActionFocusPanel(context)
         actionFocusCard.addView(UiKit.cardTitle(context, "ACTION FOCUS"))
@@ -134,6 +143,60 @@ ${formatDateTime(latest.createdAtMillis)}
             openLastDetailBtn.isEnabled = latest != null
         }
 
+        fun renderLastVsCurrent(
+            session: RoastSessionState,
+            validation: RoastValidationResult
+        ) {
+            val latest = RoastHistoryEngine.latest()
+            val currentHealth = buildHealthHeadline(validation)
+
+            lastVsCurrentBody.text = if (latest == null) {
+                """
+No previous roast reference yet.
+
+Save a roast history entry to compare current operation against the latest batch.
+                """.trimIndent()
+            } else {
+                val currentEnv = AppState.lastPlannerInput
+                val currentEnvTemp = currentEnv?.envTemp
+                val currentEnvRh = currentEnv?.envRH
+
+                val currentEnvText = if (currentEnvTemp == null || currentEnvRh == null) {
+                    "- / -"
+                } else {
+                    "${oneDecimal(currentEnvTemp)} ℃ / ${oneDecimal(currentEnvRh)} %"
+                }
+
+                val lastEnvText = "${oneDecimal(latest.envTemp)} ℃ / ${oneDecimal(latest.envRh)} %"
+
+                val lastFc = formatElapsed(
+                    latest.actualFcSec ?: latest.predictedFcSec ?: 0,
+                    allowDash = latest.actualFcSec == null && latest.predictedFcSec == null
+                )
+                val lastDrop = formatElapsed(
+                    latest.actualDropSec ?: latest.predictedDropSec ?: 0,
+                    allowDash = latest.actualDropSec == null && latest.predictedDropSec == null
+                )
+
+                """
+Last Batch
+${latest.batchId}
+
+Environment
+Current  $currentEnvText
+Last     $lastEnvText
+
+Timeline Reference
+Current Elapsed   ${formatElapsed(session.lastElapsedSec)}
+Last FC / Drop    $lastFc / $lastDrop
+
+Health
+Current  $currentHealth
+Last     ${latest.roastHealthHeadline}
+                """.trimIndent()
+            }
+        }
+
         fun render() {
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
@@ -154,6 +217,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             renderLastSnapshot()
+            renderLastVsCurrent(session, snapshot.validation)
             actionFocusPanel.update()
             executivePanel.update()
             advisorPanel.update()
@@ -269,5 +333,9 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
     private fun formatDateTime(ms: Long): String {
         return java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
             .format(java.util.Date(ms))
+    }
+
+    private fun oneDecimal(value: Double): String {
+        return String.format(java.util.Locale.getDefault(), "%.1f", value)
     }
 }
