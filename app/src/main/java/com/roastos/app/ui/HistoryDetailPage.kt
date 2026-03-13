@@ -1,9 +1,11 @@
 package com.roastos.app.ui
 
+import android.app.AlertDialog
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
+import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastHistoryEntry
 import com.roastos.app.RoastStyleFromBatchEngine
 import com.roastos.app.UiKit
@@ -28,12 +30,16 @@ object HistoryDetailPage {
         root.addView(UiKit.pageTitle(context, "ROAST HISTORY DETAIL"))
         root.addView(UiKit.spacer(context))
 
+        val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
-        root.addView(backBtn)
+
+        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        navCard.addView(backBtn)
+
+        root.addView(navCard)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
-
             val emptyCard = UiKit.card(context)
 
             emptyCard.addView(UiKit.cardTitle(context, "NO DATA"))
@@ -166,6 +172,22 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         styleCard.addView(createStyleBtn)
 
         root.addView(styleCard)
+        root.addView(UiKit.spacer(context))
+
+        val dangerCard = UiKit.card(context)
+        val deleteBtn = UiKit.secondaryButton(context, "DELETE THIS HISTORY")
+
+        dangerCard.addView(UiKit.cardTitle(context, "DANGER"))
+        dangerCard.addView(
+            UiKit.bodyText(
+                context,
+                "Delete this roast history entry from local storage."
+            )
+        )
+        dangerCard.addView(UiKit.spacer(context))
+        dangerCard.addView(deleteBtn)
+
+        root.addView(dangerCard)
 
         createStyleBtn.setOnClickListener {
             val suggestedName =
@@ -182,6 +204,27 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
                 result.message,
                 Toast.LENGTH_LONG
             ).show()
+        }
+
+        deleteBtn.setOnClickListener {
+            AlertDialog.Builder(context)
+                .setTitle("Delete this history?")
+                .setMessage("Batch ${entry.batchId} will be permanently removed from local history.")
+                .setPositiveButton("DELETE") { _, _ ->
+                    val result = RoastHistoryEngine.delete(entry.batchId)
+
+                    Toast.makeText(
+                        context,
+                        result.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    if (result.deleted) {
+                        onBack?.invoke() ?: RoastStudioPage.show(context, container)
+                    }
+                }
+                .setNegativeButton("CANCEL", null)
+                .show()
         }
 
         backBtn.setOnClickListener {
