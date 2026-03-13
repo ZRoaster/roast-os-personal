@@ -4,7 +4,9 @@ import android.content.Context
 import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
+import com.roastos.app.MachineStateStorage
 import com.roastos.app.RoastCalibrationSessionEngine
+import com.roastos.app.RoastStateModel
 import com.roastos.app.UiKit
 
 class RoastCalibrationPanel(
@@ -101,9 +103,24 @@ class RoastCalibrationPanel(
                 note = noteInput.text.toString()
             )
 
-            RoastCalibrationSessionEngine.commit()
+            val profile = RoastCalibrationSessionEngine.commit()
+
+            RoastStateModel.machine = RoastStateModel.MachineState(
+                thermalMass = profile.inertia.thermalInertiaScore ?: 1.0,
+                drumMass = profile.inertia.drumInertiaScore ?: 1.0,
+                heatRetention = profile.inertia.airflowInertiaScore ?: 1.0,
+                maxPowerW = RoastStateModel.machine.maxPowerW,
+                maxAirPa = RoastStateModel.machine.maxAirPa,
+                maxRpm = RoastStateModel.machine.maxRpm,
+                powerResponseDelay = profile.delays.heatUpDelaySec ?: 6.0,
+                airflowResponseDelay = profile.delays.airflowDelaySec ?: 3.0,
+                rpmResponseDelay = profile.delays.drumSpeedDelaySec ?: 2.0
+            )
+
+            MachineStateStorage.save(context, RoastStateModel.machine)
+
             refreshFromDraft()
-            summaryView.text = "Calibration saved to MachineDynamicsEngine."
+            summaryView.text = "Calibration saved to MachineDynamicsEngine and local storage."
         }
 
         cancelBtn.setOnClickListener {
