@@ -376,6 +376,9 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
 Batch
 ${entry.batchId}
 
+Created
+${formatDateTime(entry.createdAtMillis)}
+
 Status
 ${entry.batchStatus}
 
@@ -384,6 +387,9 @@ ${entry.roastHealthHeadline}
 
 Evaluation
 ${if (entry.evaluation != null) "Saved" else "Not saved"}
+
+Environment
+${entry.envTemp} ℃ / ${entry.envRh} %
 
 FC / Drop
 ${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
