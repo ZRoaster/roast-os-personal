@@ -390,28 +390,32 @@ ${evaluationStatusText(b)}
     private fun buildCompactEntryText(
         entry: RoastHistoryEntry
     ): String {
+        val fc = formatSec(entry.actualFcSec ?: entry.predictedFcSec)
+        val drop = formatSec(entry.actualDropSec ?: entry.predictedDropSec)
+
         return """
 Batch
 ${entry.batchId}
 
-Title
-${entry.title}
-
-Process
-${entry.process}
-
-Status
-${entry.batchStatus}
-
-Health
-${entry.roastHealthHeadline}
+Status / Health
+${entry.batchStatus} / ${entry.roastHealthHeadline}
 
 Evaluation
 ${if (entry.evaluation != null) "Saved" else "Not saved"}
 
+FC / Drop
+$fc / $drop
+
 Created
 ${formatDateTime(entry.createdAtMillis)}
         """.trimIndent()
+    }
+
+    private fun formatSec(sec: Int?): String {
+        if (sec == null) return "-"
+        val m = sec / 60
+        val s = sec % 60
+        return "%d:%02d".format(m, s)
     }
 
     private fun formatDateTime(ms: Long): String {
