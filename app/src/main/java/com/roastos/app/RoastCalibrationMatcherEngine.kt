@@ -51,7 +51,11 @@ object RoastCalibrationMatcherEngine {
             .sortedBy { it.second }
 
         val best = ranked.first()
-        val reason = buildReason(currentEnvironment, best.first.calibrationEnvironment, best.second)
+        val reason = buildReason(
+            currentEnvironment,
+            best.first.calibrationEnvironment,
+            best.second
+        )
 
         return RoastCalibrationMatchResult(
             matchedProfile = best.first,
@@ -64,9 +68,17 @@ object RoastCalibrationMatcherEngine {
         current: EnvironmentProfile,
         reference: EnvironmentProfile
     ): Double {
-        val tempDiff = abs((current.ambientTempC ?: 0.0) - (reference.ambientTempC ?: 0.0))
-        val humidityDiff = abs((current.ambientHumidityRh ?: 0.0) - (reference.ambientHumidityRh ?: 0.0))
-        val altitudeDiff = abs((current.altitudeMeters ?: 0.0) - (reference.altitudeMeters ?: 0.0))
+        val tempDiff = abs(
+            toDoubleValue(current.ambientTempC) - toDoubleValue(reference.ambientTempC)
+        )
+
+        val humidityDiff = abs(
+            toDoubleValue(current.ambientHumidityRh) - toDoubleValue(reference.ambientHumidityRh)
+        )
+
+        val altitudeDiff = abs(
+            toDoubleValue(current.altitudeMeters) - toDoubleValue(reference.altitudeMeters)
+        )
 
         return tempDiff * 1.0 +
             humidityDiff * 0.08 +
@@ -83,5 +95,18 @@ Current env: ${current.ambientTempC ?: "-"} °C, ${current.ambientHumidityRh ?: 
 Matched env: ${reference.ambientTempC ?: "-"} °C, ${reference.ambientHumidityRh ?: "-"} %RH, ${reference.altitudeMeters ?: "-"} m
 Environment distance score: ${"%.2f".format(score)}
         """.trimIndent()
+    }
+
+    private fun toDoubleValue(value: Any?): Double {
+        return when (value) {
+            null -> 0.0
+            is Double -> value
+            is Float -> value.toDouble()
+            is Int -> value.toDouble()
+            is Long -> value.toDouble()
+            is Short -> value.toDouble()
+            is String -> value.toDoubleOrNull() ?: 0.0
+            else -> value.toString().toDoubleOrNull() ?: 0.0
+        }
     }
 }
