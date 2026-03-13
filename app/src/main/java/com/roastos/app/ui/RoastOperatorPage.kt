@@ -30,6 +30,13 @@ object RoastOperatorPage {
         root.addView(statusCard)
         root.addView(UiKit.spacer(context))
 
+        val actionFocusCard = UiKit.card(context)
+        val actionFocusPanel = RoastActionFocusPanel(context)
+        actionFocusCard.addView(UiKit.cardTitle(context, "ACTION FOCUS"))
+        actionFocusCard.addView(actionFocusPanel)
+        root.addView(actionFocusCard)
+        root.addView(UiKit.spacer(context))
+
         val executiveCard = UiKit.card(context)
         val executivePanel = RoastExecutiveSummaryPanel(context)
         executiveCard.addView(UiKit.cardTitle(context, "EXECUTIVE SUMMARY"))
@@ -89,6 +96,7 @@ PHASE    ${snapshot.companion.phaseLabel}
 HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
+            actionFocusPanel.update()
             executivePanel.update()
             advisorPanel.update()
             predictionPanel.update()
