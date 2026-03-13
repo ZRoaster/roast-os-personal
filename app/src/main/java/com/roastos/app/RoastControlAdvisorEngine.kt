@@ -49,17 +49,19 @@ object RoastControlAdvisorEngine {
         val decision = RoastDecisionEngine.evaluate(snapshot)
         val control = RoastControlModel.evaluate(snapshot)
         val ai = RoastAiAssistantEngine.generate()
+        val prediction = RoastRorPredictionEngine.evaluate(snapshot)
 
-        val finalHeat = buildHeatAdvice(decision, control)
-        val finalAirflow = buildAirflowAdvice(decision, control)
+        val finalHeat = buildHeatAdvice(decision, control, prediction)
+        val finalAirflow = buildAirflowAdvice(decision, control, prediction)
 
-        val risk = ai.riskLevel
+        val risk = buildRisk(ai, prediction)
         val confidence = decision.confidence
 
         val reason = buildReason(
             decision = decision,
             control = control,
-            ai = ai
+            ai = ai,
+            prediction = prediction
         )
 
         return RoastControlAdvisorOutput(
@@ -76,7 +78,8 @@ object RoastControlAdvisorEngine {
 
     private fun buildHeatAdvice(
         decision: RoastDecision,
-        control: RoastControlAdjustment
+        control: RoastControlAdjustment,
+        prediction: RoastRorPrediction
     ): String {
 
         val bias = control.recommendedHeatBiasPercent
@@ -89,12 +92,20 @@ object RoastControlAdvisorEngine {
             else -> "保持基准 (${formatSignedPercent(bias)})"
         }
 
-        return "${decision.heatAction} · $biasText"
+        val predictionText = when (prediction.predictedRisk) {
+            "stall risk" -> "；预测显示存在失速风险"
+            "flick risk" -> "；预测显示存在后段反弹风险"
+            "possible overshoot" -> "；预测显示可能推进过猛"
+            else -> ""
+        }
+
+        return "${decision.heatAction} · $biasText$predictionText"
     }
 
     private fun buildAirflowAdvice(
         decision: RoastDecision,
-        control: RoastControlAdjustment
+        control: RoastControlAdjustment,
+        prediction: RoastRorPrediction
     ): String {
 
         val bias = control.recommendedAirflowBiasSteps
@@ -107,13 +118,33 @@ object RoastControlAdvisorEngine {
             else -> "保持基准 (0)"
         }
 
-        return "${decision.airflowAction} · $biasText"
+        val predictionText = when (prediction.predictedRisk) {
+            "flick risk" -> "；配合排气抑制后段上冲"
+            "possible overshoot" -> "；配合控制推进速度"
+            "stall risk" -> "；避免过度加风削弱热量积累"
+            else -> ""
+        }
+
+        return "${decision.airflowAction} · $biasText$predictionText"
+    }
+
+    private fun buildRisk(
+        ai: RoastAiAssistantOutput,
+        prediction: RoastRorPrediction
+    ): String {
+        return when {
+            prediction.predictedRisk == "stall risk" -> "watch"
+            prediction.predictedRisk == "flick risk" -> "watch"
+            prediction.predictedRisk == "possible overshoot" -> "watch"
+            else -> ai.riskLevel
+        }
     }
 
     private fun buildReason(
         decision: RoastDecision,
         control: RoastControlAdjustment,
-        ai: RoastAiAssistantOutput
+        ai: RoastAiAssistantOutput,
+        prediction: RoastRorPrediction
     ): String {
 
         val parts = mutableListOf<String>()
@@ -121,11 +152,19 @@ object RoastControlAdvisorEngine {
         parts += decision.rationale
 
         if (control.reason.isNotBlank()) {
-            parts += control.reason
+            parts += "Control Model: ${control.reason}"
+        }
+
+        if (prediction.reason.isNotBlank()) {
+            parts += "RoR Prediction: ${prediction.reason}"
+        }
+
+        prediction.estimatedFirstCrackWindowSec?.let {
+            parts += "Estimated First Crack Window: ${formatSec(it)}"
         }
 
         if (ai.summary.isNotBlank()) {
-            parts += ai.summary
+            parts += "AI Assistant: ${ai.summary}"
         }
 
         return parts.joinToString("\n\n")
@@ -133,5 +172,11 @@ object RoastControlAdvisorEngine {
 
     private fun formatSignedPercent(value: Int): String {
         return if (value >= 0) "+${value}%" else "${value}%"
+    }
+
+    private fun formatSec(value: Int): String {
+        val m = value / 60
+        val s = value % 60
+        return "%d:%02d".format(m, s)
     }
 }
