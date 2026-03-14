@@ -139,41 +139,88 @@ object RoastInsightBridge {
             .trim()
 
         if (normalized.isBlank()) {
-            return "Roast remains stable under current pace."
+            return "当前节奏整体稳定。"
         }
 
         val lower = normalized.lowercase(Locale.getDefault())
 
         return when {
-            containsAny(lower, "stall", "slowing too much", "energy falling", "energy dropping") ->
-                "Momentum is weakening under current pace."
+            containsAny(
+                lower,
+                "stall",
+                "slowing too much",
+                "energy falling",
+                "energy dropping",
+                "deficit"
+            ) -> "当前动能偏弱，推进正在放慢。"
 
-            containsAny(lower, "flick", "overshoot", "too strong", "pushing too hard", "surging") ->
-                "Late-phase push looks stronger than baseline."
+            containsAny(
+                lower,
+                "flick",
+                "overshoot",
+                "too strong",
+                "pushing too hard",
+                "surging"
+            ) -> "当前推进偏强，后段有上冲倾向。"
 
-            containsAny(lower, "crash", "weakening into crack", "momentum collapsing") ->
-                "Momentum may fade too quickly into late phase."
+            containsAny(
+                lower,
+                "crash",
+                "weakening into crack",
+                "momentum collapsing"
+            ) -> "中后段动能正在明显减弱。"
 
-            containsAny(lower, "stable", "steady", "controlled", "balanced") ->
-                "Roast remains stable under current pace."
+            containsAny(
+                lower,
+                "stable",
+                "steady",
+                "controlled",
+                "balanced"
+            ) -> "当前节奏整体稳定。"
 
-            containsAny(lower, "energy building", "carrying forward", "good carry", "holding energy") ->
-                "Energy is carrying forward steadily."
+            containsAny(
+                lower,
+                "energy building",
+                "carrying forward",
+                "good carry",
+                "holding energy",
+                "rising"
+            ) -> "当前热量延续较平稳。"
 
-            containsAny(lower, "maillard short", "short maillard", "development compressed") ->
-                "Mid-phase development looks slightly compressed."
+            containsAny(
+                lower,
+                "maillard short",
+                "short maillard",
+                "development compressed"
+            ) -> "中段发展略偏短。"
 
-            containsAny(lower, "maillard long", "extended maillard", "development stretching") ->
-                "Mid-phase development looks slightly extended."
+            containsAny(
+                lower,
+                "maillard long",
+                "extended maillard",
+                "development stretching"
+            ) -> "中段发展略偏长。"
 
-            containsAny(lower, "clean", "clarity", "clear cup") ->
-                "Current pace supports a cleaner cup direction."
+            containsAny(
+                lower,
+                "clean",
+                "clarity",
+                "clear cup"
+            ) -> "当前节奏偏向更干净的杯测方向。"
 
-            containsAny(lower, "sweet", "sweetness", "sweeter") ->
-                "Current pace supports sweetness retention."
+            containsAny(
+                lower,
+                "sweet",
+                "sweetness",
+                "sweeter"
+            ) -> "当前节奏有利于甜感保留。"
 
-            containsAny(lower, "body", "heavier body", "weightier") ->
-                "Current pace supports a heavier body direction."
+            containsAny(
+                lower,
+                "body",
+                "heavier body",
+                "weightier"
+            ) -> "当前节奏偏向更厚的口感方向。"
 
             else -> fallbackHeadline(normalized)
         }
@@ -188,14 +235,17 @@ object RoastInsightBridge {
 
         val base = when {
             sentenceCut > 0 -> normalized.substring(0, sentenceCut).trim()
-            normalized.length <= 52 -> normalized
-            else -> normalized.take(52).trimEnd() + "..."
+            normalized.length <= 26 -> normalized
+            else -> normalized.take(26).trimEnd() + "…"
         }
 
-        return if (base.isBlank()) {
-            "Roast remains stable under current pace."
-        } else {
-            base
+        if (base.isBlank()) {
+            return "当前节奏整体稳定。"
+        }
+
+        return when {
+            base.endsWith("。") || base.endsWith("！") || base.endsWith("…") -> base
+            else -> "$base。"
         }
     }
 
