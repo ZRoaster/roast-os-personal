@@ -68,28 +68,36 @@ object RoastOperatorPage {
         root.addView(referenceCard)
         root.addView(UiKit.spacer(context))
 
-        val controlCard = UiKit.card(context)
+        val primaryControlCard = UiKit.card(context)
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+
+        primaryControlCard.addView(UiKit.cardTitle(context, "PRIMARY CONTROL"))
+        primaryControlCard.addView(UiKit.helperText(context, "Use these controls for the live roast session."))
+        primaryControlCard.addView(UiKit.spacer(context))
+        primaryControlCard.addView(startBtn)
+        primaryControlCard.addView(stopBtn)
+        primaryControlCard.addView(refreshBtn)
+        root.addView(primaryControlCard)
+        root.addView(UiKit.spacer(context))
+
+        val accessCard = UiKit.card(context)
         val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
         val openReviewBtn = UiKit.secondaryButton(context, "OPEN REVIEW")
         val openLatestBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
         val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
         val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
 
-        controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
-        controlCard.addView(UiKit.helperText(context, "Use controls after checking the current state."))
-        controlCard.addView(UiKit.spacer(context))
-        controlCard.addView(startBtn)
-        controlCard.addView(stopBtn)
-        controlCard.addView(refreshBtn)
-        controlCard.addView(openEnvironmentBtn)
-        controlCard.addView(openReviewBtn)
-        controlCard.addView(openLatestBtn)
-        controlCard.addView(openLastCompareBtn)
-        controlCard.addView(backShellBtn)
-        root.addView(controlCard)
+        accessCard.addView(UiKit.cardTitle(context, "MORE ACCESS"))
+        accessCard.addView(UiKit.helperText(context, "Open preparation, review, history, or go back home."))
+        accessCard.addView(UiKit.spacer(context))
+        accessCard.addView(openEnvironmentBtn)
+        accessCard.addView(openReviewBtn)
+        accessCard.addView(openLatestBtn)
+        accessCard.addView(openLastCompareBtn)
+        accessCard.addView(backShellBtn)
+        root.addView(accessCard)
 
         fun resolveUiState(snapshot: RoastSessionBusSnapshot): OperatorUiState {
             val session = snapshot.session
@@ -287,7 +295,9 @@ $fcText
             render()
         }
 
-        refreshBtn.setOnClickListener { render() }
+        refreshBtn.setOnClickListener {
+            render()
+        }
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
