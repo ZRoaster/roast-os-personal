@@ -1,5 +1,7 @@
 package com.roastos.app
 
+import java.util.Locale
+
 object RoastInsightBridge {
 
     fun analyzeSnapshot(
@@ -137,20 +139,71 @@ object RoastInsightBridge {
             .trim()
 
         if (normalized.isBlank()) {
-            return "No clear observation."
+            return "Roast remains stable under current pace."
         }
 
+        val lower = normalized.lowercase(Locale.getDefault())
+
+        return when {
+            containsAny(lower, "stall", "slowing too much", "energy falling", "energy dropping") ->
+                "Momentum is weakening under current pace."
+
+            containsAny(lower, "flick", "overshoot", "too strong", "pushing too hard", "surging") ->
+                "Late-phase push looks stronger than baseline."
+
+            containsAny(lower, "crash", "weakening into crack", "momentum collapsing") ->
+                "Momentum may fade too quickly into late phase."
+
+            containsAny(lower, "stable", "steady", "controlled", "balanced") ->
+                "Roast remains stable under current pace."
+
+            containsAny(lower, "energy building", "carrying forward", "good carry", "holding energy") ->
+                "Energy is carrying forward steadily."
+
+            containsAny(lower, "maillard short", "short maillard", "development compressed") ->
+                "Mid-phase development looks slightly compressed."
+
+            containsAny(lower, "maillard long", "extended maillard", "development stretching") ->
+                "Mid-phase development looks slightly extended."
+
+            containsAny(lower, "clean", "clarity", "clear cup") ->
+                "Current pace supports a cleaner cup direction."
+
+            containsAny(lower, "sweet", "sweetness", "sweeter") ->
+                "Current pace supports sweetness retention."
+
+            containsAny(lower, "body", "heavier body", "weightier") ->
+                "Current pace supports a heavier body direction."
+
+            else -> fallbackHeadline(normalized)
+        }
+    }
+
+    private fun fallbackHeadline(
+        normalized: String
+    ): String {
         val sentenceCut = normalized.indexOfFirst {
             it == '.' || it == '。' || it == '!' || it == '！'
         }
 
-        val headline = when {
+        val base = when {
             sentenceCut > 0 -> normalized.substring(0, sentenceCut).trim()
-            normalized.length <= 48 -> normalized
-            else -> normalized.take(48).trimEnd() + "..."
+            normalized.length <= 52 -> normalized
+            else -> normalized.take(52).trimEnd() + "..."
         }
 
-        return if (headline.isBlank()) "No clear observation." else headline
+        return if (base.isBlank()) {
+            "Roast remains stable under current pace."
+        } else {
+            base
+        }
+    }
+
+    private fun containsAny(
+        text: String,
+        vararg patterns: String
+    ): Boolean {
+        return patterns.any { pattern -> pattern in text }
     }
 
     private fun estimateBeanTempFromHistory(
