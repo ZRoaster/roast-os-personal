@@ -20,6 +20,14 @@ object SystemHubPage {
         root.addView(UiKit.pageTitle(context, "SYSTEM"))
         root.addView(UiKit.pageSubtitle(context, "Profile, app settings, and advanced system access"))
         root.addView(UiKit.spacer(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.SYSTEM
+            )
+        )
+        root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
