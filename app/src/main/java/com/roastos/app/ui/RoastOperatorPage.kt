@@ -34,12 +34,16 @@ object RoastOperatorPage {
 
         val snapshotCard = UiKit.card(context)
         val snapshotBody = UiKit.bodyText(context, "")
+        val lastCompareTargetBody = UiKit.bodyText(context, "")
         val openLastDetailBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
         val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
         val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
 
         snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
         snapshotCard.addView(snapshotBody)
+        snapshotCard.addView(UiKit.spacer(context))
+        snapshotCard.addView(UiKit.cardTitle(context, "LAST COMPARE TARGET"))
+        snapshotCard.addView(lastCompareTargetBody)
         snapshotCard.addView(UiKit.spacer(context))
         snapshotCard.addView(openLastDetailBtn)
         snapshotCard.addView(openLastCompareBtn)
@@ -160,6 +164,26 @@ $fc / $drop
 
 Created
 ${formatDateTime(latest.createdAtMillis)}
+                """.trimIndent()
+            }
+
+            val allEntries = RoastHistoryEngine.all()
+            lastCompareTargetBody.text = if (allEntries.size < 2) {
+                """
+Need at least 2 roast history entries.
+
+The last compare target will appear here once both latest and previous batches exist.
+                """.trimIndent()
+            } else {
+                val latest = allEntries[0]
+                val previous = allEntries[1]
+
+                """
+A
+${previous.batchId}
+
+B
+${latest.batchId}
                 """.trimIndent()
             }
 
