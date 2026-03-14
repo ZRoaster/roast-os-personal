@@ -1,7 +1,9 @@
 package com.roastos.app.ui
 
 import android.content.Context
+import android.graphics.Typeface
 import android.widget.LinearLayout
+import android.widget.TextView
 import com.roastos.app.UiKit
 
 object TopNavBar {
@@ -18,42 +20,28 @@ object TopNavBar {
         container: LinearLayout,
         current: Section
     ): LinearLayout {
-        val bar = UiKit.card(context)
+        val card = UiKit.card(context)
 
-        val title = UiKit.cardTitle(context, "NAVIGATION")
+        card.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        card.addView(UiKit.spacer(context))
+
         val row = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
         }
 
-        val operateBtn = if (current == Section.OPERATE) {
-            UiKit.primaryButton(context, "OPERATE")
-        } else {
-            UiKit.secondaryButton(context, "OPERATE")
-        }
-
-        val reviewBtn = if (current == Section.REVIEW) {
-            UiKit.primaryButton(context, "REVIEW")
-        } else {
-            UiKit.secondaryButton(context, "REVIEW")
-        }
-
-        val studioBtn = if (current == Section.STUDIO) {
-            UiKit.primaryButton(context, "STUDIO")
-        } else {
-            UiKit.secondaryButton(context, "STUDIO")
-        }
-
-        val systemBtn = if (current == Section.SYSTEM) {
-            UiKit.primaryButton(context, "SYSTEM")
-        } else {
-            UiKit.secondaryButton(context, "SYSTEM")
-        }
-
-        operateBtn.setOnClickListener {
+        val operateTab = navTab(
+            context = context,
+            text = "OPERATE",
+            active = current == Section.OPERATE
+        ) {
             RoastOperatorPage.show(context, container)
         }
 
-        reviewBtn.setOnClickListener {
+        val reviewTab = navTab(
+            context = context,
+            text = "REVIEW",
+            active = current == Section.REVIEW
+        ) {
             ReviewHubPage.show(
                 context = context,
                 container = container,
@@ -63,7 +51,11 @@ object TopNavBar {
             )
         }
 
-        studioBtn.setOnClickListener {
+        val studioTab = navTab(
+            context = context,
+            text = "STUDIO",
+            active = current == Section.STUDIO
+        ) {
             StudioHubPage.show(
                 context = context,
                 container = container,
@@ -73,7 +65,11 @@ object TopNavBar {
             )
         }
 
-        systemBtn.setOnClickListener {
+        val systemTab = navTab(
+            context = context,
+            text = "SYSTEM",
+            active = current == Section.SYSTEM
+        ) {
             SystemHubPage.show(
                 context = context,
                 container = container,
@@ -83,15 +79,44 @@ object TopNavBar {
             )
         }
 
-        row.addView(operateBtn)
-        row.addView(reviewBtn)
-        row.addView(studioBtn)
-        row.addView(systemBtn)
+        row.addView(operateTab, weightedParams())
+        row.addView(reviewTab, weightedParams())
+        row.addView(studioTab, weightedParams())
+        row.addView(systemTab, weightedParams())
 
-        bar.addView(title)
-        bar.addView(UiKit.spacer(context))
-        bar.addView(row)
+        card.addView(row)
+        return card
+    }
 
-        return bar
+    private fun navTab(
+        context: Context,
+        text: String,
+        active: Boolean,
+        onClick: () -> Unit
+    ): TextView {
+        val view = if (active) {
+            UiKit.cardTitle(context, text)
+        } else {
+            UiKit.helperText(context, text)
+        }
+
+        view.apply {
+            setPadding(12, 18, 12, 18)
+            gravity = android.view.Gravity.CENTER
+            if (active) {
+                setTypeface(null, Typeface.BOLD)
+            }
+            setOnClickListener { onClick() }
+        }
+
+        return view
+    }
+
+    private fun weightedParams(): LinearLayout.LayoutParams {
+        return LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1f
+        )
     }
 }
