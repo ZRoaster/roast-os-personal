@@ -3,6 +3,7 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import com.roastos.app.RoastControlAdvisorEngine
+import com.roastos.app.RoastInsightBridge
 import com.roastos.app.RoastSessionBus
 import com.roastos.app.UiKit
 
@@ -29,8 +30,12 @@ No active roast session.
         }
 
         val output = RoastControlAdvisorEngine.evaluate(snapshot)
+        val observationHeadline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
 
         textView.text = """
+观察
+$observationHeadline
+
 阶段 / 优先级
 ${output.stage} / ${output.priority}
 
