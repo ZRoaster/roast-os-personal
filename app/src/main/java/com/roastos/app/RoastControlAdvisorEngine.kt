@@ -1,5 +1,6 @@
 package com.roastos.app
 
+import java.util.Locale
 import kotlin.math.abs
 
 data class RoastControlAdvisorOutput(
