@@ -61,12 +61,46 @@ object UiKit {
         return view
     }
 
+    fun sectionLabel(context: Context, text: String): TextView {
+
+        val view = TextView(context)
+
+        view.text = text
+        view.textSize = 12f
+        view.setTypeface(null, Typeface.BOLD)
+        view.alpha = 0.72f
+
+        return view
+    }
+
     fun bodyText(context: Context, text: String): TextView {
 
         val view = TextView(context)
 
         view.text = text
         view.textSize = 14f
+
+        return view
+    }
+
+    fun helperText(context: Context, text: String): TextView {
+
+        val view = TextView(context)
+
+        view.text = text
+        view.textSize = 13f
+        view.alpha = 0.82f
+
+        return view
+    }
+
+    fun dangerText(context: Context, text: String): TextView {
+
+        val view = TextView(context)
+
+        view.text = text
+        view.textSize = 13f
+        view.alpha = 0.72f
 
         return view
     }
