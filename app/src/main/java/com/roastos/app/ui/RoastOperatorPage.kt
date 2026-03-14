@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Toast
 import com.roastos.app.*
 import kotlin.math.abs
 
@@ -34,12 +35,14 @@ object RoastOperatorPage {
         val snapshotCard = UiKit.card(context)
         val snapshotBody = UiKit.bodyText(context, "")
         val openLastDetailBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
+        val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
         val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
 
         snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
         snapshotCard.addView(snapshotBody)
         snapshotCard.addView(UiKit.spacer(context))
         snapshotCard.addView(openLastDetailBtn)
+        snapshotCard.addView(openLastCompareBtn)
         snapshotCard.addView(openRecentBtnTop)
 
         root.addView(snapshotCard)
@@ -121,6 +124,7 @@ object RoastOperatorPage {
 
         fun renderLastSnapshot() {
             val latest = RoastHistoryEngine.latest()
+            val historyCount = RoastHistoryEngine.all().size
 
             snapshotBody.text = if (latest == null) {
                 """
@@ -160,6 +164,7 @@ ${formatDateTime(latest.createdAtMillis)}
             }
 
             openLastDetailBtn.isEnabled = latest != null
+            openLastCompareBtn.isEnabled = historyCount >= 2
         }
 
         fun renderLastActionableReference() {
@@ -429,6 +434,32 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 context = context,
                 container = container,
                 entry = RoastHistoryEngine.latest(),
+                onBack = {
+                    show(context, container)
+                }
+            )
+        }
+
+        openLastCompareBtn.setOnClickListener {
+            val allEntries = RoastHistoryEngine.all()
+
+            if (allEntries.size < 2) {
+                Toast.makeText(
+                    context,
+                    "Need at least 2 roast history entries",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            val latest = allEntries[0]
+            val previous = allEntries[1]
+
+            RoastComparePage.show(
+                context = context,
+                container = container,
+                left = previous,
+                right = latest,
                 onBack = {
                     show(context, container)
                 }
