@@ -12,6 +12,7 @@ data class RoastControlAdvisorOutput(
     val riskLevel: String,
     val confidence: String,
     val reason: String,
+    val referenceContextLevel: String,
     val referenceContext: String
 ) {
 
@@ -40,6 +41,9 @@ $confidence
 
 Reason
 $reason
+
+Reference Context Level
+$referenceContextLevel
 
 Reference Context
 $referenceContext
@@ -75,7 +79,7 @@ object RoastControlAdvisorEngine {
             machine = machine
         )
 
-        val referenceContext = buildReferenceContext(snapshot)
+        val referenceEvaluation = evaluateReferenceContext(snapshot)
 
         return RoastControlAdvisorOutput(
             stage = decision.stage,
@@ -86,7 +90,72 @@ object RoastControlAdvisorEngine {
             riskLevel = risk,
             confidence = confidence,
             reason = reason,
-            referenceContext = referenceContext
+            referenceContextLevel = referenceEvaluation.level,
+            referenceContext = referenceEvaluation.text
+        )
+    }
+
+    private data class ReferenceContextEvaluation(
+        val level: String,
+        val text: String
+    )
+
+    private fun evaluateReferenceContext(
+        snapshot: RoastSessionBusSnapshot
+    ): ReferenceContextEvaluation {
+        val latest = RoastHistoryEngine.latest()
+            ?: return ReferenceContextEvaluation(
+                level = "STABLE",
+                text = "No latest roast reference available."
+            )
+
+        val session = snapshot.session
+        val currentElapsed = session.lastElapsedSec
+        val currentHealth = buildHealthHeadline(snapshot.validation)
+        val currentHealthScore = riskScore(currentHealth)
+        val lastHealthScore = riskScore(latest.roastHealthHeadline)
+
+        val parts = mutableListOf<String>()
+        var shifted = false
+
+        if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
+            parts += "Current health is weaker than the last saved roast. Prefer stability over aggressive late-phase carry."
+            shifted = true
+        }
+
+        val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
+        if (lastYellow != null && currentElapsed >= lastYellow + 20) {
+            parts += "Current roast is already slower than last yellow reference. Do not assume the same crack timing without adjustment."
+        }
+
+        val lastFc = latest.actualFcSec ?: latest.predictedFcSec
+        if (lastFc != null && currentElapsed >= lastFc - 15) {
+            parts += "Current roast is already close to last first crack reference. Verify whether the current mid-late phase pace is aligned with intent."
+        }
+
+        val currentEnv = AppState.lastPlannerInput
+        val currentEnvTemp = currentEnv?.envTemp
+        val currentEnvRh = currentEnv?.envRH
+        val envShiftDetected =
+            currentEnvTemp != null &&
+                currentEnvRh != null &&
+                (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
+
+        if (envShiftDetected) {
+            parts += "Current environment differs clearly from the last saved roast. Re-check phase expectations before copying the previous rhythm."
+            shifted = true
+        }
+
+        if (parts.isEmpty()) {
+            return ReferenceContextEvaluation(
+                level = "STABLE",
+                text = "No strong reference deviation under current rules."
+            )
+        }
+
+        return ReferenceContextEvaluation(
+            level = if (shifted) "SHIFTED" else "WATCH",
+            text = parts.take(2).joinToString("\n\n")
         )
     }
 
@@ -195,53 +264,6 @@ object RoastControlAdvisorEngine {
         }
 
         return parts.joinToString("\n\n")
-    }
-
-    private fun buildReferenceContext(
-        snapshot: RoastSessionBusSnapshot
-    ): String {
-        val latest = RoastHistoryEngine.latest()
-            ?: return "No latest roast reference available."
-
-        val session = snapshot.session
-        val currentElapsed = session.lastElapsedSec
-        val currentHealth = buildHealthHeadline(snapshot.validation)
-        val currentHealthScore = riskScore(currentHealth)
-        val lastHealthScore = riskScore(latest.roastHealthHeadline)
-
-        val parts = mutableListOf<String>()
-
-        if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
-            parts += "Current health is weaker than the last saved roast. Prefer stability over aggressive late-phase carry."
-        }
-
-        val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
-        if (lastYellow != null && currentElapsed >= lastYellow + 20) {
-            parts += "Current roast is already slower than last yellow reference. Do not assume the same crack timing without adjustment."
-        }
-
-        val lastFc = latest.actualFcSec ?: latest.predictedFcSec
-        if (lastFc != null && currentElapsed >= lastFc - 15) {
-            parts += "Current roast is already close to last first crack reference. Verify whether the current mid-late phase pace is aligned with intent."
-        }
-
-        val currentEnv = AppState.lastPlannerInput
-        val currentEnvTemp = currentEnv?.envTemp
-        val currentEnvRh = currentEnv?.envRH
-        val envShiftDetected =
-            currentEnvTemp != null &&
-                currentEnvRh != null &&
-                (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
-
-        if (envShiftDetected) {
-            parts += "Current environment differs clearly from the last saved roast. Re-check phase expectations before copying the previous rhythm."
-        }
-
-        return if (parts.isEmpty()) {
-            "No strong reference deviation under current rules."
-        } else {
-            parts.take(2).joinToString("\n\n")
-        }
     }
 
     private fun buildMachineStateBlock(
