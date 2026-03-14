@@ -391,7 +391,16 @@ $envShift
             else -> "Conditional reference"
         }
 
+        val replayVerdict = when (recommendedUse) {
+            "Direct replay reference" -> "Can replay directly"
+            "Do not directly replay" -> "Do not replay directly"
+            else -> "Replay with conditions"
+        }
+
         return """
+Replay Verdict
+$replayVerdict
+
 Primary Focus
 $primaryFocus
 
