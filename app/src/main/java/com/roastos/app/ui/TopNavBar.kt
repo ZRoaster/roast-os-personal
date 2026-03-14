@@ -20,76 +20,56 @@ object TopNavBar {
         container: LinearLayout,
         current: Section
     ): LinearLayout {
-        val card = UiKit.card(context)
-
-        card.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        card.addView(UiKit.spacer(context))
-
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
         }
 
-        val operateTab = navTab(
-            context = context,
-            text = "OPERATE",
-            active = current == Section.OPERATE
-        ) {
-            RoastOperatorPage.show(context, container)
-        }
+        row.addView(
+            navTab(context, container, "OPERATE", current == Section.OPERATE) {
+                RoastOperatorPage.show(context, container)
+            },
+            weightedParams()
+        )
 
-        val reviewTab = navTab(
-            context = context,
-            text = "REVIEW",
-            active = current == Section.REVIEW
-        ) {
-            ReviewHubPage.show(
-                context = context,
-                container = container,
-                onBack = {
-                    MainShellPage.show(context, container)
-                }
-            )
-        }
+        row.addView(
+            navTab(context, container, "REVIEW", current == Section.REVIEW) {
+                ReviewHubPage.show(
+                    context = context,
+                    container = container,
+                    onBack = { MainShellPage.show(context, container) }
+                )
+            },
+            weightedParams()
+        )
 
-        val studioTab = navTab(
-            context = context,
-            text = "STUDIO",
-            active = current == Section.STUDIO
-        ) {
-            StudioHubPage.show(
-                context = context,
-                container = container,
-                onBack = {
-                    MainShellPage.show(context, container)
-                }
-            )
-        }
+        row.addView(
+            navTab(context, container, "STUDIO", current == Section.STUDIO) {
+                StudioHubPage.show(
+                    context = context,
+                    container = container,
+                    onBack = { MainShellPage.show(context, container) }
+                )
+            },
+            weightedParams()
+        )
 
-        val systemTab = navTab(
-            context = context,
-            text = "SYSTEM",
-            active = current == Section.SYSTEM
-        ) {
-            SystemHubPage.show(
-                context = context,
-                container = container,
-                onBack = {
-                    MainShellPage.show(context, container)
-                }
-            )
-        }
+        row.addView(
+            navTab(context, container, "SYSTEM", current == Section.SYSTEM) {
+                SystemHubPage.show(
+                    context = context,
+                    container = container,
+                    onBack = { MainShellPage.show(context, container) }
+                )
+            },
+            weightedParams()
+        )
 
-        row.addView(operateTab, weightedParams())
-        row.addView(reviewTab, weightedParams())
-        row.addView(studioTab, weightedParams())
-        row.addView(systemTab, weightedParams())
-
-        card.addView(row)
-        return card
+        return row
     }
 
     private fun navTab(
         context: Context,
+        container: LinearLayout,
         text: String,
         active: Boolean,
         onClick: () -> Unit
@@ -101,8 +81,8 @@ object TopNavBar {
         }
 
         view.apply {
-            setPadding(12, 18, 12, 18)
             gravity = android.view.Gravity.CENTER
+            setPadding(8, 10, 8, 10)
             if (active) {
                 setTypeface(null, Typeface.BOLD)
             }
