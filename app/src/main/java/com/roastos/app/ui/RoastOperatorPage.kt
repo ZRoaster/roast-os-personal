@@ -93,6 +93,13 @@ object RoastOperatorPage {
         root.addView(executiveCard)
         root.addView(UiKit.spacer(context))
 
+        val insightCard = UiKit.card(context)
+        val insightPanel = RoastInsightPanel(context)
+        insightCard.addView(UiKit.cardTitle(context, "INSIGHT"))
+        insightCard.addView(insightPanel)
+        root.addView(insightCard)
+        root.addView(UiKit.spacer(context))
+
         val advisorCard = UiKit.card(context)
         val advisorPanel = RoastControlAdvisorPanel(context)
         advisorCard.addView(UiKit.cardTitle(context, "CONTROL ADVISOR"))
@@ -394,6 +401,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             renderDeviationAlert(session, snapshot.validation)
             actionFocusPanel.update()
             executivePanel.update()
+            insightPanel.update()
             advisorPanel.update()
             predictionPanel.update()
         }
