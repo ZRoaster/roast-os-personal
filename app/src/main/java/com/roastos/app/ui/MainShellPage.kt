@@ -22,24 +22,11 @@ object MainShellPage {
 
         val operateCard = UiKit.card(context)
         val openOperateBtn = UiKit.primaryButton(context, "OPEN OPERATE")
-
         operateCard.addView(UiKit.cardTitle(context, "OPERATE"))
         operateCard.addView(
             UiKit.helperText(
                 context,
-                "Live operating layer. Check connection, readiness, current status, judgment, and action."
-            )
-        )
-        operateCard.addView(UiKit.spacer(context))
-        operateCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        operateCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this when you are about to roast or already roasting.
-
-This is the main live workspace.
-                """.trimIndent()
+                "Live roast control, judgment, and action."
             )
         )
         operateCard.addView(UiKit.spacer(context))
@@ -49,24 +36,11 @@ This is the main live workspace.
 
         val reviewCard = UiKit.card(context)
         val openReviewBtn = UiKit.primaryButton(context, "OPEN REVIEW")
-
         reviewCard.addView(UiKit.cardTitle(context, "REVIEW"))
         reviewCard.addView(
             UiKit.helperText(
                 context,
-                "Review past batches, inspect one roast, and compare two roasts for learning and reuse."
-            )
-        )
-        reviewCard.addView(UiKit.spacer(context))
-        reviewCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        reviewCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this after roasting.
-
-Start from recent roasts, then go into detail or compare.
-                """.trimIndent()
+                "Review past batches and compare roast results."
             )
         )
         reviewCard.addView(UiKit.spacer(context))
@@ -76,24 +50,11 @@ Start from recent roasts, then go into detail or compare.
 
         val studioCard = UiKit.card(context)
         val openStudioBtn = UiKit.primaryButton(context, "OPEN STUDIO")
-
         studioCard.addView(UiKit.cardTitle(context, "STUDIO"))
         studioCard.addView(
             UiKit.helperText(
                 context,
-                "Preparation and build layer. Environment, planning, style, and machine-related setup live here."
-            )
-        )
-        studioCard.addView(UiKit.spacer(context))
-        studioCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        studioCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this before roasting or when refining your system.
-
-This is where RoastOS becomes a long-term tool, not just a live screen.
-                """.trimIndent()
+                "Prepare environment, style, and machine setup."
             )
         )
         studioCard.addView(UiKit.spacer(context))
@@ -103,24 +64,11 @@ This is where RoastOS becomes a long-term tool, not just a live screen.
 
         val systemCard = UiKit.card(context)
         val openSystemBtn = UiKit.primaryButton(context, "OPEN SYSTEM")
-
         systemCard.addView(UiKit.cardTitle(context, "SYSTEM"))
         systemCard.addView(
             UiKit.helperText(
                 context,
-                "Profile, settings, and advanced system-level access belong in this layer."
-            )
-        )
-        systemCard.addView(UiKit.spacer(context))
-        systemCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        systemCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this for app-level maintenance, profile access, and future advanced pages.
-
-This is not part of the main live roasting workflow.
-                """.trimIndent()
+                "Profile, settings, and advanced system access."
             )
         )
         systemCard.addView(UiKit.spacer(context))
