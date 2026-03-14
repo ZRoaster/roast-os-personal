@@ -5,10 +5,11 @@ import android.widget.LinearLayout
 import com.roastos.app.EnergyEngine
 import com.roastos.app.MachineProfiles
 import com.roastos.app.MachineStateEngine
-import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastInsightReport
 import com.roastos.app.RoastSessionBus
 import com.roastos.app.RoastStabilityEngine
+import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.UiKit
 
 class RoastInsightPanel(context: Context) : LinearLayout(context) {
@@ -51,19 +52,26 @@ Possibilities
         val session = snapshot.session
 
         val machineState = MachineStateEngine.buildState(
-            powerW = session.lastPower,
-            airflowPa = session.lastAirflow,
-            drumRpm = session.lastDrumRpm,
+            powerW = 0,
+            airflowPa = 0,
+            drumRpm = 0,
             beanTemp = session.lastBeanTemp,
             ror = session.lastRor,
             elapsedSec = session.lastElapsedSec,
-            environmentTemp = session.envTemp,
-            environmentHumidity = session.envRH
+            environmentTemp = 25.0,
+            environmentHumidity = 50.0
         )
 
         val profile = MachineProfiles.HB_M2SE
         val energy = EnergyEngine.evaluate(profile, machineState)
-        val curvePrediction = RoastCurveEngineV3.predict(profile, machineState, energy)
+
+        RoastCurveEngineV3.reset()
+        RoastCurveEngineV3.ingest(
+            elapsedSec = machineState.elapsedSec,
+            bt = machineState.beanTemp
+        )
+        val curvePrediction = RoastCurveEngineV3.predict()
+
         val stability = RoastStabilityEngine.evaluate(curvePrediction)
 
         val report = RoastInsightEngine.analyze(
@@ -74,6 +82,10 @@ Possibilities
             styleGoal = null
         )
 
+        renderReport(report)
+    }
+
+    private fun renderReport(report: RoastInsightReport) {
         headlineBody.text = """
 Insight
 
@@ -105,30 +117,38 @@ ${buildPossibilityText(report)}
     }
 
     private fun buildObservationText(
-        report: com.roastos.app.RoastInsightReport
+        report: RoastInsightReport
     ): String {
         if (report.observations.isEmpty()) return "-"
 
-        return report.observations.take(4).joinToString("\n\n") { insight ->
+        return report.observations.take(4).joinToString("\n\n") { item ->
             """
-${insight.title}
-${insight.message}
-等级：${formatSeverity(insight.severity.name)}
-类型：${formatType(insight.type.name)}
+${item.title}
+${item.message}
+
+Severity
+${formatSeverity(item.severity.name)}
+
+Type
+${formatType(item.type.name)}
             """.trimIndent()
         }
     }
 
     private fun buildPossibilityText(
-        report: com.roastos.app.RoastInsightReport
+        report: RoastInsightReport
     ): String {
         if (report.possibilities.isEmpty()) return "-"
 
-        return report.possibilities.take(3).joinToString("\n\n") { possibility ->
+        return report.possibilities.take(3).joinToString("\n\n") { item ->
             """
-${possibility.title}
-方向：${formatDirection(possibility.direction.name)}
-${possibility.description}
+${item.title}
+
+Direction
+${formatDirection(item.direction.name)}
+
+Description
+${item.description}
             """.trimIndent()
         }
     }
@@ -147,7 +167,7 @@ ${possibility.description}
         return when (value) {
             "OBSERVATION" -> "观察"
             "CAUSE" -> "原因"
-            "CONSEQUENCE" -> "后果"
+            "CONSEQUENCE" -> "结果"
             "POSSIBILITY" -> "可能性"
             else -> value
         }
@@ -157,7 +177,7 @@ ${possibility.description}
         return when (value) {
             "CLARITY" -> "清晰"
             "SWEETNESS" -> "甜感"
-            "BODY" -> "醇厚"
+            "BODY" -> "厚度"
             "BALANCE" -> "平衡"
             "EXPERIMENTAL" -> "实验"
             else -> value
