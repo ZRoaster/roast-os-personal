@@ -50,12 +50,7 @@ object RoastOperatorPage {
         val statusCard = UiKit.card(context)
         val statusBody = UiKit.bodyText(context, "")
         statusCard.addView(UiKit.cardTitle(context, "OPERATOR STATUS"))
-        statusCard.addView(
-            UiKit.helperText(
-                context,
-                "See connection, readiness, and current roast state first."
-            )
-        )
+        statusCard.addView(UiKit.helperText(context, "See connection, readiness, and current roast state first."))
         statusCard.addView(UiKit.spacer(context))
         statusCard.addView(UiKit.sectionLabel(context, "STATUS"))
         statusCard.addView(statusBody)
@@ -65,12 +60,7 @@ object RoastOperatorPage {
         val decisionCard = UiKit.card(context)
         val decisionBody = UiKit.bodyText(context, "")
         decisionCard.addView(UiKit.cardTitle(context, "DECISION"))
-        decisionCard.addView(
-            UiKit.helperText(
-                context,
-                "Read one short observation, then the immediate action and current risk."
-            )
-        )
+        decisionCard.addView(UiKit.helperText(context, "Read one short observation, then the immediate action and current risk."))
         decisionCard.addView(UiKit.spacer(context))
         decisionCard.addView(UiKit.sectionLabel(context, "DECISION"))
         decisionCard.addView(decisionBody)
@@ -80,12 +70,7 @@ object RoastOperatorPage {
         val referenceCard = UiKit.card(context)
         val referenceBody = UiKit.bodyText(context, "")
         referenceCard.addView(UiKit.cardTitle(context, "REFERENCE CHECK"))
-        referenceCard.addView(
-            UiKit.helperText(
-                context,
-                "Use the latest saved roast as a soft reference for drift, not as a rigid command."
-            )
-        )
+        referenceCard.addView(UiKit.helperText(context, "Use the latest saved roast as a soft reference for drift, not as a rigid command."))
         referenceCard.addView(UiKit.spacer(context))
         referenceCard.addView(UiKit.sectionLabel(context, "REFERENCE"))
         referenceCard.addView(referenceBody)
@@ -103,12 +88,7 @@ object RoastOperatorPage {
         val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
 
         controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
-        controlCard.addView(
-            UiKit.helperText(
-                context,
-                "Controls stay available, but always check status and decision first."
-            )
-        )
+        controlCard.addView(UiKit.helperText(context, "Controls stay available, but always check status and decision first."))
         controlCard.addView(UiKit.spacer(context))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
@@ -349,11 +329,7 @@ $predictionRisk
         openLastCompareBtn.setOnClickListener {
             val allEntries = RoastHistoryEngine.all()
             if (allEntries.size < 2) {
-                Toast.makeText(
-                    context,
-                    "Need at least 2 roast history entries",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "Need at least 2 roast history entries", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
