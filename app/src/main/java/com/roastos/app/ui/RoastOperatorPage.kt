@@ -50,9 +50,6 @@ object RoastOperatorPage {
         val statusCard = UiKit.card(context)
         val statusBody = UiKit.bodyText(context, "")
         statusCard.addView(UiKit.cardTitle(context, "OPERATOR STATUS"))
-        statusCard.addView(UiKit.helperText(context, "See connection, readiness, and current roast state first."))
-        statusCard.addView(UiKit.spacer(context))
-        statusCard.addView(UiKit.sectionLabel(context, "STATUS"))
         statusCard.addView(statusBody)
         root.addView(statusCard)
         root.addView(UiKit.spacer(context))
@@ -60,9 +57,6 @@ object RoastOperatorPage {
         val decisionCard = UiKit.card(context)
         val decisionBody = UiKit.bodyText(context, "")
         decisionCard.addView(UiKit.cardTitle(context, "DECISION"))
-        decisionCard.addView(UiKit.helperText(context, "Read one short observation, then the immediate action and current risk."))
-        decisionCard.addView(UiKit.spacer(context))
-        decisionCard.addView(UiKit.sectionLabel(context, "DECISION"))
         decisionCard.addView(decisionBody)
         root.addView(decisionCard)
         root.addView(UiKit.spacer(context))
@@ -70,9 +64,6 @@ object RoastOperatorPage {
         val referenceCard = UiKit.card(context)
         val referenceBody = UiKit.bodyText(context, "")
         referenceCard.addView(UiKit.cardTitle(context, "REFERENCE CHECK"))
-        referenceCard.addView(UiKit.helperText(context, "Use the latest saved roast as a soft reference for drift, not as a rigid command."))
-        referenceCard.addView(UiKit.spacer(context))
-        referenceCard.addView(UiKit.sectionLabel(context, "REFERENCE"))
         referenceCard.addView(referenceBody)
         root.addView(referenceCard)
         root.addView(UiKit.spacer(context))
@@ -88,8 +79,6 @@ object RoastOperatorPage {
         val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
 
         controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
-        controlCard.addView(UiKit.helperText(context, "Controls stay available, but always check status and decision first."))
-        controlCard.addView(UiKit.spacer(context))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
@@ -132,28 +121,28 @@ Telemetry
 ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "弱数据存在" else "未检测到有效实时数据"}
 
 下一步
-先确认机器连接或数据来源，再进入烘焙操作。
+确认机器连接或数据来源
             """.trimIndent()
 
             decisionBody.text = """
 当前判断
-现在不适合读取实时烘焙建议。
+现在不适合读取实时烘焙建议
 
 当前动作
-1. 检查连接
-2. 补环境
-3. 回到本页重新确认状态
+检查连接
+补环境
+重新确认状态
 
 当前风险
-在连接未确认时，实时判断不应作为可靠依据。
+实时判断暂不可靠
             """.trimIndent()
 
             referenceBody.text = """
 参考状态
 ${buildLatestReferenceStrip()}
 
-说明
-现在更适合进入准备和复盘，不适合进入实时决策。
+当前建议
+先做准备，不进入实时决策
             """.trimIndent()
 
             startBtn.isEnabled = false
@@ -171,9 +160,9 @@ ${buildLatestReferenceStrip()}
             }
 
             val readinessNote = when {
-                !hasEnvironment -> "缺少环境输入。"
-                session.lastElapsedSec <= 0 -> "尚未进入有效烘焙进程。"
-                else -> "当前数据不足以进入完整主操作流。"
+                !hasEnvironment -> "缺少环境输入"
+                session.lastElapsedSec <= 0 -> "尚未进入有效烘焙进程"
+                else -> "当前数据不足以进入完整主操作流"
             }
 
             statusBody.text = """
@@ -198,18 +187,19 @@ $readinessNote
 ${RoastInsightBridge.observationHeadlineForSnapshot(snapshot)}
 
 当前判断
-这条观察现在只能作为弱提示。
+只能作为弱提示
 
 当前动作
-先补全准备条件，再进入完整操作模式。
+先补全准备条件
+再进入完整操作模式
             """.trimIndent()
 
             referenceBody.text = """
 参考状态
 ${buildLatestReferenceStrip()}
 
-建议
-先完成准备，再开始读取更强的动作建议。
+当前建议
+先完成准备，再读取更强建议
             """.trimIndent()
 
             startBtn.isEnabled = hasEnvironment
@@ -228,41 +218,37 @@ ${buildLatestReferenceStrip()}
 状态
 ${session.status}
 
-核心读数
-BT   ${String.format("%.1f", session.lastBeanTemp)} ℃
-RoR  ${String.format("%.1f", session.lastRor)} ℃/min
-时间  ${formatElapsed(session.lastElapsedSec)}
+BT / RoR / 时间
+${String.format("%.1f", session.lastBeanTemp)} ℃
+${String.format("%.1f", session.lastRor)} ℃/min
+${formatElapsed(session.lastElapsedSec)}
 
 阶段 / 健康
-${snapshot.companion.phaseLabel} / ${buildHealthHeadline(snapshot.validation)}
+${snapshot.companion.phaseLabel}
+${buildHealthHeadline(snapshot.validation)}
             """.trimIndent()
 
             val fcText = prediction.estimatedFirstCrackWindowSec?.let { formatElapsed(it) } ?: "-"
-            val predictionRisk = prediction.predictedRisk
             val headline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
 
             decisionBody.text = """
 当前观察
 $headline
 
-当前动作
-火力：${advisor.finalHeatAdvice}
-风门：${advisor.finalAirflowAdvice}
+火力
+${advisor.finalHeatAdvice}
+
+风门
+${advisor.finalAirflowAdvice}
 
 优先级
 ${advisor.stage} / ${advisor.priority}
 
-当前风险
+风险 / 置信度
 ${advisor.riskLevel} / ${advisor.confidence}
 
 预计一爆
 $fcText
-
-风味方向
-${advisor.flavorDirection}
-
-预测风险
-$predictionRisk
             """.trimIndent()
 
             referenceBody.text = buildActiveReferenceText(
@@ -367,9 +353,9 @@ $predictionRisk
 
     private fun buildLatestReferenceStrip(): String {
         val latest = RoastHistoryEngine.latest() ?: return """
-No roast history yet.
+No roast history yet
 
-Save the first usable roast to unlock comparison-based reference.
+保存第一锅后可启用参考
         """.trimIndent()
 
         return """
@@ -394,9 +380,9 @@ ${if (latest.evaluation != null) "Saved" else "Not saved"}
         if (latest == null) {
             return """
 参考状态
-No roast history yet.
+No roast history yet
 
-Save the first usable roast to unlock reference-based drift checks.
+保存第一锅后可启用偏差检查
             """.trimIndent()
         }
 
@@ -409,15 +395,15 @@ Save the first usable roast to unlock reference-based drift checks.
         val currentHealthScore = riskScore(currentHealth)
         val lastHealthScore = riskScore(latest.roastHealthHeadline)
         if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
-            alerts += "当前健康状态弱于最近参考锅。"
+            alerts += "当前健康状态弱于最近参考锅"
         }
 
         if (lastYellow != null && currentElapsed >= lastYellow + 20) {
-            alerts += "当前节奏已慢于最近 yellow 参考。"
+            alerts += "当前节奏已慢于最近 yellow 参考"
         }
 
         if (lastFc != null && currentElapsed >= lastFc - 15) {
-            alerts += "当前节奏已接近最近一爆参考。"
+            alerts += "当前节奏已接近最近一爆参考"
         }
 
         val currentEnv = AppState.lastPlannerInput
@@ -429,7 +415,7 @@ Save the first usable roast to unlock reference-based drift checks.
                 (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
 
         if (envShiftDetected) {
-            alerts += "当前环境与最近参考锅差异明显。"
+            alerts += "当前环境与最近参考锅差异明显"
         }
 
         val currentEnvText = if (currentEnvTemp == null || currentEnvRh == null) {
@@ -447,7 +433,7 @@ Current  $currentEnvText
 Last     ${oneDecimal(latest.envTemp)} ℃ / ${oneDecimal(latest.envRh)} %
 
 参考预警
-${if (alerts.isEmpty()) "无明显参考偏差。" else alerts.take(2).joinToString("\n")}
+${if (alerts.isEmpty()) "无明显参考偏差" else alerts.take(2).joinToString("\n")}
         """.trimIndent()
     }
 
