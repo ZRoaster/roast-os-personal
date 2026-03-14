@@ -79,7 +79,7 @@ object HistoryDetailPage {
 
         compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
         compareCard.addView(
-            UiKit.bodyText(
+            UiKit.helperText(
                 context,
                 "Open this batch against a newer or older reference."
             )
@@ -226,34 +226,25 @@ ${formatRor(entry.actualPreFcRor)}
 
         evaluationCard.addView(UiKit.cardTitle(context, "EVALUATION"))
         evaluationCard.addView(
-            UiKit.bodyText(
+            UiKit.helperText(
                 context,
                 buildEvaluationIntro(entry.evaluation)
             )
         )
         evaluationCard.addView(UiKit.spacer(context))
-        evaluationCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Input
 
-Color / Water Activity
-                """.trimIndent()
-            )
-        )
+        evaluationCard.addView(UiKit.sectionLabel(context, "INPUT"))
+        evaluationCard.addView(UiKit.sectionLabel(context, "COLOR / WATER ACTIVITY"))
         evaluationCard.addView(beanColorInput)
         evaluationCard.addView(groundColorInput)
         evaluationCard.addView(roastedAwInput)
         evaluationCard.addView(UiKit.spacer(context))
-        evaluationCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Cup Scores
 
-Use your own consistent scoring rhythm across batches.
-                """.trimIndent()
+        evaluationCard.addView(UiKit.sectionLabel(context, "CUP SCORES"))
+        evaluationCard.addView(
+            UiKit.helperText(
+                context,
+                "Use your own consistent scoring rhythm across batches."
             )
         )
         evaluationCard.addView(sweetnessInput)
@@ -262,18 +253,18 @@ Use your own consistent scoring rhythm across batches.
         evaluationCard.addView(flavorClarityInput)
         evaluationCard.addView(balanceInput)
         evaluationCard.addView(UiKit.spacer(context))
-        evaluationCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Notes
 
-Capture the cup result, roast impression, and reuse hints.
-                """.trimIndent()
+        evaluationCard.addView(UiKit.sectionLabel(context, "NOTES"))
+        evaluationCard.addView(
+            UiKit.helperText(
+                context,
+                "Capture the cup result, roast impression, and reuse hints."
             )
         )
         evaluationCard.addView(notesInput)
         evaluationCard.addView(UiKit.spacer(context))
+
+        evaluationCard.addView(UiKit.sectionLabel(context, "SAVED EVALUATION"))
         evaluationCard.addView(
             UiKit.bodyText(
                 context,
@@ -292,7 +283,7 @@ Capture the cup result, roast impression, and reuse hints.
 
         styleCard.addView(UiKit.cardTitle(context, "STYLE"))
         styleCard.addView(
-            UiKit.bodyText(
+            UiKit.helperText(
                 context,
                 "Turn this batch into a reusable style reference."
             )
@@ -308,7 +299,7 @@ Capture the cup result, roast impression, and reuse hints.
 
         deleteCard.addView(UiKit.cardTitle(context, "DELETE"))
         deleteCard.addView(
-            UiKit.bodyText(
+            UiKit.dangerText(
                 context,
                 "Remove this batch from local history."
             )
@@ -579,15 +570,10 @@ ${formatRor(entry.actualPreFcRor)}
         evaluation: RoastEvaluation?
     ): String {
         if (evaluation == null) {
-            return """
-Saved Evaluation
-No evaluation saved yet.
-            """.trimIndent()
+            return "No evaluation saved yet."
         }
 
         return """
-Saved Evaluation
-
 Bean Color
 ${evaluation.beanColor ?: "-"}
 
