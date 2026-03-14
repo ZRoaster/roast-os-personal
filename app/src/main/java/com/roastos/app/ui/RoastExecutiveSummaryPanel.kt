@@ -25,8 +25,6 @@ class RoastExecutiveSummaryPanel(
 
         if (snapshot == null) {
             textView.text = """
-Executive Summary
-
 No active roast session.
             """.trimIndent()
             return
@@ -43,28 +41,23 @@ No active roast session.
         val calibrationId = match.matchedProfile?.calibrationId ?: "manual/default"
 
         textView.text = """
-当前阶段
+阶段
 ${advisor.stage}
 
-当前重点
+重点
 ${advisor.priority}
 
 系统理解
 ${advisor.insightSummary}
 
-最终火力建议
-${advisor.finalHeatAdvice}
+建议
+火力：${advisor.finalHeatAdvice}
+风门：${advisor.finalAirflowAdvice}
 
-最终风门建议
-${advisor.finalAirflowAdvice}
+风险 / 一爆
+${advisor.riskLevel} / $fcText
 
-预测风险
-${advisor.riskLevel}
-
-预计一爆时间
-$fcText
-
-当前标定基线
+基线
 $calibrationId
         """.trimIndent()
     }
