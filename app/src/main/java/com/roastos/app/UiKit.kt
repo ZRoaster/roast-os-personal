@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -13,6 +15,7 @@ object UiKit {
     private const val PAGE_PADDING = 40
     private const val CARD_PADDING = 30
     private const val BUTTON_HEIGHT = 120
+    private const val FIELD_HEIGHT = 112
 
     private val cardBackgroundColor = Color.parseColor("#F7F7F5")
     private val cardStrokeColor = Color.parseColor("#DDDCD6")
@@ -23,6 +26,11 @@ object UiKit {
     private val secondaryButtonBackgroundColor = Color.parseColor("#ECEBE6")
     private val secondaryButtonStrokeColor = Color.parseColor("#D8D6CF")
     private val secondaryButtonTextColor = Color.parseColor("#2E2E2A")
+
+    private val fieldBackgroundColor = Color.parseColor("#FBFBF9")
+    private val fieldStrokeColor = Color.parseColor("#D6D4CC")
+    private val fieldTextColor = Color.parseColor("#24241F")
+    private val fieldHintColor = Color.parseColor("#7A786F")
 
     fun pageRoot(context: Context): LinearLayout {
         val layout = LinearLayout(context)
@@ -113,6 +121,33 @@ object UiKit {
         return view
     }
 
+    fun decimalField(context: Context, hint: String): EditText {
+        return styledField(context).apply {
+            this.hint = hint
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+        }
+    }
+
+    fun integerField(context: Context, hint: String): EditText {
+        return styledField(context).apply {
+            this.hint = hint
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setSingleLine(true)
+        }
+    }
+
+    fun notesField(context: Context, hint: String = "Notes"): EditText {
+        return styledField(context).apply {
+            this.hint = hint
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            minLines = 4
+            setSingleLine(false)
+        }
+    }
+
     fun primaryButton(context: Context, text: String): Button {
         val button = Button(context)
         button.text = text
@@ -150,5 +185,22 @@ object UiKit {
         view.text = ""
         view.height = 28
         return view
+    }
+
+    private fun styledField(context: Context): EditText {
+        return EditText(context).apply {
+            textSize = 14f
+            setTextColor(fieldTextColor)
+            setHintTextColor(fieldHintColor)
+            minHeight = FIELD_HEIGHT
+            minimumHeight = FIELD_HEIGHT
+            setPadding(28, 22, 28, 22)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 20f
+                setColor(fieldBackgroundColor)
+                setStroke(2, fieldStrokeColor)
+            }
+        }
     }
 }
