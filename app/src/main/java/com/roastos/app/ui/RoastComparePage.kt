@@ -27,15 +27,13 @@ object RoastComparePage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST COMPARE"))
-        root.addView(UiKit.pageSubtitle(context, "Side-by-side batch comparison"))
+        root.addView(UiKit.pageSubtitle(context, "Comparison workspace"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
-
         navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
         navCard.addView(backBtn)
-
         root.addView(navCard)
         root.addView(UiKit.spacer(context))
 
@@ -59,6 +57,7 @@ object RoastComparePage {
             return
         }
 
+        // 结论层
         root.addView(
             buildSectionCard(
                 context = context,
@@ -93,7 +92,7 @@ ${right.batchId}
             buildSectionCard(
                 context = context,
                 title = "DECISION SUPPORT",
-                leftLabel = "SUPPORT",
+                leftLabel = "SUMMARY",
                 leftValue = buildDecisionSupport(left, right),
                 rightLabel = "SELECTED",
                 rightValue = """
@@ -107,19 +106,18 @@ ${right.batchId}
         )
         root.addView(UiKit.spacer(context))
 
+        // 差异层
         root.addView(
             buildSectionCard(
                 context = context,
                 title = "OPERATION HINTS",
-                leftLabel = "HINTS",
+                leftLabel = "FOCUS",
                 leftValue = buildOperationHints(left, right),
-                rightLabel = "SELECTED",
+                rightLabel = "READING",
                 rightValue = """
-A
-${left.batchId}
+Use this section as the first action layer.
 
-B
-${right.batchId}
+Then check KEY DIFFERENCES and COMPARE SUMMARY for detail.
                 """.trimIndent()
             )
         )
@@ -131,14 +129,8 @@ ${right.batchId}
                 title = "KEY DIFFERENCES",
                 leftLabel = "TAGS",
                 leftValue = buildKeyDifferences(left, right),
-                rightLabel = "SELECTED",
-                rightValue = """
-A
-${left.batchId}
-
-B
-${right.batchId}
-                """.trimIndent()
+                rightLabel = "COMPARE",
+                rightValue = buildFastCompareStrip(left, right)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -149,30 +141,13 @@ ${right.batchId}
                 title = "COMPARE SUMMARY",
                 leftLabel = "SUMMARY",
                 leftValue = buildCompareSummary(left, right),
-                rightLabel = "SELECTED",
-                rightValue = """
-A
-${left.batchId}
-
-B
-${right.batchId}
-                """.trimIndent()
+                rightLabel = "EVALUATION",
+                rightValue = buildEvaluationDifferences(left.evaluation, right.evaluation)
             )
         )
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "EVALUATION DIFFERENCES",
-                leftLabel = "DIFF",
-                leftValue = buildEvaluationDifferences(left.evaluation, right.evaluation),
-                rightLabel = "STATE",
-                rightValue = buildEvaluationState(left.evaluation, right.evaluation)
-            )
-        )
-        root.addView(UiKit.spacer(context))
-
+        // 详情层
         root.addView(
             buildSectionCard(
                 context = context,
@@ -297,7 +272,6 @@ ${right.batchId}
         rightValue: String
     ): LinearLayout {
         val card = UiKit.card(context)
-
         card.addView(UiKit.cardTitle(context, title))
         card.addView(
             UiKit.bodyText(
@@ -311,8 +285,31 @@ $rightValue
                 """.trimIndent()
             )
         )
-
         return card
+    }
+
+    private fun buildFastCompareStrip(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val fcA = formatSec(left.actualFcSec ?: left.predictedFcSec)
+        val fcB = formatSec(right.actualFcSec ?: right.predictedFcSec)
+        val dropA = formatSec(left.actualDropSec ?: left.predictedDropSec)
+        val dropB = formatSec(right.actualDropSec ?: right.predictedDropSec)
+
+        return """
+FC
+A $fcA
+B $fcB
+
+Drop
+A $dropA
+B $dropB
+
+Health
+A ${left.roastHealthHeadline}
+B ${right.roastHealthHeadline}
+        """.trimIndent()
     }
 
     private fun buildInsightSummary(
