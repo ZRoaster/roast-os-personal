@@ -318,7 +318,7 @@ $rightValue
     private fun buildInsightSummary(
         entry: RoastHistoryEntry
     ): String {
-        return RoastInsightBridge.analyzeHistory(entry).quietSummary.ifBlank { "-" }
+        return RoastInsightBridge.quietSummaryForHistory(entry)
     }
 
     private fun buildCompareReference(
@@ -646,7 +646,7 @@ Current records do not show a strong difference under the active rules.
         val b = right!!
         val parts = mutableListOf<String>()
 
-  compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
+        compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
         compareDoubleEval("Ground color", a.groundColor, b.groundColor)?.let { parts += it }
         compareDoubleEval("Roasted AW", a.roastedAw, b.roastedAw)?.let { parts += it }
 
