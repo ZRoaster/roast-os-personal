@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.LinearLayout
 import com.roastos.app.RoastCalibrationMatcherEngine
 import com.roastos.app.RoastControlAdvisorEngine
+import com.roastos.app.RoastInsightBridge
 import com.roastos.app.RoastRorPredictionEngine
 import com.roastos.app.RoastSessionBus
 import com.roastos.app.UiKit
@@ -33,6 +34,7 @@ No active roast session.
         val advisor = RoastControlAdvisorEngine.evaluate(snapshot)
         val prediction = RoastRorPredictionEngine.evaluate(snapshot)
         val match = RoastCalibrationMatcherEngine.matchBest()
+        val observationHeadline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
 
         val fcText = prediction.estimatedFirstCrackWindowSec?.let {
             formatSec(it)
@@ -41,6 +43,9 @@ No active roast session.
         val calibrationId = match.matchedProfile?.calibrationId ?: "manual/default"
 
         textView.text = """
+观察
+$observationHeadline
+
 阶段
 ${advisor.stage}
 
