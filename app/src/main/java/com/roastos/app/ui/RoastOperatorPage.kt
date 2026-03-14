@@ -22,7 +22,7 @@ object RoastOperatorPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST OPERATOR"))
-        root.addView(UiKit.pageSubtitle(context, "Live roast workspace"))
+        root.addView(UiKit.pageSubtitle(context, "Focus, insight, and control"))
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -110,7 +110,7 @@ object RoastOperatorPage {
         val actionableCard = UiKit.card(context)
         val actionableBody = UiKit.bodyText(context, "")
 
-        actionableCard.addView(UiKit.cardTitle(context, "LAST ACTIONABLE REFERENCE"))
+        actionableCard.addView(UiKit.cardTitle(context, "LAST REFERENCE"))
         actionableCard.addView(actionableBody)
 
         root.addView(actionableCard)
