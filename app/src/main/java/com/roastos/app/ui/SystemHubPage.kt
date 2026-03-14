@@ -31,14 +31,8 @@ object SystemHubPage {
 
         val profileCard = UiKit.card(context)
         val openProfileBtn = UiKit.primaryButton(context, "OPEN PROFILE")
-
         profileCard.addView(UiKit.cardTitle(context, "PROFILE"))
-        profileCard.addView(
-            UiKit.helperText(
-                context,
-                "Personal and account-level pages."
-            )
-        )
+        profileCard.addView(UiKit.helperText(context, "Personal and account-level pages."))
         profileCard.addView(UiKit.spacer(context))
         profileCard.addView(openProfileBtn)
         root.addView(profileCard)
@@ -46,14 +40,8 @@ object SystemHubPage {
 
         val appSettingsCard = UiKit.card(context)
         val openAppSettingsBtn = UiKit.primaryButton(context, "OPEN APP SETTINGS")
-
         appSettingsCard.addView(UiKit.cardTitle(context, "APP SETTINGS"))
-        appSettingsCard.addView(
-            UiKit.helperText(
-                context,
-                "Application-level preferences and future system settings."
-            )
-        )
+        appSettingsCard.addView(UiKit.helperText(context, "Application-level preferences and future system settings."))
         appSettingsCard.addView(UiKit.spacer(context))
         appSettingsCard.addView(openAppSettingsBtn)
         root.addView(appSettingsCard)
@@ -61,14 +49,8 @@ object SystemHubPage {
 
         val advancedCard = UiKit.card(context)
         val openAdvancedBtn = UiKit.primaryButton(context, "OPEN ADVANCED / DEBUG")
-
         advancedCard.addView(UiKit.cardTitle(context, "ADVANCED"))
-        advancedCard.addView(
-            UiKit.helperText(
-                context,
-                "Advanced tools and future debug-oriented pages."
-            )
-        )
+        advancedCard.addView(UiKit.helperText(context, "Advanced tools and future debug-oriented pages."))
         advancedCard.addView(UiKit.spacer(context))
         advancedCard.addView(openAdvancedBtn)
         root.addView(advancedCard)
@@ -77,12 +59,7 @@ object SystemHubPage {
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
         navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(
-            UiKit.helperText(
-                context,
-                "Return to the app home when needed."
-            )
-        )
+        navCard.addView(UiKit.helperText(context, "Return to the app home when needed."))
         navCard.addView(UiKit.spacer(context))
         navCard.addView(backBtn)
         root.addView(navCard)
