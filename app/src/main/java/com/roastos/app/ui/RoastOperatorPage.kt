@@ -7,9 +7,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import com.roastos.app.AppState
-import com.roastos.app.EnvironmentInputPage
-import com.roastos.app.HistoryDetailPage
-import com.roastos.app.RecentRoastListPage
 import com.roastos.app.RoastControlAdvisorEngine
 import com.roastos.app.RoastHistoryEngine
 import com.roastos.app.RoastInsightBridge
@@ -17,7 +14,6 @@ import com.roastos.app.RoastRorPredictionEngine
 import com.roastos.app.RoastSessionBus
 import com.roastos.app.RoastSessionBusSnapshot
 import com.roastos.app.RoastSessionState
-import com.roastos.app.RoastStateModel
 import com.roastos.app.RoastValidationResult
 import com.roastos.app.UiKit
 import kotlin.math.abs
@@ -93,7 +89,7 @@ object RoastOperatorPage {
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
         val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
-        val openRecentBtn = UiKit.secondaryButton(context, "OPEN REVIEW")
+        val openReviewBtn = UiKit.secondaryButton(context, "OPEN REVIEW")
         val openLatestBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
         val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
         val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
@@ -110,7 +106,7 @@ object RoastOperatorPage {
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
         controlCard.addView(openEnvironmentBtn)
-        controlCard.addView(openRecentBtn)
+        controlCard.addView(openReviewBtn)
         controlCard.addView(openLatestBtn)
         controlCard.addView(openLastCompareBtn)
         controlCard.addView(backShellBtn)
@@ -325,7 +321,7 @@ $predictionRisk
             EnvironmentInputPage.show(context, container)
         }
 
-        openRecentBtn.setOnClickListener {
+        openReviewBtn.setOnClickListener {
             ReviewHubPage.show(
                 context = context,
                 container = container,
