@@ -14,8 +14,13 @@ object RoastOperatorPage {
     private val handler = Handler(Looper.getMainLooper())
     private var running = false
 
-    fun show(context: Context, container: LinearLayout) {
+    private enum class OperatorUiState {
+        DISCONNECTED,
+        NOT_READY,
+        ACTIVE
+    }
 
+    fun show(context: Context, container: LinearLayout) {
         container.removeAllViews()
 
         val scroll = ScrollView(context)
@@ -25,102 +30,72 @@ object RoastOperatorPage {
         root.addView(UiKit.pageSubtitle(context, "Connect, verify, observe, and act"))
         root.addView(UiKit.spacer(context))
 
-        val connectionCard = UiKit.card(context)
-        val connectionBody = UiKit.bodyText(context, "")
-        connectionCard.addView(UiKit.cardTitle(context, "MACHINE CONNECTION"))
-        connectionCard.addView(
+        val stateCard = UiKit.card(context)
+        val stateBody = UiKit.bodyText(context, "")
+        stateCard.addView(UiKit.cardTitle(context, "OPERATOR STATE"))
+        stateCard.addView(
             UiKit.helperText(
                 context,
-                "Confirm connection state first. Do not trust live operating guidance until the machine and telemetry state are clear."
+                "This page changes by state. First confirm connection, then readiness, then live operation."
             )
         )
-        connectionCard.addView(UiKit.spacer(context))
-        connectionCard.addView(UiKit.sectionLabel(context, "CONNECTION"))
-        connectionCard.addView(connectionBody)
-        root.addView(connectionCard)
+        stateCard.addView(UiKit.spacer(context))
+        stateCard.addView(UiKit.sectionLabel(context, "STATE"))
+        stateCard.addView(stateBody)
+        root.addView(stateCard)
         root.addView(UiKit.spacer(context))
 
-        val readinessCard = UiKit.card(context)
-        val readinessBody = UiKit.bodyText(context, "")
-        readinessCard.addView(UiKit.cardTitle(context, "ROAST READINESS"))
-        readinessCard.addView(
+        val primaryCard = UiKit.card(context)
+        val primaryBody = UiKit.bodyText(context, "")
+        primaryCard.addView(UiKit.cardTitle(context, "PRIMARY TASK"))
+        primaryCard.addView(
             UiKit.helperText(
                 context,
-                "Check whether environment, session, and latest machine state are ready enough to begin or continue operation."
+                "This block shows the most important next step under the current operator state."
             )
         )
-        readinessCard.addView(UiKit.spacer(context))
-        readinessCard.addView(UiKit.sectionLabel(context, "READINESS"))
-        readinessCard.addView(readinessBody)
-        root.addView(readinessCard)
+        primaryCard.addView(UiKit.spacer(context))
+        primaryCard.addView(UiKit.sectionLabel(context, "TASK"))
+        primaryCard.addView(primaryBody)
+        root.addView(primaryCard)
         root.addView(UiKit.spacer(context))
 
-        val statusCard = UiKit.card(context)
-        val statusBody = UiKit.bodyText(context, "")
-        statusCard.addView(UiKit.cardTitle(context, "CURRENT STATUS"))
-        statusCard.addView(
+        val focusCard = UiKit.card(context)
+        val focusBody = UiKit.bodyText(context, "")
+        focusCard.addView(UiKit.cardTitle(context, "CURRENT FOCUS"))
+        focusCard.addView(
             UiKit.helperText(
                 context,
-                "See where the roast is now, the core readings, and whether the current run looks healthy."
+                "In active roast state, this becomes the main judgment and action area."
             )
         )
-        statusCard.addView(UiKit.spacer(context))
-        statusCard.addView(UiKit.sectionLabel(context, "STATUS"))
-        statusCard.addView(statusBody)
-        root.addView(statusCard)
+        focusCard.addView(UiKit.spacer(context))
+        focusCard.addView(UiKit.sectionLabel(context, "FOCUS"))
+        focusCard.addView(focusBody)
+        root.addView(focusCard)
         root.addView(UiKit.spacer(context))
 
-        val judgmentCard = UiKit.card(context)
-        val judgmentBody = UiKit.bodyText(context, "")
-        judgmentCard.addView(UiKit.cardTitle(context, "CURRENT JUDGMENT"))
-        judgmentCard.addView(
+        val supportCard = UiKit.card(context)
+        val supportBody = UiKit.bodyText(context, "")
+        supportCard.addView(UiKit.cardTitle(context, "SUPPORT"))
+        supportCard.addView(
             UiKit.helperText(
                 context,
-                "Read one short observation first, then a compact system interpretation."
+                "Use this area for readiness notes, prediction, or reference drift depending on current state."
             )
         )
-        judgmentCard.addView(UiKit.spacer(context))
-        judgmentCard.addView(UiKit.sectionLabel(context, "OBSERVATION"))
-        judgmentCard.addView(judgmentBody)
-        root.addView(judgmentCard)
-        root.addView(UiKit.spacer(context))
-
-        val actionCard = UiKit.card(context)
-        val actionBody = UiKit.bodyText(context, "")
-        actionCard.addView(UiKit.cardTitle(context, "CURRENT ACTION"))
-        actionCard.addView(
-            UiKit.helperText(
-                context,
-                "This is the default action layer for heat, airflow, and immediate operating priority."
-            )
-        )
-        actionCard.addView(UiKit.spacer(context))
-        actionCard.addView(UiKit.sectionLabel(context, "ACTION"))
-        actionCard.addView(actionBody)
-        root.addView(actionCard)
-        root.addView(UiKit.spacer(context))
-
-        val riskCard = UiKit.card(context)
-        val riskBody = UiKit.bodyText(context, "")
-        riskCard.addView(UiKit.cardTitle(context, "RISK / REFERENCE"))
-        riskCard.addView(
-            UiKit.helperText(
-                context,
-                "Check predicted crack timing, current risk, and whether the roast is drifting from the latest usable reference."
-            )
-        )
-        riskCard.addView(UiKit.spacer(context))
-        riskCard.addView(UiKit.sectionLabel(context, "RISK"))
-        riskCard.addView(riskBody)
-        root.addView(riskCard)
+        supportCard.addView(UiKit.spacer(context))
+        supportCard.addView(UiKit.sectionLabel(context, "SUPPORT"))
+        supportCard.addView(supportBody)
+        root.addView(supportCard)
         root.addView(UiKit.spacer(context))
 
         val controlCard = UiKit.card(context)
         val startBtn = UiKit.primaryButton(context, "START ROAST")
         val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
         val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
-        val openStudioBtn = UiKit.secondaryButton(context, "OPEN STUDIO")
         val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
+        val openStudioBtn = UiKit.secondaryButton(context, "OPEN STUDIO")
         val openRecentBtn = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
         val openLatestBtn = UiKit.secondaryButton(context, "OPEN LATEST HISTORY")
         val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
@@ -129,113 +104,172 @@ object RoastOperatorPage {
         controlCard.addView(
             UiKit.helperText(
                 context,
-                "Use these controls after connection and readiness are confirmed."
+                "Controls stay available, but their importance depends on current operator state."
             )
         )
         controlCard.addView(UiKit.spacer(context))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
-        controlCard.addView(openStudioBtn)
         controlCard.addView(openEnvironmentBtn)
+        controlCard.addView(openStudioBtn)
         controlCard.addView(openRecentBtn)
         controlCard.addView(openLatestBtn)
         controlCard.addView(openLastCompareBtn)
         root.addView(controlCard)
 
-        fun renderConnection() {
-            val machine = RoastStateModel.machine
-            val session = RoastSessionBus.peek()?.session
+        fun resolveUiState(snapshot: RoastSessionBusSnapshot): OperatorUiState {
+            val session = snapshot.session
+            val plannerInput = AppState.lastPlannerInput
 
-            val sessionState = when {
-                session == null -> "No session"
-                else -> session.status.toString()
+            val hasEnvironment = plannerInput?.envTemp != null && plannerInput.envRH != null
+            val hasTelemetry = session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0
+            val isActivelyRoasting = running ||
+                session.lastElapsedSec > 0 ||
+                session.status.toString().contains("roast", ignoreCase = true) ||
+                session.status.toString().contains("running", ignoreCase = true)
+
+            return when {
+                !hasTelemetry -> OperatorUiState.DISCONNECTED
+                !hasEnvironment || !isActivelyRoasting -> OperatorUiState.NOT_READY
+                else -> OperatorUiState.ACTIVE
             }
-
-            val telemetryState = when {
-                session == null -> "No live session snapshot"
-                session.lastElapsedSec > 0 || session.lastBeanTemp > 0.0 -> "Live or simulated data present"
-                else -> "No meaningful live telemetry yet"
-            }
-
-            val controlMode = "Assist / manual-safe"
-            val connectionStatus = when {
-                telemetryState == "Live or simulated data present" -> "Connected or session-fed"
-                else -> "Not confirmed"
-            }
-
-            connectionBody.text = """
-Connection
-$connectionStatus
-
-Control Mode
-$controlMode
-
-Telemetry
-$telemetryState
-
-Session
-$sessionState
-
-Machine Profile
-HB M2SE
-
-Synced Machine State
-Power Delay ${formatDouble(machine.powerResponseDelay)} s
-Air Delay ${formatDouble(machine.airflowResponseDelay)} s
-RPM Delay ${formatDouble(machine.rpmResponseDelay)} s
-            """.trimIndent()
         }
 
-        fun renderReadiness(snapshot: RoastSessionBusSnapshot) {
+        fun renderDisconnected(snapshot: RoastSessionBusSnapshot) {
+            val session = snapshot.session
+
+            stateBody.text = """
+当前状态
+未连接 / 未确认
+
+Session
+${session.status}
+
+Telemetry
+${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "弱数据存在" else "未检测到有效实时数据"}
+
+首页逻辑
+先确认机器与数据，再进入烘焙操作。
+            """.trimIndent()
+
+            primaryBody.text = """
+当前主任务
+先确认连接状态。
+
+下一步建议
+1. 检查机器连接或数据来源
+2. 进入 Environment 补全环境信息
+3. 再返回本页确认是否进入可操作状态
+
+当前不建议
+不要把实时判断与动作建议当成可靠依据。
+            """.trimIndent()
+
+            focusBody.text = """
+当前焦点
+机器连接优先于烘焙判断。
+
+只有当 telemetry 足够明确时，
+Operate 首页才应该进入真正的操作模式。
+            """.trimIndent()
+
+            supportBody.text = """
+可用入口
+- OPEN ENVIRONMENT
+- OPEN STUDIO
+- OPEN RECENT ROASTS
+
+说明
+你现在更适合做准备工作，而不是读实时烘焙建议。
+            """.trimIndent()
+
+            startBtn.isEnabled = false
+            stopBtn.isEnabled = false
+        }
+
+        fun renderNotReady(snapshot: RoastSessionBusSnapshot) {
+            val session = snapshot.session
             val plannerInput = AppState.lastPlannerInput
             val hasEnvironment = plannerInput?.envTemp != null && plannerInput.envRH != null
             val environmentText = if (hasEnvironment) {
                 "${oneDecimal(plannerInput!!.envTemp)} ℃ / ${oneDecimal(plannerInput.envRH)} %"
             } else {
-                "Missing"
+                "缺失"
             }
 
-            val session = snapshot.session
-            val hasTelemetry = session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0
-            val sessionText = session.status.toString()
+            stateBody.text = """
+当前状态
+已连接但未就绪
 
-            val readiness = when {
-                !hasEnvironment && !hasTelemetry -> "Not ready"
-                !hasEnvironment -> "Partially ready"
-                !hasTelemetry -> "Connection unclear"
-                else -> "Ready for guided operation"
-            }
-
-            val note = when (readiness) {
-                "Ready for guided operation" -> "Environment and session data are present."
-                "Connection unclear" -> "Environment exists, but live telemetry is still weak."
-                "Partially ready" -> "Session exists, but environment input is missing."
-                else -> "Set environment and verify telemetry before relying on live guidance."
-            }
-
-            readinessBody.text = """
-Readiness
-$readiness
+Session
+${session.status}
 
 Environment
 $environmentText
 
-Session
-$sessionText
-
 Telemetry
-${if (hasTelemetry) "Present" else "Weak / absent"}
+${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "已存在" else "偏弱"}
 
-Note
-$note
+首页逻辑
+系统已进入准备阶段，但还不适合完整主操作流。
             """.trimIndent()
+
+            val readinessNote = when {
+                !hasEnvironment -> "缺少环境输入，请先补全。"
+                session.lastElapsedSec <= 0 -> "尚未进入有效烘焙进程。"
+                else -> "当前数据存在，但还不适合完整操作流。"
+            }
+
+            primaryBody.text = """
+当前主任务
+把状态补到可操作。
+
+当前缺口
+$readinessNote
+
+下一步建议
+1. 先补环境或确认 session
+2. 检查是否已经进入实际烘焙状态
+3. 再进入完整操作判断
+            """.trimIndent()
+
+            val headline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
+            focusBody.text = """
+当前观察
+$headline
+
+说明
+这条观察现在只能作为弱提示，
+还不应当作为完整操作依据。
+            """.trimIndent()
+
+            val latest = RoastHistoryEngine.latest()
+            supportBody.text = """
+最近参考
+${latest?.batchId ?: "无"}
+
+环境就绪
+${if (hasEnvironment) "已补全" else "未补全"}
+
+建议
+先完成准备，再开始读取更强的动作建议。
+            """.trimIndent()
+
+            startBtn.isEnabled = hasEnvironment
+            stopBtn.isEnabled = false
         }
 
-        fun renderStatus(snapshot: RoastSessionBusSnapshot) {
+        fun renderActive(snapshot: RoastSessionBusSnapshot) {
             val session = snapshot.session
+            val advisor = RoastControlAdvisorEngine.evaluate(snapshot)
+            val prediction = RoastRorPredictionEngine.evaluate(snapshot)
+            val latest = RoastHistoryEngine.latest()
 
-            statusBody.text = """
+            stateBody.text = """
+当前状态
+烘焙中
+
 状态
 ${session.status}
 
@@ -247,77 +281,40 @@ RoR  ${String.format("%.1f", session.lastRor)} ℃/min
 阶段 / 健康
 ${snapshot.companion.phaseLabel} / ${buildHealthHeadline(snapshot.validation)}
             """.trimIndent()
-        }
 
-        fun renderJudgment(snapshot: RoastSessionBusSnapshot) {
-            val headline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
-            val summary = RoastInsightBridge.quietSummaryForSnapshot(snapshot)
+            primaryBody.text = """
+当前主任务
+按当前阶段维持正确动作。
 
-            judgmentBody.text = """
-$headline
+观察
+${RoastInsightBridge.observationHeadlineForSnapshot(snapshot)}
+
+动作
+火力：${advisor.finalHeatAdvice}
+风门：${advisor.finalAirflowAdvice}
+            """.trimIndent()
+
+            focusBody.text = """
+阶段 / 优先级
+${advisor.stage} / ${advisor.priority}
 
 系统理解
-$summary
-            """.trimIndent()
-        }
-
-        fun renderAction(snapshot: RoastSessionBusSnapshot) {
-            val output = RoastControlAdvisorEngine.evaluate(snapshot)
-
-            actionBody.text = """
-阶段 / 优先级
-${output.stage} / ${output.priority}
-
-火力
-${output.finalHeatAdvice}
-
-风门
-${output.finalAirflowAdvice}
+${advisor.insightSummary}
 
 风味方向
-${output.flavorDirection}
+${advisor.flavorDirection}
 
 风险 / 置信度
-${output.riskLevel} / ${output.confidence}
-            """.trimIndent()
-        }
-
-        fun renderRiskAndReference(
-            session: RoastSessionState,
-            validation: RoastValidationResult
-        ) {
-            val snapshot = RoastSessionBus.peek()
-            val prediction = snapshot?.let { RoastRorPredictionEngine.evaluate(it) }
-            val latest = RoastHistoryEngine.latest()
-
-            val currentHealth = buildHealthHeadline(validation)
-            val fcText = prediction?.estimatedFirstCrackWindowSec?.let { formatElapsed(it) } ?: "-"
-            val predictionRisk = prediction?.predictedRisk ?: "-"
-            val predictionReason = prediction?.reason?.ifBlank { "-" } ?: "-"
-
-            val parts = mutableListOf<String>()
-
-            parts += """
-当前健康
-$currentHealth
-
-预测风险
-$predictionRisk
-
-预计一爆
-$fcText
-
-预测说明
-$predictionReason
+${advisor.riskLevel} / ${advisor.confidence}
             """.trimIndent()
 
-            if (latest == null) {
-                parts += """
-参考状态
-No roast history yet.
+            val currentHealth = buildHealthHeadline(snapshot.validation)
+            val fcText = prediction.estimatedFirstCrackWindowSec?.let { formatElapsed(it) } ?: "-"
+            val predictionRisk = prediction.predictedRisk
+            val predictionReason = prediction.reason.ifBlank { "-" }
 
-Save the first usable roast to unlock comparison-based guidance.
-                """.trimIndent()
+            val referenceText = if (latest == null) {
+                "No roast history yet."
             } else {
                 val alerts = mutableListOf<String>()
                 val currentElapsed = session.lastElapsedSec
@@ -328,15 +325,15 @@ Save the first usable roast to unlock comparison-based guidance.
                 val currentHealthScore = riskScore(currentHealth)
                 val lastHealthScore = riskScore(latest.roastHealthHeadline)
                 if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
-                    alerts += "Current health is weaker than the latest saved roast."
+                    alerts += "当前健康状态弱于最近参考锅。"
                 }
 
                 if (lastYellow != null && currentElapsed >= lastYellow + 20) {
-                    alerts += "Current pace is already slower than the last yellow reference."
+                    alerts += "当前节奏已慢于最近 yellow 参考。"
                 }
 
                 if (lastFc != null && currentElapsed >= lastFc - 15) {
-                    alerts += "Current pace is already close to the last first crack reference."
+                    alerts += "当前节奏已接近最近一爆参考。"
                 }
 
                 val currentEnv = AppState.lastPlannerInput
@@ -348,47 +345,46 @@ Save the first usable roast to unlock comparison-based guidance.
                         (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
 
                 if (envShiftDetected) {
-                    alerts += "Environment differs clearly from the latest saved roast."
+                    alerts += "当前环境与最近参考锅差异明显。"
                 }
 
-                val alertText = if (alerts.isEmpty()) {
-                    "No strong deviation under current rules."
+                if (alerts.isEmpty()) {
+                    "无明显参考偏差。"
                 } else {
                     alerts.take(2).joinToString("\n")
                 }
-
-                val currentEnvText = if (currentEnvTemp == null || currentEnvRh == null) {
-                    "- / -"
-                } else {
-                    "${oneDecimal(currentEnvTemp)} ℃ / ${oneDecimal(currentEnvRh)} %"
-                }
-
-                parts += """
-参考锅
-${latest.batchId}
-
-环境
-Current  $currentEnvText
-Last     ${oneDecimal(latest.envTemp)} ℃ / ${oneDecimal(latest.envRh)} %
-
-参考预警
-$alertText
-                """.trimIndent()
             }
 
-            riskBody.text = parts.joinToString("\n\n")
+            supportBody.text = """
+当前健康
+$currentHealth
+
+预测风险
+$predictionRisk
+
+预计一爆
+$fcText
+
+预测说明
+$predictionReason
+
+参考预警
+$referenceText
+            """.trimIndent()
+
+            startBtn.isEnabled = false
+            stopBtn.isEnabled = true
         }
 
         fun render() {
             val snapshot = RoastSessionBus.tick()
-            val session = snapshot.session
+            val uiState = resolveUiState(snapshot)
 
-            renderConnection()
-            renderReadiness(snapshot)
-            renderStatus(snapshot)
-            renderJudgment(snapshot)
-            renderAction(snapshot)
-            renderRiskAndReference(session, snapshot.validation)
+            when (uiState) {
+                OperatorUiState.DISCONNECTED -> renderDisconnected(snapshot)
+                OperatorUiState.NOT_READY -> renderNotReady(snapshot)
+                OperatorUiState.ACTIVE -> renderActive(snapshot)
+            }
 
             val allEntries = RoastHistoryEngine.all()
             openLastCompareBtn.isEnabled = allEntries.size >= 2
@@ -410,12 +406,12 @@ $alertText
             render()
         }
 
-        openStudioBtn.setOnClickListener {
-            RoastStudioPage.show(context, container)
-        }
-
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
+        }
+
+        openStudioBtn.setOnClickListener {
+            RoastStudioPage.show(context, container)
         }
 
         openRecentBtn.setOnClickListener {
@@ -512,15 +508,6 @@ $alertText
         val m = sec / 60
         val s = sec % 60
         return "%d:%02d".format(m, s)
-    }
-
-    private fun formatDouble(value: Double): String {
-        return String.format(java.util.Locale.getDefault(), "%.2f", value)
-    }
-
-    private fun formatDateTime(ms: Long): String {
-        return java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(ms))
     }
 
     private fun oneDecimal(value: Double): String {
