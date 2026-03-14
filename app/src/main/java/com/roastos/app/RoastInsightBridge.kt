@@ -4,7 +4,7 @@ object RoastInsightBridge {
 
     fun analyzeSnapshot(
         snapshot: RoastSessionBusSnapshot
-    ): RoastInsightOutput {
+    ) = run {
         val session = snapshot.session
 
         val plannerInput = AppState.lastPlannerInput
@@ -42,7 +42,7 @@ object RoastInsightBridge {
         val curvePrediction = RoastCurveEngineV3.predict()
         val stability = RoastStabilityEngine.evaluate(curvePrediction)
 
-        return RoastInsightEngine.analyze(
+        RoastInsightEngine.analyze(
             profile = profile,
             machineState = machineState,
             energy = energy,
@@ -53,7 +53,7 @@ object RoastInsightBridge {
 
     fun analyzeHistory(
         entry: RoastHistoryEntry
-    ): RoastInsightOutput {
+    ) = run {
         val beanTempEstimate = estimateBeanTempFromHistory(entry)
         val rorEstimate = entry.actualPreFcRor ?: 0.0
         val elapsedEstimate = entry.actualDropSec
@@ -93,7 +93,7 @@ object RoastInsightBridge {
         val curvePrediction = RoastCurveEngineV3.predict()
         val stability = RoastStabilityEngine.evaluate(curvePrediction)
 
-        return RoastInsightEngine.analyze(
+        RoastInsightEngine.analyze(
             profile = profile,
             machineState = machineState,
             energy = energy,
@@ -140,7 +140,10 @@ object RoastInsightBridge {
             return "No clear observation."
         }
 
-        val sentenceCut = normalized.indexOfFirst { it == '.' || it == '。' || it == '!' || it == '！' }
+        val sentenceCut = normalized.indexOfFirst {
+            it == '.' || it == '。' || it == '!' || it == '！'
+        }
+
         val headline = when {
             sentenceCut > 0 -> normalized.substring(0, sentenceCut).trim()
             normalized.length <= 48 -> normalized
