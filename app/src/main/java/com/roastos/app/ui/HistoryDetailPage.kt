@@ -81,7 +81,7 @@ object HistoryDetailPage {
         compareCard.addView(
             UiKit.bodyText(
                 context,
-                "Open a direct comparison between this batch and another reference batch."
+                "Open this batch against a newer or older reference."
             )
         )
         compareCard.addView(UiKit.spacer(context))
@@ -294,7 +294,7 @@ Capture the cup result, roast impression, and reuse hints.
         styleCard.addView(
             UiKit.bodyText(
                 context,
-                "Create a reusable roast style from this batch."
+                "Turn this batch into a reusable style reference."
             )
         )
         styleCard.addView(UiKit.spacer(context))
@@ -310,7 +310,7 @@ Capture the cup result, roast impression, and reuse hints.
         deleteCard.addView(
             UiKit.bodyText(
                 context,
-                "Delete this roast history entry from local storage."
+                "Remove this batch from local history."
             )
         )
         deleteCard.addView(UiKit.spacer(context))
