@@ -130,7 +130,7 @@ Use this for app-level maintenance, not for the main roasting workflow.
         }
 
         openReviewBtn.setOnClickListener {
-            RecentRoastListPage.show(
+            ReviewHubPage.show(
                 context = context,
                 container = container,
                 onBack = {
@@ -140,7 +140,13 @@ Use this for app-level maintenance, not for the main roasting workflow.
         }
 
         openStudioBtn.setOnClickListener {
-            RoastStudioPage.show(context, container)
+            StudioHubPage.show(
+                context = context,
+                container = container,
+                onBack = {
+                    show(context, container)
+                }
+            )
         }
 
         openSystemBtn.setOnClickListener {
