@@ -95,9 +95,17 @@ object RoastOperatorPage {
         val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
 
         snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
+        snapshotCard.addView(
+            UiKit.helperText(
+                context,
+                "Use the latest saved batch as a soft reference, not a rigid replay target."
+            )
+        )
+        snapshotCard.addView(UiKit.spacer(context))
+        snapshotCard.addView(UiKit.sectionLabel(context, "LATEST"))
         snapshotCard.addView(snapshotBody)
         snapshotCard.addView(UiKit.spacer(context))
-        snapshotCard.addView(UiKit.cardTitle(context, "LAST COMPARE TARGET"))
+        snapshotCard.addView(UiKit.sectionLabel(context, "LAST COMPARE TARGET"))
         snapshotCard.addView(lastCompareTargetBody)
         snapshotCard.addView(UiKit.spacer(context))
         snapshotCard.addView(openLastDetailBtn)
@@ -111,6 +119,14 @@ object RoastOperatorPage {
         val actionableBody = UiKit.bodyText(context, "")
 
         actionableCard.addView(UiKit.cardTitle(context, "LAST REFERENCE"))
+        actionableCard.addView(
+            UiKit.helperText(
+                context,
+                "Track the latest timing and health markers before deciding how closely to follow them."
+            )
+        )
+        actionableCard.addView(UiKit.spacer(context))
+        actionableCard.addView(UiKit.sectionLabel(context, "REFERENCE"))
         actionableCard.addView(actionableBody)
 
         root.addView(actionableCard)
@@ -120,6 +136,14 @@ object RoastOperatorPage {
         val lastVsCurrentBody = UiKit.bodyText(context, "")
 
         lastVsCurrentCard.addView(UiKit.cardTitle(context, "LAST VS CURRENT"))
+        lastVsCurrentCard.addView(
+            UiKit.helperText(
+                context,
+                "Compare current pace and health against the latest saved batch."
+            )
+        )
+        lastVsCurrentCard.addView(UiKit.spacer(context))
+        lastVsCurrentCard.addView(UiKit.sectionLabel(context, "COMPARISON"))
         lastVsCurrentCard.addView(lastVsCurrentBody)
 
         root.addView(lastVsCurrentCard)
@@ -129,6 +153,14 @@ object RoastOperatorPage {
         val deviationBody = UiKit.bodyText(context, "")
 
         deviationCard.addView(UiKit.cardTitle(context, "REFERENCE DEVIATION ALERT"))
+        deviationCard.addView(
+            UiKit.helperText(
+                context,
+                "This block only flags meaningful drift from the latest saved reference."
+            )
+        )
+        deviationCard.addView(UiKit.spacer(context))
+        deviationCard.addView(UiKit.sectionLabel(context, "ALERT"))
         deviationCard.addView(deviationBody)
 
         root.addView(deviationCard)
