@@ -22,6 +22,14 @@ object ReviewHubPage {
         root.addView(UiKit.pageTitle(context, "REVIEW"))
         root.addView(UiKit.pageSubtitle(context, "Inspect past roasts, compare batches, and extract usable experience"))
         root.addView(UiKit.spacer(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.REVIEW
+            )
+        )
+        root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
@@ -48,9 +56,7 @@ object ReviewHubPage {
             )
         )
         recentCard.addView(UiKit.spacer(context))
-        recentCard.addView(
-            UiKit.sectionLabel(context, "PURPOSE")
-        )
+        recentCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
         recentCard.addView(
             UiKit.bodyText(
                 context,
