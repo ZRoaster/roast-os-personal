@@ -1,5 +1,7 @@
 package com.roastos.app
 
+import kotlin.math.abs
+
 data class RoastControlAdvisorOutput(
     val stage: String,
     val priority: String,
@@ -8,7 +10,8 @@ data class RoastControlAdvisorOutput(
     val flavorDirection: String,
     val riskLevel: String,
     val confidence: String,
-    val reason: String
+    val reason: String,
+    val referenceContext: String
 ) {
 
     fun summaryText(): String {
@@ -36,6 +39,9 @@ $confidence
 
 Reason
 $reason
+
+Reference Context
+$referenceContext
         """.trimIndent()
     }
 }
@@ -68,6 +74,8 @@ object RoastControlAdvisorEngine {
             machine = machine
         )
 
+        val referenceContext = buildReferenceContext(snapshot)
+
         return RoastControlAdvisorOutput(
             stage = decision.stage,
             priority = decision.priority,
@@ -76,7 +84,8 @@ object RoastControlAdvisorEngine {
             flavorDirection = decision.flavorDirection,
             riskLevel = risk,
             confidence = confidence,
-            reason = reason
+            reason = reason,
+            referenceContext = referenceContext
         )
     }
 
@@ -187,6 +196,53 @@ object RoastControlAdvisorEngine {
         return parts.joinToString("\n\n")
     }
 
+    private fun buildReferenceContext(
+        snapshot: RoastSessionBusSnapshot
+    ): String {
+        val latest = RoastHistoryEngine.latest()
+            ?: return "No latest roast reference available."
+
+        val session = snapshot.session
+        val currentElapsed = session.lastElapsedSec
+        val currentHealth = buildHealthHeadline(snapshot.validation)
+        val currentHealthScore = riskScore(currentHealth)
+        val lastHealthScore = riskScore(latest.roastHealthHeadline)
+
+        val parts = mutableListOf<String>()
+
+        val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
+        if (lastYellow != null && currentElapsed >= lastYellow + 20) {
+            parts += "Current roast is already slower than last yellow reference. Do not assume the same crack timing without adjustment."
+        }
+
+        val lastFc = latest.actualFcSec ?: latest.predictedFcSec
+        if (lastFc != null && currentElapsed >= lastFc - 15) {
+            parts += "Current roast is already close to last first crack reference. Verify whether the current mid-late phase pace is aligned with intent."
+        }
+
+        if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
+            parts += "Current health is weaker than the last saved roast. Prefer stability over aggressive late-phase carry."
+        }
+
+        val currentEnv = AppState.lastPlannerInput
+        val currentEnvTemp = currentEnv?.envTemp
+        val currentEnvRh = currentEnv?.envRH
+        val envShiftDetected =
+            currentEnvTemp != null &&
+                currentEnvRh != null &&
+                (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
+
+        if (envShiftDetected) {
+            parts += "Current environment differs clearly from the last saved roast. Re-check phase expectations before copying the previous rhythm."
+        }
+
+        return if (parts.isEmpty()) {
+            "No strong reference deviation under current rules."
+        } else {
+            parts.joinToString("\n\n")
+        }
+    }
+
     private fun buildMachineStateBlock(
         machine: RoastStateModel.MachineState
     ): String {
@@ -202,6 +258,35 @@ Max Power: ${machine.maxPowerW} W
 Max Air: ${machine.maxAirPa} Pa
 Max RPM: ${machine.maxRpm}
         """.trimIndent()
+    }
+
+    private fun buildHealthHeadline(
+        validation: RoastValidationResult
+    ): String {
+        if (!validation.hasIssues()) return "稳定"
+
+        return when (validation.highestSeverity()) {
+            "high" -> "高风险"
+            "medium" -> "中风险"
+            "watch" -> "需留意"
+            "low" -> "低风险"
+            else -> "稳定"
+        }
+    }
+
+    private fun riskScore(headline: String): Int {
+        val text = headline.lowercase(Locale.getDefault())
+        return when {
+            "高风险" in headline -> 4
+            "中风险" in headline -> 3
+            "需留意" in headline -> 2
+            "低风险" in headline -> 1
+            "high" in text -> 4
+            "medium" in text -> 3
+            "watch" in text -> 2
+            "low" in text -> 1
+            else -> 0
+        }
     }
 
     private fun formatSignedPercent(value: Int): String {
