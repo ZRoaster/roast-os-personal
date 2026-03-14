@@ -31,20 +31,6 @@ object ReviewHubPage {
         )
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(
-            UiKit.helperText(
-                context,
-                "Review is the learning layer of RoastOS. Start from recent roasts, then go deeper into detail or comparison."
-            )
-        )
-        navCard.addView(UiKit.spacer(context))
-        navCard.addView(backBtn)
-        root.addView(navCard)
-        root.addView(UiKit.spacer(context))
-
         val recentCard = UiKit.card(context)
         val openRecentBtn = UiKit.primaryButton(context, "OPEN RECENT ROASTS")
 
@@ -52,17 +38,7 @@ object ReviewHubPage {
         recentCard.addView(
             UiKit.helperText(
                 context,
-                "Browse saved batches first. This is the default entry for review work."
-            )
-        )
-        recentCard.addView(UiKit.spacer(context))
-        recentCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        recentCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this to choose a batch before opening detail or comparison.
-                """.trimIndent()
+                "Browse saved batches first."
             )
         )
         recentCard.addView(UiKit.spacer(context))
@@ -78,11 +54,10 @@ Use this to choose a batch before opening detail or comparison.
         lastDetailCard.addView(
             UiKit.helperText(
                 context,
-                "Jump directly into the latest saved roast when you already know you want the newest batch."
+                "Jump directly into the latest saved roast."
             )
         )
         lastDetailCard.addView(UiKit.spacer(context))
-        lastDetailCard.addView(UiKit.sectionLabel(context, "LATEST"))
         lastDetailCard.addView(lastDetailBody)
         lastDetailCard.addView(UiKit.spacer(context))
         lastDetailCard.addView(openLastDetailBtn)
@@ -97,15 +72,28 @@ Use this to choose a batch before opening detail or comparison.
         compareCard.addView(
             UiKit.helperText(
                 context,
-                "Compare the latest two saved roasts to see the most recent learning gap."
+                "Compare the latest two saved roasts."
             )
         )
         compareCard.addView(UiKit.spacer(context))
-        compareCard.addView(UiKit.sectionLabel(context, "COMPARE TARGET"))
         compareCard.addView(compareBody)
         compareCard.addView(UiKit.spacer(context))
         compareCard.addView(openLastCompareBtn)
         root.addView(compareCard)
+        root.addView(UiKit.spacer(context))
+
+        val navCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "BACK")
+        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        navCard.addView(
+            UiKit.helperText(
+                context,
+                "Return to the app home when needed."
+            )
+        )
+        navCard.addView(UiKit.spacer(context))
+        navCard.addView(backBtn)
+        root.addView(navCard)
 
         fun render() {
             val allEntries = RoastHistoryEngine.all()
