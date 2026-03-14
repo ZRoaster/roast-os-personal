@@ -6,6 +6,7 @@ import android.os.Looper
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.*
+import kotlin.math.abs
 
 object RoastOperatorPage {
 
@@ -60,6 +61,15 @@ object RoastOperatorPage {
         lastVsCurrentCard.addView(lastVsCurrentBody)
 
         root.addView(lastVsCurrentCard)
+        root.addView(UiKit.spacer(context))
+
+        val deviationCard = UiKit.card(context)
+        val deviationBody = UiKit.bodyText(context, "")
+
+        deviationCard.addView(UiKit.cardTitle(context, "REFERENCE DEVIATION ALERT"))
+        deviationCard.addView(deviationBody)
+
+        root.addView(deviationCard)
         root.addView(UiKit.spacer(context))
 
         val actionFocusCard = UiKit.card(context)
@@ -261,6 +271,75 @@ Last     ${latest.roastHealthHeadline}
             }
         }
 
+        fun renderDeviationAlert(
+            session: RoastSessionState,
+            validation: RoastValidationResult
+        ) {
+            val latest = RoastHistoryEngine.latest()
+
+            deviationBody.text = if (latest == null) {
+                """
+No deviation reference yet.
+
+Save a roast history entry to enable a lightweight reference deviation check.
+                """.trimIndent()
+            } else {
+                val alerts = mutableListOf<String>()
+                val currentElapsed = session.lastElapsedSec
+
+                val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
+                val lastFc = latest.actualFcSec ?: latest.predictedFcSec
+
+                if (lastYellow != null && currentElapsed >= lastYellow + 20) {
+                    alerts += """
+Current elapsed is already beyond last yellow reference.
+Review whether the roast is intentionally running slower than the previous batch.
+                    """.trimIndent()
+                }
+
+                if (lastFc != null && currentElapsed >= lastFc - 15) {
+                    alerts += """
+Current elapsed is already close to the last first crack reference.
+Verify whether the current mid-late phase pace is aligned with intent.
+                    """.trimIndent()
+                }
+
+                val currentHealthScore = riskScore(buildHealthHeadline(validation))
+                val lastHealthScore = riskScore(latest.roastHealthHeadline)
+                if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
+                    alerts += """
+Current health is worse than the last saved roast.
+Watch late-stage stability before repeating the same finish.
+                    """.trimIndent()
+                }
+
+                val currentEnv = AppState.lastPlannerInput
+                val currentEnvTemp = currentEnv?.envTemp
+                val currentEnvRh = currentEnv?.envRH
+                val envShiftDetected =
+                    currentEnvTemp != null &&
+                    currentEnvRh != null &&
+                    (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
+
+                if (envShiftDetected) {
+                    alerts += """
+Current environment differs clearly from the last saved roast.
+Do not reuse previous phase expectations without accounting for this environment shift.
+                    """.trimIndent()
+                }
+
+                if (alerts.isEmpty()) {
+                    """
+No strong deviation alert under current rules.
+
+Use LAST VS CURRENT as a soft reference and continue monitoring the roast rhythm.
+                    """.trimIndent()
+                } else {
+                    alerts.joinToString("\n\n")
+                }
+            }
+        }
+
         fun render() {
             val snapshot = RoastSessionBus.tick()
             val session = snapshot.session
@@ -283,6 +362,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             renderLastSnapshot()
             renderLastActionableReference()
             renderLastVsCurrent(session, snapshot.validation)
+            renderDeviationAlert(session, snapshot.validation)
             actionFocusPanel.update()
             executivePanel.update()
             advisorPanel.update()
@@ -382,6 +462,21 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
             "watch" -> "需留意"
             "low" -> "低风险"
             else -> "稳定"
+        }
+    }
+
+    private fun riskScore(headline: String): Int {
+        val text = headline.lowercase(java.util.Locale.getDefault())
+        return when {
+            "高风险" in headline -> 4
+            "中风险" in headline -> 3
+            "需留意" in headline -> 2
+            "低风险" in headline -> 1
+            "high" in text -> 4
+            "medium" in text -> 3
+            "watch" in text -> 2
+            "low" in text -> 1
+            else -> 0
         }
     }
 
