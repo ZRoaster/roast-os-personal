@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
+import android.util.TypedValue
+import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -12,147 +14,181 @@ import android.widget.TextView
 
 object UiKit {
 
-    private const val PAGE_PADDING = 32
-    private const val CARD_PADDING = 22
-    private const val BUTTON_HEIGHT = 92
-    private const val FIELD_HEIGHT = 88
+    private const val PAGE_PADDING_DP = 24
+    private const val CARD_PADDING_DP = 18
+    private const val CARD_RADIUS_DP = 18
+    private const val BUTTON_RADIUS_DP = 16
+    private const val FIELD_RADIUS_DP = 16
 
-    private val cardBackgroundColor = Color.parseColor("#F7F7F5")
-    private val cardStrokeColor = Color.parseColor("#DDDCD6")
+    private const val PRIMARY_BUTTON_HEIGHT_DP = 56
+    private const val SECONDARY_BUTTON_HEIGHT_DP = 52
+    private const val FIELD_HEIGHT_DP = 52
+    private const val NOTES_MIN_HEIGHT_DP = 108
 
-    private val primaryButtonBackgroundColor = Color.parseColor("#2F2F2B")
+    private const val SPACER_L_DP = 18
+    private const val SPACER_M_DP = 12
+    private const val SPACER_S_DP = 8
+
+    private val pageBackgroundColor = Color.parseColor("#F3F2EF")
+    private val cardBackgroundColor = Color.parseColor("#FAF9F6")
+    private val cardStrokeColor = Color.parseColor("#DDD9D2")
+
+    private val primaryTextColor = Color.parseColor("#1E1E1A")
+    private val secondaryTextColor = Color.parseColor("#5E5A54")
+    private val tertiaryTextColor = Color.parseColor("#7A756D")
+
+    private val primaryButtonBackgroundColor = Color.parseColor("#262622")
     private val primaryButtonTextColor = Color.parseColor("#FFFFFF")
 
-    private val secondaryButtonBackgroundColor = Color.parseColor("#ECEBE6")
-    private val secondaryButtonStrokeColor = Color.parseColor("#D8D6CF")
-    private val secondaryButtonTextColor = Color.parseColor("#2E2E2A")
+    private val secondaryButtonBackgroundColor = Color.parseColor("#F3F1EC")
+    private val secondaryButtonStrokeColor = Color.parseColor("#D8D3CB")
+    private val secondaryButtonTextColor = Color.parseColor("#2B2A26")
 
-    private val fieldBackgroundColor = Color.parseColor("#FCFCFA")
-    private val fieldStrokeColor = Color.parseColor("#D8D6CF")
+    private val fieldBackgroundColor = Color.parseColor("#FCFBF8")
+    private val fieldStrokeColor = Color.parseColor("#D8D3CB")
     private val fieldTextColor = Color.parseColor("#24241F")
-    private val fieldHintColor = Color.parseColor("#77746D")
+    private val fieldHintColor = Color.parseColor("#8A857D")
+
+    private fun dp(context: Context, value: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value.toFloat(),
+            context.resources.displayMetrics
+        ).toInt()
+    }
 
     fun pageRoot(context: Context): LinearLayout {
-        val layout = LinearLayout(context)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(PAGE_PADDING, PAGE_PADDING, PAGE_PADDING, PAGE_PADDING)
-        return layout
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(pageBackgroundColor)
+            setPadding(
+                dp(context, PAGE_PADDING_DP),
+                dp(context, PAGE_PADDING_DP),
+                dp(context, PAGE_PADDING_DP),
+                dp(context, PAGE_PADDING_DP)
+            )
+        }
     }
 
     fun pageTitle(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 22f
-        view.setTypeface(null, Typeface.BOLD)
-        view.setTextColor(Color.parseColor("#1F1F1B"))
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(primaryTextColor)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 21f
+            setLineSpacing(0f, 1.0f)
+        }
     }
 
     fun pageSubtitle(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 13f
-        view.alpha = 0.7f
-        view.setTextColor(Color.parseColor("#2A2A26"))
-        view.setLineSpacing(2f, 1.0f)
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(secondaryTextColor)
+            textSize = 11f
+            setLineSpacing(0f, 1.0f)
+            alpha = 0.95f
+        }
     }
 
     fun card(context: Context): LinearLayout {
-        val layout = LinearLayout(context)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-
-        val background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 24f
-            setColor(cardBackgroundColor)
-            setStroke(2, cardStrokeColor)
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                dp(context, CARD_PADDING_DP),
+                dp(context, CARD_PADDING_DP),
+                dp(context, CARD_PADDING_DP),
+                dp(context, CARD_PADDING_DP)
+            )
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(context, CARD_RADIUS_DP).toFloat()
+                setColor(cardBackgroundColor)
+                setStroke(dp(context, 1), cardStrokeColor)
+            }
         }
-
-        layout.background = background
-        return layout
     }
 
     fun cardTitle(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 15f
-        view.setTypeface(null, Typeface.BOLD)
-        view.setTextColor(Color.parseColor("#20201C"))
-        view.setLineSpacing(2f, 1.0f)
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(primaryTextColor)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 13f
+            setLineSpacing(0f, 1.0f)
+        }
     }
 
     fun sectionLabel(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 11f
-        view.setTypeface(null, Typeface.BOLD)
-        view.alpha = 0.74f
-        view.setTextColor(Color.parseColor("#34342F"))
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(tertiaryTextColor)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 10f
+            setLineSpacing(0f, 1.0f)
+        }
     }
 
     fun bodyText(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 13f
-        view.setTextColor(Color.parseColor("#24241F"))
-        view.setLineSpacing(4f, 1.0f)
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(primaryTextColor)
+            textSize = 12.5f
+            setLineSpacing(dp(context, 2).toFloat(), 1.0f)
+        }
     }
 
     fun helperText(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 12f
-        view.alpha = 0.84f
-        view.setTextColor(Color.parseColor("#33332E"))
-        view.setLineSpacing(3f, 1.0f)
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(secondaryTextColor)
+            textSize = 11f
+            setLineSpacing(dp(context, 1).toFloat(), 1.0f)
+        }
     }
 
     fun dangerText(context: Context, text: String): TextView {
-        val view = TextView(context)
-        view.text = text
-        view.textSize = 12f
-        view.alpha = 0.78f
-        view.setTextColor(Color.parseColor("#5A403E"))
-        view.setLineSpacing(3f, 1.0f)
-        return view
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(Color.parseColor("#8A4A3C"))
+            textSize = 11f
+            setLineSpacing(dp(context, 1).toFloat(), 1.0f)
+        }
     }
 
     fun primaryButton(context: Context, text: String): Button {
-        val button = Button(context)
-        button.text = text
-        button.textSize = 14f
-        button.setTypeface(null, Typeface.BOLD)
-        button.setTextColor(primaryButtonTextColor)
-        button.minHeight = BUTTON_HEIGHT
-        button.minimumHeight = BUTTON_HEIGHT
-        button.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 20f
-            setColor(primaryButtonBackgroundColor)
+        return Button(context).apply {
+            this.text = text
+            setTextColor(primaryButtonTextColor)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 12.5f
+            minHeight = dp(context, PRIMARY_BUTTON_HEIGHT_DP)
+            minimumHeight = dp(context, PRIMARY_BUTTON_HEIGHT_DP)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(context, BUTTON_RADIUS_DP).toFloat()
+                setColor(primaryButtonBackgroundColor)
+            }
+            isAllCaps = false
         }
-        return button
     }
 
     fun secondaryButton(context: Context, text: String): Button {
-        val button = Button(context)
-        button.text = text
-        button.textSize = 13f
-        button.setTextColor(secondaryButtonTextColor)
-        button.minHeight = BUTTON_HEIGHT
-        button.minimumHeight = BUTTON_HEIGHT
-        button.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 20f
-            setColor(secondaryButtonBackgroundColor)
-            setStroke(2, secondaryButtonStrokeColor)
+        return Button(context).apply {
+            this.text = text
+            setTextColor(secondaryButtonTextColor)
+            textSize = 12f
+            minHeight = dp(context, SECONDARY_BUTTON_HEIGHT_DP)
+            minimumHeight = dp(context, SECONDARY_BUTTON_HEIGHT_DP)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(context, BUTTON_RADIUS_DP).toFloat()
+                setColor(secondaryButtonBackgroundColor)
+                setStroke(dp(context, 1), secondaryButtonStrokeColor)
+            }
+            isAllCaps = false
         }
-        return button
     }
 
     fun decimalField(context: Context, hint: String): EditText {
@@ -169,9 +205,9 @@ object UiKit {
 
     fun notesField(context: Context, hint: String): EditText {
         return baseField(context, hint).apply {
-            minLines = 4
-            setLines(4)
-            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            minHeight = dp(context, NOTES_MIN_HEIGHT_DP)
+            minimumHeight = dp(context, NOTES_MIN_HEIGHT_DP)
+            gravity = Gravity.TOP or Gravity.START
             inputType = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
@@ -179,27 +215,46 @@ object UiKit {
     }
 
     private fun baseField(context: Context, hint: String): EditText {
-        val field = EditText(context)
-        field.hint = hint
-        field.textSize = 13f
-        field.setTextColor(fieldTextColor)
-        field.setHintTextColor(fieldHintColor)
-        field.minHeight = FIELD_HEIGHT
-        field.minimumHeight = FIELD_HEIGHT
-        field.setPadding(24, 20, 24, 20)
-        field.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 18f
-            setColor(fieldBackgroundColor)
-            setStroke(2, fieldStrokeColor)
+        return EditText(context).apply {
+            this.hint = hint
+            setTextColor(fieldTextColor)
+            setHintTextColor(fieldHintColor)
+            textSize = 12.5f
+            minHeight = dp(context, FIELD_HEIGHT_DP)
+            minimumHeight = dp(context, FIELD_HEIGHT_DP)
+            setPadding(
+                dp(context, 16),
+                dp(context, 12),
+                dp(context, 16),
+                dp(context, 12)
+            )
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(context, FIELD_RADIUS_DP).toFloat()
+                setColor(fieldBackgroundColor)
+                setStroke(dp(context, 1), fieldStrokeColor)
+            }
         }
-        return field
     }
 
     fun spacer(context: Context): TextView {
-        val view = TextView(context)
-        view.text = ""
-        view.height = 18
-        return view
+        return TextView(context).apply {
+            text = ""
+            height = dp(context, SPACER_L_DP)
+        }
+    }
+
+    fun spacerM(context: Context): TextView {
+        return TextView(context).apply {
+            text = ""
+            height = dp(context, SPACER_M_DP)
+        }
+    }
+
+    fun spacerS(context: Context): TextView {
+        return TextView(context).apply {
+            text = ""
+            height = dp(context, SPACER_S_DP)
+        }
     }
 }
