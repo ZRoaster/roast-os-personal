@@ -2,7 +2,6 @@ package com.roastos.app.ui
 
 import android.app.AlertDialog
 import android.content.Context
-import android.text.InputType
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -190,23 +189,17 @@ ${formatRor(entry.actualPreFcRor)}
 
         val evaluationCard = UiKit.card(context)
 
-        val beanColorInput = decimalInput(context, "Bean Color")
-        val groundColorInput = decimalInput(context, "Ground Color")
-        val roastedAwInput = decimalInput(context, "Roasted AW")
+        val beanColorInput = UiKit.decimalField(context, "Bean Color")
+        val groundColorInput = UiKit.decimalField(context, "Ground Color")
+        val roastedAwInput = UiKit.decimalField(context, "Roasted AW")
 
-        val sweetnessInput = integerInput(context, "Sweetness")
-        val acidityInput = integerInput(context, "Acidity")
-        val bodyInput = integerInput(context, "Body")
-        val flavorClarityInput = integerInput(context, "Flavor Clarity")
-        val balanceInput = integerInput(context, "Balance")
+        val sweetnessInput = UiKit.integerField(context, "Sweetness")
+        val acidityInput = UiKit.integerField(context, "Acidity")
+        val bodyInput = UiKit.integerField(context, "Body")
+        val flavorClarityInput = UiKit.integerField(context, "Flavor Clarity")
+        val balanceInput = UiKit.integerField(context, "Balance")
 
-        val notesInput = EditText(context).apply {
-            hint = "Notes"
-            inputType = InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
-                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            minLines = 4
-        }
+        val notesInput = UiKit.notesField(context, "Notes")
 
         fillEvaluation(
             entry.evaluation,
@@ -518,28 +511,6 @@ ${formatRor(entry.actualPreFcRor)}
             "No saved evaluation yet. Add cup feedback and roast result notes here."
         } else {
             "Saved evaluation detected. Update the values below to revise this batch review."
-        }
-    }
-
-    private fun decimalInput(
-        context: Context,
-        hint: String
-    ): EditText {
-        return EditText(context).apply {
-            this.hint = hint
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setSingleLine(true)
-        }
-    }
-
-    private fun integerInput(
-        context: Context,
-        hint: String
-    ): EditText {
-        return EditText(context).apply {
-            this.hint = hint
-            inputType = InputType.TYPE_CLASS_NUMBER
-            setSingleLine(true)
         }
     }
 
