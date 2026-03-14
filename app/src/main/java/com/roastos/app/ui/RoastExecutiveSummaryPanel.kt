@@ -49,6 +49,9 @@ ${advisor.stage}
 当前重点
 ${advisor.priority}
 
+系统理解
+${advisor.insightSummary}
+
 最终火力建议
 ${advisor.finalHeatAdvice}
 
