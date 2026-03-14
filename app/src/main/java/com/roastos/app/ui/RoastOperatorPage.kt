@@ -38,6 +38,14 @@ object RoastOperatorPage {
         root.addView(UiKit.pageTitle(context, "OPERATE"))
         root.addView(UiKit.pageSubtitle(context, "Connect, judge, and act"))
         root.addView(UiKit.spacer(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.OPERATE
+            )
+        )
+        root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
         val statusBody = UiKit.bodyText(context, "")
