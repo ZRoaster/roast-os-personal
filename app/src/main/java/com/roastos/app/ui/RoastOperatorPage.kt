@@ -47,23 +47,23 @@ object RoastOperatorPage {
         )
         root.addView(UiKit.spacer(context))
 
-        val statusCard = UiKit.card(context)
-        val statusBody = UiKit.bodyText(context, "")
-        statusCard.addView(UiKit.cardTitle(context, "OPERATOR STATUS"))
-        statusCard.addView(statusBody)
-        root.addView(statusCard)
+        val summaryCard = UiKit.card(context)
+        val summaryBody = UiKit.bodyText(context, "")
+        summaryCard.addView(UiKit.cardTitle(context, "CURRENT STATE"))
+        summaryCard.addView(summaryBody)
+        root.addView(summaryCard)
         root.addView(UiKit.spacer(context))
 
-        val decisionCard = UiKit.card(context)
-        val decisionBody = UiKit.bodyText(context, "")
-        decisionCard.addView(UiKit.cardTitle(context, "DECISION"))
-        decisionCard.addView(decisionBody)
-        root.addView(decisionCard)
+        val actionCard = UiKit.card(context)
+        val actionBody = UiKit.bodyText(context, "")
+        actionCard.addView(UiKit.cardTitle(context, "CURRENT DECISION"))
+        actionCard.addView(actionBody)
+        root.addView(actionCard)
         root.addView(UiKit.spacer(context))
 
         val referenceCard = UiKit.card(context)
         val referenceBody = UiKit.bodyText(context, "")
-        referenceCard.addView(UiKit.cardTitle(context, "REFERENCE CHECK"))
+        referenceCard.addView(UiKit.cardTitle(context, "REFERENCE"))
         referenceCard.addView(referenceBody)
         root.addView(referenceCard)
         root.addView(UiKit.spacer(context))
@@ -112,8 +112,8 @@ object RoastOperatorPage {
         fun renderDisconnected(snapshot: RoastSessionBusSnapshot) {
             val session = snapshot.session
 
-            statusBody.text = """
-当前状态
+            summaryBody.text = """
+状态
 未连接 / 未确认
 
 Session
@@ -126,7 +126,7 @@ ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "弱数据存在
 确认机器连接或数据来源
             """.trimIndent()
 
-            decisionBody.text = """
+            actionBody.text = """
 当前判断
 现在不适合读取实时烘焙建议
 
@@ -167,8 +167,8 @@ ${buildLatestReferenceStrip()}
                 else -> "当前数据不足以进入完整主操作流"
             }
 
-            statusBody.text = """
-当前状态
+            summaryBody.text = """
+状态
 已连接但未就绪
 
 Session
@@ -184,7 +184,7 @@ ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "已存在" else
 $readinessNote
             """.trimIndent()
 
-            decisionBody.text = """
+            actionBody.text = """
 当前观察
 ${RoastInsightBridge.observationHeadlineForSnapshot(snapshot)}
 
@@ -213,8 +213,8 @@ ${buildLatestReferenceStrip()}
             val advisor = RoastControlAdvisorEngine.evaluate(snapshot)
             val prediction = RoastRorPredictionEngine.evaluate(snapshot)
 
-            statusBody.text = """
-当前状态
+            summaryBody.text = """
+状态
 已进入操作状态
 
 Session
@@ -233,7 +233,7 @@ ${buildHealthHeadline(snapshot.validation)}
             val fcText = prediction.estimatedFirstCrackWindowSec?.let { formatElapsed(it) } ?: "-"
             val headline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
 
-            decisionBody.text = """
+            actionBody.text = """
 当前观察
 $headline
 
@@ -264,9 +264,7 @@ $fcText
 
         fun render() {
             val snapshot = RoastSessionBus.tick()
-            val uiState = resolveUiState(snapshot)
-
-            when (uiState) {
+            when (resolveUiState(snapshot)) {
                 OperatorUiState.DISCONNECTED -> renderDisconnected(snapshot)
                 OperatorUiState.NOT_READY -> renderNotReady(snapshot)
                 OperatorUiState.ACTIVE -> renderActive(snapshot)
@@ -289,9 +287,7 @@ $fcText
             render()
         }
 
-        refreshBtn.setOnClickListener {
-            render()
-        }
+        refreshBtn.setOnClickListener { render() }
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
@@ -339,9 +335,7 @@ $fcText
 
         handler.post(object : Runnable {
             override fun run() {
-                if (running) {
-                    render()
-                }
+                if (running) render()
                 handler.postDelayed(this, 1000)
             }
         })
