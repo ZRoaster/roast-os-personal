@@ -140,6 +140,22 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
+        val compareCard = UiKit.card(context)
+        val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
+
+        compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
+        compareCard.addView(
+            UiKit.bodyText(
+                context,
+                "Open a direct comparison between this batch and the latest saved roast."
+            )
+        )
+        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(compareWithLatestBtn)
+
+        root.addView(compareCard)
+        root.addView(UiKit.spacer(context))
+
         val reportCard = UiKit.card(context)
 
         reportCard.addView(UiKit.cardTitle(context, "REPORT"))
@@ -262,6 +278,43 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         dangerCard.addView(deleteBtn)
 
         root.addView(dangerCard)
+
+        compareWithLatestBtn.setOnClickListener {
+            val latest = RoastHistoryEngine.latest()
+
+            if (latest == null) {
+                Toast.makeText(
+                    context,
+                    "No latest roast history found",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            if (latest.batchId == entry.batchId) {
+                Toast.makeText(
+                    context,
+                    "Current entry is already the latest batch",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            RoastComparePage.show(
+                context = context,
+                container = container,
+                left = entry,
+                right = latest,
+                onBack = {
+                    show(
+                        context = context,
+                        container = container,
+                        entry = entry,
+                        onBack = onBack
+                    )
+                }
+            )
+        }
 
         saveEvaluationBtn.setOnClickListener {
             val evaluation = RoastEvaluation(
