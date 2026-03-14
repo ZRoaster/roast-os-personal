@@ -149,8 +149,7 @@ object RoastOperatorPage {
 
             val sessionState = when {
                 session == null -> "No session"
-                session.status.isBlank() -> "Unknown"
-                else -> session.status
+                else -> session.status.toString()
             }
 
             val telemetryState = when {
@@ -199,7 +198,7 @@ RPM Delay ${formatDouble(machine.rpmResponseDelay)} s
 
             val session = snapshot.session
             val hasTelemetry = session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0
-            val sessionText = if (session.status.isBlank()) "Unknown" else session.status
+            val sessionText = session.status.toString()
 
             val readiness = when {
                 !hasEnvironment && !hasTelemetry -> "Not ready"
