@@ -141,6 +141,7 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         root.addView(UiKit.spacer(context))
 
         val compareCard = UiKit.card(context)
+        val compareTargetBody = UiKit.bodyText(context, "")
         val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
         val compareWithPreviousBtn = UiKit.secondaryButton(context, "COMPARE WITH PREVIOUS")
 
@@ -151,6 +152,9 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
                 "Open a direct comparison between this batch and another reference batch."
             )
         )
+        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(UiKit.cardTitle(context, "COMPARE TARGET"))
+        compareCard.addView(compareTargetBody)
         compareCard.addView(UiKit.spacer(context))
         compareCard.addView(compareWithLatestBtn)
         compareCard.addView(compareWithPreviousBtn)
@@ -280,6 +284,30 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         dangerCard.addView(deleteBtn)
 
         root.addView(dangerCard)
+
+        fun renderCompareTarget() {
+            val latest = RoastHistoryEngine.latest()
+            val allEntries = RoastHistoryEngine.all()
+            val currentIndex = allEntries.indexOfFirst { it.batchId == entry.batchId }
+            val previous = if (currentIndex >= 0 && currentIndex + 1 < allEntries.size) {
+                allEntries[currentIndex + 1]
+            } else {
+                null
+            }
+
+            compareTargetBody.text = """
+Latest Target
+A  Current Batch
+B  ${if (latest == null) "-" else if (latest.batchId == entry.batchId) "Current Batch" else latest.batchId}
+
+Previous Target
+A  ${previous?.batchId ?: "-"}
+B  Current Batch
+            """.trimIndent()
+
+            compareWithLatestBtn.isEnabled = latest != null && latest.batchId != entry.batchId
+            compareWithPreviousBtn.isEnabled = previous != null
+        }
 
         compareWithLatestBtn.setOnClickListener {
             val latest = RoastHistoryEngine.latest()
@@ -450,6 +478,8 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         backBtn.setOnClickListener {
             onBack?.invoke() ?: RoastStudioPage.show(context, container)
         }
+
+        renderCompareTarget()
 
         scroll.addView(root)
         container.addView(scroll)
