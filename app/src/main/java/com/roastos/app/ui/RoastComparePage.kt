@@ -3,14 +3,9 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.roastos.app.EnergyEngine
-import com.roastos.app.MachineProfiles
-import com.roastos.app.MachineStateEngine
-import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastEvaluation
 import com.roastos.app.RoastHistoryEntry
-import com.roastos.app.RoastInsightEngine
-import com.roastos.app.RoastStabilityEngine
+import com.roastos.app.RoastInsightBridge
 import com.roastos.app.UiKit
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -323,37 +318,7 @@ $rightValue
     private fun buildInsightSummary(
         entry: RoastHistoryEntry
     ): String {
-        val machineState = MachineStateEngine.buildState(
-            powerW = 0,
-            airflowPa = 0,
-            drumRpm = 0,
-            beanTemp = 0.0,
-            ror = entry.actualPreFcRor ?: 0.0,
-            elapsedSec = entry.actualDropSec ?: entry.predictedDropSec ?: 0,
-            environmentTemp = entry.envTemp,
-            environmentHumidity = entry.envRh
-        )
-
-        val profile = MachineProfiles.HB_M2SE
-        val energy = EnergyEngine.evaluate(profile, machineState)
-
-        RoastCurveEngineV3.reset()
-        RoastCurveEngineV3.record(bt = 100.0, timeMillis = entry.createdAtMillis)
-        RoastCurveEngineV3.record(bt = 140.0, timeMillis = entry.createdAtMillis + 60_000)
-        RoastCurveEngineV3.record(bt = 180.0, timeMillis = entry.createdAtMillis + 120_000)
-        val curvePrediction = RoastCurveEngineV3.predict()
-
-        val stability = RoastStabilityEngine.evaluate(curvePrediction)
-
-        val report = RoastInsightEngine.analyze(
-            profile = profile,
-            machineState = machineState,
-            energy = energy,
-            stability = stability,
-            styleGoal = null
-        )
-
-        return report.quietSummary.ifBlank { "-" }
+        return RoastInsightBridge.analyzeHistory(entry).quietSummary.ifBlank { "-" }
     }
 
     private fun buildCompareReference(
@@ -681,7 +646,7 @@ Current records do not show a strong difference under the active rules.
         val b = right!!
         val parts = mutableListOf<String>()
 
-        compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
+  compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
         compareDoubleEval("Ground color", a.groundColor, b.groundColor)?.let { parts += it }
         compareDoubleEval("Roasted AW", a.roastedAw, b.roastedAw)?.let { parts += it }
 
