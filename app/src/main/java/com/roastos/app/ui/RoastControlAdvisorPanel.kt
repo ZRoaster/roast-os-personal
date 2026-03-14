@@ -23,6 +23,9 @@ class RoastControlAdvisorPanel(
 
         if (snapshot == null) {
             textView.text = """
+Reference Context Level
+-
+
 Control Advisor
 
 No active roast session.
@@ -31,6 +34,12 @@ No active roast session.
         }
 
         val output = RoastControlAdvisorEngine.evaluate(snapshot)
-        textView.text = output.summaryText()
+
+        textView.text = """
+Reference Context Level
+${output.referenceContextLevel}
+
+${output.summaryText()}
+        """.trimIndent()
     }
 }
