@@ -23,11 +23,6 @@ class RoastControlAdvisorPanel(
 
         if (snapshot == null) {
             textView.text = """
-Reference Context Level
--
-
-Control Advisor
-
 No active roast session.
             """.trimIndent()
             return
@@ -36,10 +31,30 @@ No active roast session.
         val output = RoastControlAdvisorEngine.evaluate(snapshot)
 
         textView.text = """
-Reference Context Level
+阶段 / 优先级
+${output.stage} / ${output.priority}
+
+执行建议
+火力：${output.finalHeatAdvice}
+风门：${output.finalAirflowAdvice}
+
+风味方向
+${output.flavorDirection}
+
+风险 / 置信度
+${output.riskLevel} / ${output.confidence}
+
+系统理解
+${output.insightSummary}
+
+参考状态
 ${output.referenceContextLevel}
 
-${output.summaryText()}
+参考说明
+${output.referenceContext}
+
+原因
+${output.reason}
         """.trimIndent()
     }
 }
