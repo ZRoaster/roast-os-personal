@@ -60,6 +60,18 @@ object RoastComparePage {
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "OBSERVATION HEADLINE",
+                leftLabel = "A HEADLINE",
+                leftValue = RoastInsightBridge.observationHeadlineForHistory(left),
+                rightLabel = "B HEADLINE",
+                rightValue = RoastInsightBridge.observationHeadlineForHistory(right)
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "COMPARE REFERENCE",
                 leftLabel = "REFERENCE",
                 leftValue = buildCompareReference(left, right),
@@ -534,7 +546,7 @@ Next roast should check whether early drying pace was intentionally faster in B.
         return if (hints.isEmpty()) {
             """
 Focus 1
-No strong operational gap is detected under current rules.
+No strong operational gap is detected under the current rules.
 
 Focus 2
 Treat these two batches as broadly comparable and inspect the detailed sections for smaller differences.
@@ -611,7 +623,7 @@ Treat these two batches as broadly comparable and inspect the detailed sections 
             """
 NO STRONG DIFFERENCE
 Current records do not show a strong difference under the active rules.
-            """.trimIndent()
+         """.trimIndent()
         } else {
             tags.joinToString("\n\n")
         }
