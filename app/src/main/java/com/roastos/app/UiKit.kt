@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -13,6 +15,7 @@ object UiKit {
     private const val PAGE_PADDING = 32
     private const val CARD_PADDING = 22
     private const val BUTTON_HEIGHT = 92
+    private const val FIELD_HEIGHT = 88
 
     private val cardBackgroundColor = Color.parseColor("#F7F7F5")
     private val cardStrokeColor = Color.parseColor("#DDDCD6")
@@ -23,6 +26,11 @@ object UiKit {
     private val secondaryButtonBackgroundColor = Color.parseColor("#ECEBE6")
     private val secondaryButtonStrokeColor = Color.parseColor("#D8D6CF")
     private val secondaryButtonTextColor = Color.parseColor("#2E2E2A")
+
+    private val fieldBackgroundColor = Color.parseColor("#FCFCFA")
+    private val fieldStrokeColor = Color.parseColor("#D8D6CF")
+    private val fieldTextColor = Color.parseColor("#24241F")
+    private val fieldHintColor = Color.parseColor("#77746D")
 
     fun pageRoot(context: Context): LinearLayout {
         val layout = LinearLayout(context)
@@ -145,6 +153,47 @@ object UiKit {
             setStroke(2, secondaryButtonStrokeColor)
         }
         return button
+    }
+
+    fun decimalField(context: Context, hint: String): EditText {
+        return baseField(context, hint).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+    }
+
+    fun integerField(context: Context, hint: String): EditText {
+        return baseField(context, hint).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+        }
+    }
+
+    fun notesField(context: Context, hint: String): EditText {
+        return baseField(context, hint).apply {
+            minLines = 4
+            setLines(4)
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+    }
+
+    private fun baseField(context: Context, hint: String): EditText {
+        val field = EditText(context)
+        field.hint = hint
+        field.textSize = 13f
+        field.setTextColor(fieldTextColor)
+        field.setHintTextColor(fieldHintColor)
+        field.minHeight = FIELD_HEIGHT
+        field.minimumHeight = FIELD_HEIGHT
+        field.setPadding(24, 20, 24, 20)
+        field.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 18f
+            setColor(fieldBackgroundColor)
+            setStroke(2, fieldStrokeColor)
+        }
+        return field
     }
 
     fun spacer(context: Context): TextView {
