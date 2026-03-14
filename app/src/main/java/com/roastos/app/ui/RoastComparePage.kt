@@ -61,6 +61,24 @@ object RoastComparePage {
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "COMPARE REFERENCE",
+                leftLabel = "REFERENCE",
+                leftValue = buildCompareReference(left, right),
+                rightLabel = "SELECTED",
+                rightValue = """
+A
+${left.batchId}
+
+B
+${right.batchId}
+                """.trimIndent()
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "OPERATION HINTS",
                 leftLabel = "HINTS",
                 leftValue = buildOperationHints(left, right),
@@ -264,6 +282,47 @@ $rightValue
         )
 
         return card
+    }
+
+    private fun buildCompareReference(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val newerBatch = when {
+            left.createdAtMillis > right.createdAtMillis -> "A"
+            right.createdAtMillis > left.createdAtMillis -> "B"
+            else -> "Same Time"
+        }
+
+        val evaluationState = when {
+            left.evaluation != null && right.evaluation != null -> "A Saved / B Saved"
+            left.evaluation != null && right.evaluation == null -> "A Saved / B Not saved"
+            left.evaluation == null && right.evaluation != null -> "A Not saved / B Saved"
+            else -> "A Not saved / B Not saved"
+        }
+
+        val envShift = if (abs(left.envTemp - right.envTemp) >= 1.0 || abs(left.envRh - right.envRh) >= 5.0) {
+            "Yes"
+        } else {
+            "No"
+        }
+
+        return """
+A
+${left.batchId}
+
+B
+${right.batchId}
+
+Newer Batch
+$newerBatch
+
+Evaluation
+$evaluationState
+
+Environment Shift
+$envShift
+        """.trimIndent()
     }
 
     private fun buildOperationHints(
@@ -662,7 +721,7 @@ B shows a higher roast health risk headline than A.
         val text = headline.lowercase(Locale.getDefault())
 
         return when {
-          "高风险" in headline -> 4
+            "高风险" in headline -> 4
             "中风险" in headline -> 3
             "需留意" in headline -> 2
             "低风险" in headline -> 1
