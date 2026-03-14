@@ -20,6 +20,14 @@ object StudioHubPage {
         root.addView(UiKit.pageTitle(context, "STUDIO"))
         root.addView(UiKit.pageSubtitle(context, "Prepare, build, and refine your roasting system"))
         root.addView(UiKit.spacer(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.STUDIO
+            )
+        )
+        root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
