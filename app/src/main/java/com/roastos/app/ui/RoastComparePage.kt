@@ -385,6 +385,12 @@ $envShift
             else -> "High"
         }
 
+        val recommendedUse = when {
+            reuseConfidence == "High" && primaryFocus == "Minor gap" -> "Direct replay reference"
+            reuseConfidence == "Low" -> "Do not directly replay"
+            else -> "Conditional reference"
+        }
+
         return """
 Primary Focus
 $primaryFocus
@@ -394,6 +400,9 @@ $reuseConfidence
 
 Evaluation Basis
 $evaluationBasis
+
+Recommended Use
+$recommendedUse
         """.trimIndent()
     }
 
