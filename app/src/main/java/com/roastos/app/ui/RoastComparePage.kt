@@ -3,8 +3,14 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import com.roastos.app.EnergyEngine
+import com.roastos.app.MachineProfiles
+import com.roastos.app.MachineStateEngine
+import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastEvaluation
 import com.roastos.app.RoastHistoryEntry
+import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastStabilityEngine
 import com.roastos.app.UiKit
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -72,6 +78,18 @@ ${left.batchId}
 B
 ${right.batchId}
                 """.trimIndent()
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
+                title = "INSIGHT REFERENCE",
+                leftLabel = "A INSIGHT",
+                leftValue = buildInsightSummary(left),
+                rightLabel = "B INSIGHT",
+                rightValue = buildInsightSummary(right)
             )
         )
         root.addView(UiKit.spacer(context))
@@ -300,6 +318,42 @@ $rightValue
         )
 
         return card
+    }
+
+    private fun buildInsightSummary(
+        entry: RoastHistoryEntry
+    ): String {
+        val machineState = MachineStateEngine.buildState(
+            powerW = 0,
+            airflowPa = 0,
+            drumRpm = 0,
+            beanTemp = 0.0,
+            ror = entry.actualPreFcRor ?: 0.0,
+            elapsedSec = entry.actualDropSec ?: entry.predictedDropSec ?: 0,
+            environmentTemp = entry.envTemp,
+            environmentHumidity = entry.envRh
+        )
+
+        val profile = MachineProfiles.HB_M2SE
+        val energy = EnergyEngine.evaluate(profile, machineState)
+
+        RoastCurveEngineV3.reset()
+        RoastCurveEngineV3.record(bt = 100.0, timeMillis = entry.createdAtMillis)
+        RoastCurveEngineV3.record(bt = 140.0, timeMillis = entry.createdAtMillis + 60_000)
+        RoastCurveEngineV3.record(bt = 180.0, timeMillis = entry.createdAtMillis + 120_000)
+        val curvePrediction = RoastCurveEngineV3.predict()
+
+        val stability = RoastStabilityEngine.evaluate(curvePrediction)
+
+        val report = RoastInsightEngine.analyze(
+            profile = profile,
+            machineState = machineState,
+            energy = energy,
+            stability = stability,
+            styleGoal = null
+        )
+
+        return report.quietSummary.ifBlank { "-" }
     }
 
     private fun buildCompareReference(
