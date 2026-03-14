@@ -44,6 +44,15 @@ object RoastOperatorPage {
         root.addView(snapshotCard)
         root.addView(UiKit.spacer(context))
 
+        val actionableCard = UiKit.card(context)
+        val actionableBody = UiKit.bodyText(context, "")
+
+        actionableCard.addView(UiKit.cardTitle(context, "LAST ACTIONABLE REFERENCE"))
+        actionableCard.addView(actionableBody)
+
+        root.addView(actionableCard)
+        root.addView(UiKit.spacer(context))
+
         val lastVsCurrentCard = UiKit.card(context)
         val lastVsCurrentBody = UiKit.bodyText(context, "")
 
@@ -143,6 +152,49 @@ ${formatDateTime(latest.createdAtMillis)}
             openLastDetailBtn.isEnabled = latest != null
         }
 
+        fun renderLastActionableReference() {
+            val latest = RoastHistoryEngine.latest()
+
+            actionableBody.text = if (latest == null) {
+                """
+No actionable roast reference yet.
+
+Save a roast history entry to bring the latest turning, yellow, crack, drop, health, and evaluation reference into this panel.
+                """.trimIndent()
+            } else {
+                val turning = formatElapsed(
+                    latest.actualTurningSec ?: latest.predictedTurningSec ?: 0,
+                    allowDash = latest.actualTurningSec == null && latest.predictedTurningSec == null
+                )
+                val yellow = formatElapsed(
+                    latest.actualYellowSec ?: latest.predictedYellowSec ?: 0,
+                    allowDash = latest.actualYellowSec == null && latest.predictedYellowSec == null
+                )
+                val fc = formatElapsed(
+                    latest.actualFcSec ?: latest.predictedFcSec ?: 0,
+                    allowDash = latest.actualFcSec == null && latest.predictedFcSec == null
+                )
+                val drop = formatElapsed(
+                    latest.actualDropSec ?: latest.predictedDropSec ?: 0,
+                    allowDash = latest.actualDropSec == null && latest.predictedDropSec == null
+                )
+
+                """
+Last Batch
+${latest.batchId}
+
+Last Turning / Yellow
+$turning / $yellow
+
+Last FC / Drop
+$fc / $drop
+
+Last Health / Evaluation
+${latest.roastHealthHeadline} / ${if (latest.evaluation != null) "Saved" else "Not saved"}
+                """.trimIndent()
+            }
+        }
+
         fun renderLastVsCurrent(
             session: RoastSessionState,
             validation: RoastValidationResult
@@ -229,6 +281,7 @@ HEALTH   ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             renderLastSnapshot()
+            renderLastActionableReference()
             renderLastVsCurrent(session, snapshot.validation)
             actionFocusPanel.update()
             executivePanel.update()
