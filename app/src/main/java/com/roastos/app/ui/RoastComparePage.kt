@@ -269,19 +269,14 @@ Then check KEY DIFFERENCES and COMPARE SUMMARY for detail.
         rightValue: String
     ): LinearLayout {
         val card = UiKit.card(context)
-        card.addView(UiKit.cardTitle(context, title))
-        card.addView(
-            UiKit.bodyText(
-                context,
-                """
-$leftLabel
-$leftValue
 
-$rightLabel
-$rightValue
-                """.trimIndent()
-            )
-        )
+        card.addView(UiKit.cardTitle(context, title))
+        card.addView(UiKit.sectionLabel(context, leftLabel))
+        card.addView(UiKit.bodyText(context, leftValue))
+        card.addView(UiKit.spacer(context))
+        card.addView(UiKit.sectionLabel(context, rightLabel))
+        card.addView(UiKit.bodyText(context, rightValue))
+
         return card
     }
 
@@ -539,7 +534,7 @@ Next roast should check whether early drying pace was intentionally faster in B.
         return if (hints.isEmpty()) {
             """
 Focus 1
-No strong operational gap is detected under the current rules.
+No strong operational gap is detected under current rules.
 
 Focus 2
 Treat these two batches as broadly comparable and inspect the detailed sections for smaller differences.
@@ -636,7 +631,7 @@ Current records do not show a strong difference under the active rules.
             return "Only B has saved evaluation."
         }
 
-  val a = left!!
+        val a = left!!
         val b = right!!
         val parts = mutableListOf<String>()
 
