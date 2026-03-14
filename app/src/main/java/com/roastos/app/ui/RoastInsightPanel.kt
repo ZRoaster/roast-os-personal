@@ -5,11 +5,11 @@ import android.widget.LinearLayout
 import com.roastos.app.EnergyEngine
 import com.roastos.app.MachineProfiles
 import com.roastos.app.MachineStateEngine
+import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.RoastInsightEngine
 import com.roastos.app.RoastInsightReport
 import com.roastos.app.RoastSessionBus
 import com.roastos.app.RoastStabilityEngine
-import com.roastos.app.RoastCurveEngineV3
 import com.roastos.app.UiKit
 
 class RoastInsightPanel(context: Context) : LinearLayout(context) {
@@ -66,9 +66,17 @@ Possibilities
         val energy = EnergyEngine.evaluate(profile, machineState)
 
         RoastCurveEngineV3.reset()
-        RoastCurveEngineV3.ingest(
-            elapsedSec = machineState.elapsedSec,
-            bt = machineState.beanTemp
+        RoastCurveEngineV3.record(
+            bt = machineState.beanTemp,
+            timeMillis = System.currentTimeMillis()
+        )
+        RoastCurveEngineV3.record(
+            bt = machineState.beanTemp,
+            timeMillis = System.currentTimeMillis() + 1000
+        )
+        RoastCurveEngineV3.record(
+            bt = machineState.beanTemp,
+            timeMillis = System.currentTimeMillis() + 2000
         )
         val curvePrediction = RoastCurveEngineV3.predict()
 
