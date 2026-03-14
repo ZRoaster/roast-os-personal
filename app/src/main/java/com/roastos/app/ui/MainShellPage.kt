@@ -108,7 +108,7 @@ This is where RoastOS becomes a long-term tool, not just a live screen.
         systemCard.addView(
             UiKit.helperText(
                 context,
-                "Profile, settings, and future advanced or debug-level system pages belong here."
+                "Profile, settings, and advanced system-level access belong in this layer."
             )
         )
         systemCard.addView(UiKit.spacer(context))
@@ -117,7 +117,9 @@ This is where RoastOS becomes a long-term tool, not just a live screen.
             UiKit.bodyText(
                 context,
                 """
-Use this for app-level maintenance, not for the main roasting workflow.
+Use this for app-level maintenance, profile access, and future advanced pages.
+
+This is not part of the main live roasting workflow.
                 """.trimIndent()
             )
         )
@@ -150,7 +152,13 @@ Use this for app-level maintenance, not for the main roasting workflow.
         }
 
         openSystemBtn.setOnClickListener {
-            ProfilePage.show(context, container)
+            SystemHubPage.show(
+                context = context,
+                container = container,
+                onBack = {
+                    show(context, container)
+                }
+            )
         }
 
         scroll.addView(root)
