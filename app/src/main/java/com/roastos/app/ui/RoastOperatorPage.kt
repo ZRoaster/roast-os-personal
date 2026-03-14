@@ -22,7 +22,7 @@ object RoastOperatorPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST OPERATOR"))
-        root.addView(UiKit.pageSubtitle(context, "Primary Action View"))
+        root.addView(UiKit.pageSubtitle(context, "Live roast workspace"))
         root.addView(UiKit.spacer(context))
 
         val statusCard = UiKit.card(context)
@@ -30,53 +30,6 @@ object RoastOperatorPage {
         statusCard.addView(UiKit.cardTitle(context, "ROAST STATUS"))
         statusCard.addView(statusBody)
         root.addView(statusCard)
-        root.addView(UiKit.spacer(context))
-
-        val snapshotCard = UiKit.card(context)
-        val snapshotBody = UiKit.bodyText(context, "")
-        val lastCompareTargetBody = UiKit.bodyText(context, "")
-        val openLastDetailBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
-        val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
-        val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
-
-        snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
-        snapshotCard.addView(snapshotBody)
-        snapshotCard.addView(UiKit.spacer(context))
-        snapshotCard.addView(UiKit.cardTitle(context, "LAST COMPARE TARGET"))
-        snapshotCard.addView(lastCompareTargetBody)
-        snapshotCard.addView(UiKit.spacer(context))
-        snapshotCard.addView(openLastDetailBtn)
-        snapshotCard.addView(openLastCompareBtn)
-        snapshotCard.addView(openRecentBtnTop)
-
-        root.addView(snapshotCard)
-        root.addView(UiKit.spacer(context))
-
-        val actionableCard = UiKit.card(context)
-        val actionableBody = UiKit.bodyText(context, "")
-
-        actionableCard.addView(UiKit.cardTitle(context, "LAST ACTIONABLE REFERENCE"))
-        actionableCard.addView(actionableBody)
-
-        root.addView(actionableCard)
-        root.addView(UiKit.spacer(context))
-
-        val lastVsCurrentCard = UiKit.card(context)
-        val lastVsCurrentBody = UiKit.bodyText(context, "")
-
-        lastVsCurrentCard.addView(UiKit.cardTitle(context, "LAST VS CURRENT"))
-        lastVsCurrentCard.addView(lastVsCurrentBody)
-
-        root.addView(lastVsCurrentCard)
-        root.addView(UiKit.spacer(context))
-
-        val deviationCard = UiKit.card(context)
-        val deviationBody = UiKit.bodyText(context, "")
-
-        deviationCard.addView(UiKit.cardTitle(context, "REFERENCE DEVIATION ALERT"))
-        deviationCard.addView(deviationBody)
-
-        root.addView(deviationCard)
         root.addView(UiKit.spacer(context))
 
         val actionFocusCard = UiKit.card(context)
@@ -132,6 +85,53 @@ object RoastOperatorPage {
         controlCard.addView(openRecentBtn)
         controlCard.addView(openLatestBtn)
         root.addView(controlCard)
+        root.addView(UiKit.spacer(context))
+
+        val snapshotCard = UiKit.card(context)
+        val snapshotBody = UiKit.bodyText(context, "")
+        val lastCompareTargetBody = UiKit.bodyText(context, "")
+        val openLastDetailBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
+        val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
+        val openRecentBtnTop = UiKit.secondaryButton(context, "OPEN RECENT ROASTS")
+
+        snapshotCard.addView(UiKit.cardTitle(context, "LAST ROAST SNAPSHOT"))
+        snapshotCard.addView(snapshotBody)
+        snapshotCard.addView(UiKit.spacer(context))
+        snapshotCard.addView(UiKit.cardTitle(context, "LAST COMPARE TARGET"))
+        snapshotCard.addView(lastCompareTargetBody)
+        snapshotCard.addView(UiKit.spacer(context))
+        snapshotCard.addView(openLastDetailBtn)
+        snapshotCard.addView(openLastCompareBtn)
+        snapshotCard.addView(openRecentBtnTop)
+
+        root.addView(snapshotCard)
+        root.addView(UiKit.spacer(context))
+
+        val actionableCard = UiKit.card(context)
+        val actionableBody = UiKit.bodyText(context, "")
+
+        actionableCard.addView(UiKit.cardTitle(context, "LAST ACTIONABLE REFERENCE"))
+        actionableCard.addView(actionableBody)
+
+        root.addView(actionableCard)
+        root.addView(UiKit.spacer(context))
+
+        val lastVsCurrentCard = UiKit.card(context)
+        val lastVsCurrentBody = UiKit.bodyText(context, "")
+
+        lastVsCurrentCard.addView(UiKit.cardTitle(context, "LAST VS CURRENT"))
+        lastVsCurrentCard.addView(lastVsCurrentBody)
+
+        root.addView(lastVsCurrentCard)
+        root.addView(UiKit.spacer(context))
+
+        val deviationCard = UiKit.card(context)
+        val deviationBody = UiKit.bodyText(context, "")
+
+        deviationCard.addView(UiKit.cardTitle(context, "REFERENCE DEVIATION ALERT"))
+        deviationCard.addView(deviationBody)
+
+        root.addView(deviationCard)
 
         fun renderLastSnapshot() {
             val latest = RoastHistoryEngine.latest()
@@ -141,7 +141,7 @@ object RoastOperatorPage {
                 """
 No roast history yet.
 
-Save your first roast to see the latest snapshot here.
+Save your first roast to create a usable reference.
                 """.trimIndent()
             } else {
                 val fc = formatElapsed(
@@ -157,7 +157,7 @@ Save your first roast to see the latest snapshot here.
 Batch
 ${latest.batchId}
 
-Status / Health
+Health
 ${latest.batchStatus} / ${latest.roastHealthHeadline}
 
 Evaluation
@@ -179,10 +179,10 @@ ${formatDateTime(latest.createdAtMillis)}
                 """
 Need at least 2 roast history entries.
 
-The last compare target will appear here once both latest and previous batches exist.
+The latest compare target will appear here automatically.
                 """.trimIndent()
             } else {
-                val latest = allEntries[0]
+                val latestEntry = allEntries[0]
                 val previous = allEntries[1]
 
                 """
@@ -190,7 +190,7 @@ A
 ${previous.batchId}
 
 B
-${latest.batchId}
+${latestEntry.batchId}
                 """.trimIndent()
             }
 
@@ -203,9 +203,9 @@ ${latest.batchId}
 
             actionableBody.text = if (latest == null) {
                 """
-No actionable roast reference yet.
+No actionable reference yet.
 
-Save a roast history entry to bring the latest turning, yellow, crack, drop, health, and evaluation reference into this panel.
+Save a roast history entry to unlock last-batch timing and health reference.
                 """.trimIndent()
             } else {
                 val turning = formatElapsed(
@@ -229,13 +229,13 @@ Save a roast history entry to bring the latest turning, yellow, crack, drop, hea
 Last Batch
 ${latest.batchId}
 
-Last Turning / Yellow
+Turning / Yellow
 $turning / $yellow
 
-Last FC / Drop
+FC / Drop
 $fc / $drop
 
-Last Health / Evaluation
+Health / Evaluation
 ${latest.roastHealthHeadline} / ${if (latest.evaluation != null) "Saved" else "Not saved"}
                 """.trimIndent()
             }
@@ -252,7 +252,7 @@ ${latest.roastHealthHeadline} / ${if (latest.evaluation != null) "Saved" else "N
                 """
 No previous roast reference yet.
 
-Save a roast history entry to compare current operation against the latest batch.
+Save a roast history entry to compare current operation against the last batch.
                 """.trimIndent()
             } else {
                 val currentEnv = AppState.lastPlannerInput
@@ -295,7 +295,7 @@ Environment
 Current  $currentEnvText
 Last     $lastEnvText
 
-Timeline Reference
+Timeline
 Current Elapsed        ${formatElapsed(session.lastElapsedSec)}
 Last Turning / Yellow  $lastTurning / $lastYellow
 Last FC / Drop         $lastFc / $lastDrop
@@ -317,7 +317,7 @@ Last     ${latest.roastHealthHeadline}
                 """
 No deviation reference yet.
 
-Save a roast history entry to enable a lightweight reference deviation check.
+Save a roast history entry to enable lightweight deviation alerts.
                 """.trimIndent()
             } else {
                 val alerts = mutableListOf<String>()
@@ -344,8 +344,8 @@ Review whether the roast is intentionally running slower than the previous batch
 
                 if (lastFc != null && currentElapsed >= lastFc - 15) {
                     alerts += """
-Current elapsed is already close to the last first crack reference.
-Verify whether the current mid-late phase pace is aligned with intent.
+Current elapsed is already close to last first crack reference.
+Verify whether the current mid-late pace is aligned with intent.
                     """.trimIndent()
                 }
 
@@ -360,7 +360,7 @@ Verify whether the current mid-late phase pace is aligned with intent.
                 if (envShiftDetected) {
                     alerts += """
 Current environment differs clearly from the last saved roast.
-Do not reuse previous phase expectations without accounting for this environment shift.
+Do not copy previous phase expectations without adjustment.
                     """.trimIndent()
                 }
 
@@ -368,7 +368,7 @@ Do not reuse previous phase expectations without accounting for this environment
                     """
 No strong deviation alert under current rules.
 
-Use LAST VS CURRENT as a soft reference and continue monitoring the roast rhythm.
+Use LAST VS CURRENT as a soft reference and keep following the roast rhythm.
                     """.trimIndent()
                 } else {
                     alerts.take(2).joinToString("\n\n")
@@ -382,17 +382,23 @@ Use LAST VS CURRENT as a soft reference and continue monitoring the roast rhythm
 
             statusBody.text =
                 """
-STATUS   ${session.status}
+STATUS
+${session.status}
 
-BT       ${String.format("%.1f", session.lastBeanTemp)} ℃
+BT
+${String.format("%.1f", session.lastBeanTemp)} ℃
 
-RoR      ${String.format("%.1f", session.lastRor)} ℃/min
+RoR
+${String.format("%.1f", session.lastRor)} ℃/min
 
-TIME     ${formatElapsed(session.lastElapsedSec)}
+TIME
+${formatElapsed(session.lastElapsedSec)}
 
-PHASE    ${snapshot.companion.phaseLabel}
+PHASE
+${snapshot.companion.phaseLabel}
 
-HEALTH   ${buildHealthHeadline(snapshot.validation)}
+HEALTH
+${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             renderLastSnapshot()
