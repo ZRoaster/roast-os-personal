@@ -27,7 +27,7 @@ object RoastComparePage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST COMPARE"))
-        root.addView(UiKit.pageSubtitle(context, "Comparison workspace"))
+        root.addView(UiKit.pageSubtitle(context, "Reference, difference, decision"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -57,7 +57,6 @@ object RoastComparePage {
             return
         }
 
-        // 结论层
         root.addView(
             buildSectionCard(
                 context = context,
@@ -106,7 +105,6 @@ ${right.batchId}
         )
         root.addView(UiKit.spacer(context))
 
-        // 差异层
         root.addView(
             buildSectionCard(
                 context = context,
@@ -147,11 +145,10 @@ Then check KEY DIFFERENCES and COMPARE SUMMARY for detail.
         )
         root.addView(UiKit.spacer(context))
 
-        // 详情层
         root.addView(
             buildSectionCard(
                 context = context,
-                title = "BATCH OVERVIEW",
+                title = "BATCH",
                 leftLabel = "A",
                 leftValue = buildBatchOverview(left),
                 rightLabel = "B",
@@ -211,7 +208,7 @@ Then check KEY DIFFERENCES and COMPARE SUMMARY for detail.
         root.addView(
             buildSectionCard(
                 context = context,
-                title = "EVALUATION SUMMARY",
+                title = "EVALUATION",
                 leftLabel = "A",
                 leftValue = buildEvaluationSummary(left.evaluation),
                 rightLabel = "B",
@@ -639,7 +636,7 @@ Current records do not show a strong difference under the active rules.
             return "Only B has saved evaluation."
         }
 
-        val a = left!!
+  val a = left!!
         val b = right!!
         val parts = mutableListOf<String>()
 
@@ -666,19 +663,6 @@ Current records do not show a strong difference under the active rules.
         } else {
             parts.joinToString("\n")
         }
-    }
-
-    private fun buildEvaluationState(
-        left: RoastEvaluation?,
-        right: RoastEvaluation?
-    ): String {
-        return """
-A
-${if (left == null) "No saved evaluation" else "Saved evaluation"}
-
-B
-${if (right == null) "No saved evaluation" else "Saved evaluation"}
-        """.trimIndent()
     }
 
     private fun compareIntEval(
