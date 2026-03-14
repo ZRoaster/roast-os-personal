@@ -20,7 +20,7 @@ object ReviewHubPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "REVIEW"))
-        root.addView(UiKit.pageSubtitle(context, "Inspect past roasts, compare batches, and extract usable experience"))
+        root.addView(UiKit.pageSubtitle(context, "Inspect past roasts and compare batches"))
         root.addView(UiKit.spacer(context))
         root.addView(
             TopNavBar.create(
@@ -33,14 +33,8 @@ object ReviewHubPage {
 
         val recentCard = UiKit.card(context)
         val openRecentBtn = UiKit.primaryButton(context, "OPEN RECENT ROASTS")
-
         recentCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
-        recentCard.addView(
-            UiKit.helperText(
-                context,
-                "Browse saved batches first."
-            )
-        )
+        recentCard.addView(UiKit.helperText(context, "Browse saved batches first."))
         recentCard.addView(UiKit.spacer(context))
         recentCard.addView(openRecentBtn)
         root.addView(recentCard)
@@ -49,14 +43,8 @@ object ReviewHubPage {
         val lastDetailCard = UiKit.card(context)
         val openLastDetailBtn = UiKit.primaryButton(context, "OPEN LAST ROAST DETAIL")
         val lastDetailBody = UiKit.bodyText(context, "")
-
         lastDetailCard.addView(UiKit.cardTitle(context, "LAST ROAST"))
-        lastDetailCard.addView(
-            UiKit.helperText(
-                context,
-                "Jump directly into the latest saved roast."
-            )
-        )
+        lastDetailCard.addView(UiKit.helperText(context, "Jump directly into the latest saved roast."))
         lastDetailCard.addView(UiKit.spacer(context))
         lastDetailCard.addView(lastDetailBody)
         lastDetailCard.addView(UiKit.spacer(context))
@@ -67,14 +55,8 @@ object ReviewHubPage {
         val compareCard = UiKit.card(context)
         val openLastCompareBtn = UiKit.primaryButton(context, "OPEN LAST COMPARE")
         val compareBody = UiKit.bodyText(context, "")
-
         compareCard.addView(UiKit.cardTitle(context, "LAST COMPARE"))
-        compareCard.addView(
-            UiKit.helperText(
-                context,
-                "Compare the latest two saved roasts."
-            )
-        )
+        compareCard.addView(UiKit.helperText(context, "Compare the latest two saved roasts."))
         compareCard.addView(UiKit.spacer(context))
         compareCard.addView(compareBody)
         compareCard.addView(UiKit.spacer(context))
@@ -85,12 +67,7 @@ object ReviewHubPage {
         val navCard = UiKit.card(context)
         val backBtn = UiKit.secondaryButton(context, "BACK")
         navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(
-            UiKit.helperText(
-                context,
-                "Return to the app home when needed."
-            )
-        )
+        navCard.addView(UiKit.helperText(context, "Return to the app home when needed."))
         navCard.addView(UiKit.spacer(context))
         navCard.addView(backBtn)
         root.addView(navCard)
@@ -130,7 +107,6 @@ Save more roasts to unlock direct comparison.
             } else {
                 val latestEntry = allEntries[0]
                 val previous = allEntries[1]
-
                 """
 A
 ${previous.batchId}
@@ -148,9 +124,7 @@ ${latestEntry.batchId}
             RecentRoastListPage.show(
                 context = context,
                 container = container,
-                onBack = {
-                    show(context, container, onBack)
-                }
+                onBack = { show(context, container, onBack) }
             )
         }
 
@@ -165,20 +139,14 @@ ${latestEntry.batchId}
                 context = context,
                 container = container,
                 entry = latest,
-                onBack = {
-                    show(context, container, onBack)
-                }
+                onBack = { show(context, container, onBack) }
             )
         }
 
         openLastCompareBtn.setOnClickListener {
             val allEntries = RoastHistoryEngine.all()
             if (allEntries.size < 2) {
-                Toast.makeText(
-                    context,
-                    "Need at least 2 roast history entries",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "Need at least 2 roast history entries", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -190,9 +158,7 @@ ${latestEntry.batchId}
                 container = container,
                 left = previous,
                 right = latest,
-                onBack = {
-                    show(context, container, onBack)
-                }
+                onBack = { show(context, container, onBack) }
             )
         }
 
