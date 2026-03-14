@@ -37,7 +37,7 @@ object StudioHubPage {
 
         val preparationCard = UiKit.card(context)
         val openEnvironmentBtn = UiKit.primaryButton(context, "OPEN ENVIRONMENT")
-        val openPlannerBtn = UiKit.secondaryButton(context, "OPEN PLANNER")
+        val openPreparationStudioBtn = UiKit.secondaryButton(context, "OPEN PREPARATION STUDIO")
 
         preparationCard.addView(UiKit.cardTitle(context, "PREPARATION"))
         preparationCard.addView(
@@ -52,7 +52,7 @@ object StudioHubPage {
             UiKit.bodyText(
                 context,
                 """
-Set environment and planning information before the roast starts.
+Set environment and preparation information before the roast starts.
 
 This is the first stop when the live screen says you are not ready.
                 """.trimIndent()
@@ -60,7 +60,7 @@ This is the first stop when the live screen says you are not ready.
         )
         preparationCard.addView(UiKit.spacer(context))
         preparationCard.addView(openEnvironmentBtn)
-        preparationCard.addView(openPlannerBtn)
+        preparationCard.addView(openPreparationStudioBtn)
         root.addView(preparationCard)
         root.addView(UiKit.spacer(context))
 
@@ -96,7 +96,7 @@ Use this when moving from single-roast thinking to repeatable style thinking.
         machineCard.addView(
             UiKit.helperText(
                 context,
-                "Machine-related setup, calibration logic, and future capability tuning belong here."
+                "Machine-related setup, calibration logic, and capability tuning belong here."
             )
         )
         machineCard.addView(UiKit.spacer(context))
@@ -115,13 +115,13 @@ Use this when you need to improve machine understanding rather than roast one ba
         root.addView(UiKit.spacer(context))
 
         val intelligenceCard = UiKit.card(context)
-        val openAiSettingsBtn = UiKit.primaryButton(context, "OPEN AI SETTINGS")
+        val openIntelligenceStudioBtn = UiKit.primaryButton(context, "OPEN INTELLIGENCE TOOLS")
 
         intelligenceCard.addView(UiKit.cardTitle(context, "INTELLIGENCE"))
         intelligenceCard.addView(
             UiKit.helperText(
                 context,
-                "AI settings and future advanced intelligence tools belong in this layer."
+                "AI-related and future advanced intelligence tools can live in this layer."
             )
         )
         intelligenceCard.addView(UiKit.spacer(context))
@@ -131,19 +131,21 @@ Use this when you need to improve machine understanding rather than roast one ba
                 context,
                 """
 Use this when refining how RoastOS observes, explains, and assists.
+
+In the current build, this routes into the main studio workspace.
                 """.trimIndent()
             )
         )
         intelligenceCard.addView(UiKit.spacer(context))
-        intelligenceCard.addView(openAiSettingsBtn)
+        intelligenceCard.addView(openIntelligenceStudioBtn)
         root.addView(intelligenceCard)
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
         }
 
-        openPlannerBtn.setOnClickListener {
-            PlannerPage.show(context, container)
+        openPreparationStudioBtn.setOnClickListener {
+            RoastStudioPage.show(context, container)
         }
 
         openRoastStudioBtn.setOnClickListener {
@@ -154,8 +156,8 @@ Use this when refining how RoastOS observes, explains, and assists.
             RoastStudioPage.show(context, container)
         }
 
-        openAiSettingsBtn.setOnClickListener {
-            AiSettingsPage.show(context, container)
+        openIntelligenceStudioBtn.setOnClickListener {
+            RoastStudioPage.show(context, container)
         }
 
         backBtn.setOnClickListener {
