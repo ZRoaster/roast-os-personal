@@ -79,6 +79,8 @@ object RoastOperatorPage {
         val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
 
         controlCard.addView(UiKit.cardTitle(context, "QUICK CONTROL"))
+        controlCard.addView(UiKit.helperText(context, "Use controls after checking the current state."))
+        controlCard.addView(UiKit.spacer(context))
         controlCard.addView(startBtn)
         controlCard.addView(stopBtn)
         controlCard.addView(refreshBtn)
@@ -212,10 +214,10 @@ ${buildLatestReferenceStrip()}
             val prediction = RoastRorPredictionEngine.evaluate(snapshot)
 
             statusBody.text = """
-连接 / 就绪
+当前状态
 已进入操作状态
 
-状态
+Session
 ${session.status}
 
 BT / RoR / 时间
@@ -353,7 +355,7 @@ $fcText
 
     private fun buildLatestReferenceStrip(): String {
         val latest = RoastHistoryEngine.latest() ?: return """
-No roast history yet
+暂无历史记录
 
 保存第一锅后可启用参考
         """.trimIndent()
@@ -380,7 +382,7 @@ ${if (latest.evaluation != null) "Saved" else "Not saved"}
         if (latest == null) {
             return """
 参考状态
-No roast history yet
+暂无历史记录
 
 保存第一锅后可启用偏差检查
             """.trimIndent()
