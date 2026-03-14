@@ -29,20 +29,6 @@ object SystemHubPage {
         )
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(
-            UiKit.helperText(
-                context,
-                "System is the maintenance layer of RoastOS. Use it for profile, settings, and advanced access rather than live roasting flow."
-            )
-        )
-        navCard.addView(UiKit.spacer(context))
-        navCard.addView(backBtn)
-        root.addView(navCard)
-        root.addView(UiKit.spacer(context))
-
         val profileCard = UiKit.card(context)
         val openProfileBtn = UiKit.primaryButton(context, "OPEN PROFILE")
 
@@ -50,19 +36,7 @@ object SystemHubPage {
         profileCard.addView(
             UiKit.helperText(
                 context,
-                "Profile pages belong here instead of taking space inside the main roasting workflow."
-            )
-        )
-        profileCard.addView(UiKit.spacer(context))
-        profileCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        profileCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this area for personal and account-level pages.
-
-This is not part of the main live roasting path.
-                """.trimIndent()
+                "Personal and account-level pages."
             )
         )
         profileCard.addView(UiKit.spacer(context))
@@ -77,19 +51,7 @@ This is not part of the main live roasting path.
         appSettingsCard.addView(
             UiKit.helperText(
                 context,
-                "Application-level configuration and future system settings should live in this layer."
-            )
-        )
-        appSettingsCard.addView(UiKit.spacer(context))
-        appSettingsCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        appSettingsCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this area for app maintenance, preferences, and future configuration pages.
-
-In the current build, this routes into the profile page as a temporary placeholder.
-                """.trimIndent()
+                "Application-level preferences and future system settings."
             )
         )
         appSettingsCard.addView(UiKit.spacer(context))
@@ -104,24 +66,26 @@ In the current build, this routes into the profile page as a temporary placehold
         advancedCard.addView(
             UiKit.helperText(
                 context,
-                "Advanced tools, debug pages, and internal diagnostic access belong here, not in the main user workflow."
-            )
-        )
-        advancedCard.addView(UiKit.spacer(context))
-        advancedCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        advancedCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this layer for system inspection and future debug-oriented pages.
-
-In the current build, this also routes into the profile page as a safe placeholder.
-                """.trimIndent()
+                "Advanced tools and future debug-oriented pages."
             )
         )
         advancedCard.addView(UiKit.spacer(context))
         advancedCard.addView(openAdvancedBtn)
         root.addView(advancedCard)
+        root.addView(UiKit.spacer(context))
+
+        val navCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "BACK")
+        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        navCard.addView(
+            UiKit.helperText(
+                context,
+                "Return to the app home when needed."
+            )
+        )
+        navCard.addView(UiKit.spacer(context))
+        navCard.addView(backBtn)
+        root.addView(navCard)
 
         openProfileBtn.setOnClickListener {
             ProfilePage.show(context, container)
