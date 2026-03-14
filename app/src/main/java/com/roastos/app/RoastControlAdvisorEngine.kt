@@ -42,9 +42,6 @@ $confidence
 Reason
 $reason
 
-Reference Context Level
-$referenceContextLevel
-
 Reference Context
 $referenceContext
         """.trimIndent()
