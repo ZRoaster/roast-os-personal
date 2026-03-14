@@ -41,6 +41,18 @@ object RoastInsightBridge {
         )
     }
 
+    fun quietSummaryForSnapshot(
+        snapshot: RoastSessionBusSnapshot
+    ): String {
+        return analyzeSnapshot(snapshot).quietSummary.ifBlank { "-" }
+    }
+
+    fun quietSummaryForHistory(
+        entry: RoastHistoryEntry
+    ): String {
+        return analyzeHistory(entry).quietSummary.ifBlank { "-" }
+    }
+
     private fun analyzeFromMachineState(
         machineState: MachineState
     ): RoastInsightReport {
