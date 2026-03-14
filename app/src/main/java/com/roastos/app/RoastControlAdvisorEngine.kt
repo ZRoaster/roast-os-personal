@@ -211,6 +211,10 @@ object RoastControlAdvisorEngine {
 
         val parts = mutableListOf<String>()
 
+        if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
+            parts += "Current health is weaker than the last saved roast. Prefer stability over aggressive late-phase carry."
+        }
+
         val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
         if (lastYellow != null && currentElapsed >= lastYellow + 20) {
             parts += "Current roast is already slower than last yellow reference. Do not assume the same crack timing without adjustment."
@@ -219,10 +223,6 @@ object RoastControlAdvisorEngine {
         val lastFc = latest.actualFcSec ?: latest.predictedFcSec
         if (lastFc != null && currentElapsed >= lastFc - 15) {
             parts += "Current roast is already close to last first crack reference. Verify whether the current mid-late phase pace is aligned with intent."
-        }
-
-        if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
-            parts += "Current health is weaker than the last saved roast. Prefer stability over aggressive late-phase carry."
         }
 
         val currentEnv = AppState.lastPlannerInput
@@ -240,7 +240,7 @@ object RoastControlAdvisorEngine {
         return if (parts.isEmpty()) {
             "No strong reference deviation under current rules."
         } else {
-            parts.joinToString("\n\n")
+            parts.take(2).joinToString("\n\n")
         }
     }
 
