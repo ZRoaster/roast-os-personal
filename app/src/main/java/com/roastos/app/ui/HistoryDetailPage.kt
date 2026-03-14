@@ -30,6 +30,7 @@ object HistoryDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST HISTORY DETAIL"))
+        root.addView(UiKit.pageSubtitle(context, "Single batch review"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -43,7 +44,6 @@ object HistoryDetailPage {
 
         if (entry == null) {
             val emptyCard = UiKit.card(context)
-
             emptyCard.addView(UiKit.cardTitle(context, "NO DATA"))
             emptyCard.addView(
                 UiKit.bodyText(
@@ -51,7 +51,6 @@ object HistoryDetailPage {
                     "No roast history entry found."
                 )
             )
-
             root.addView(emptyCard)
 
             backBtn.setOnClickListener {
@@ -71,13 +70,29 @@ object HistoryDetailPage {
                 buildSummaryStrip(entry)
             )
         )
-
         root.addView(summaryCard)
         root.addView(UiKit.spacer(context))
 
-        val batchCard = UiKit.card(context)
+        val compareCard = UiKit.card(context)
+        val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
+        val compareWithPreviousBtn = UiKit.secondaryButton(context, "COMPARE WITH PREVIOUS")
 
-        batchCard.addView(UiKit.cardTitle(context, "BATCH"))
+        compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
+        compareCard.addView(
+            UiKit.bodyText(
+                context,
+                "Open a direct comparison between this batch and another reference batch."
+            )
+        )
+        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(compareWithLatestBtn)
+        compareCard.addView(compareWithPreviousBtn)
+
+        root.addView(compareCard)
+        root.addView(UiKit.spacer(context))
+
+        val batchCard = UiKit.card(context)
+        batchCard.addView(UiKit.cardTitle(context, "BATCH OVERVIEW"))
         batchCard.addView(
             UiKit.bodyText(
                 context,
@@ -111,12 +126,10 @@ ${entry.envTemp} ℃ / ${entry.envRh} %
                 """.trimIndent()
             )
         )
-
         root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
         val timelineCard = UiKit.card(context)
-
         timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
         timelineCard.addView(
             UiKit.bodyText(
@@ -133,71 +146,45 @@ ${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
 
 Drop
 ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+
+Pre-FC RoR
+${formatRor(entry.actualPreFcRor)}
                 """.trimIndent()
             )
         )
-
         root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        val compareCard = UiKit.card(context)
-        val compareTargetBody = UiKit.bodyText(context, "")
-        val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
-        val compareWithPreviousBtn = UiKit.secondaryButton(context, "COMPARE WITH PREVIOUS")
-
-        compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
-        compareCard.addView(
-            UiKit.bodyText(
-                context,
-                "Open a direct comparison between this batch and another reference batch."
-            )
-        )
-        compareCard.addView(UiKit.spacer(context))
-        compareCard.addView(UiKit.cardTitle(context, "COMPARE TARGET"))
-        compareCard.addView(compareTargetBody)
-        compareCard.addView(UiKit.spacer(context))
-        compareCard.addView(compareWithLatestBtn)
-        compareCard.addView(compareWithPreviousBtn)
-
-        root.addView(compareCard)
-        root.addView(UiKit.spacer(context))
-
         val reportCard = UiKit.card(context)
-
         reportCard.addView(UiKit.cardTitle(context, "REPORT"))
         reportCard.addView(
             UiKit.bodyText(
                 context,
-                entry.reportText
+                entry.reportText.ifBlank { "-" }
             )
         )
-
         root.addView(reportCard)
         root.addView(UiKit.spacer(context))
 
         val diagnosisCard = UiKit.card(context)
-
         diagnosisCard.addView(UiKit.cardTitle(context, "DIAGNOSIS"))
         diagnosisCard.addView(
             UiKit.bodyText(
                 context,
-                entry.diagnosisText
+                entry.diagnosisText.ifBlank { "-" }
             )
         )
-
         root.addView(diagnosisCard)
         root.addView(UiKit.spacer(context))
 
         val correctionCard = UiKit.card(context)
-
         correctionCard.addView(UiKit.cardTitle(context, "CORRECTION"))
         correctionCard.addView(
             UiKit.bodyText(
                 context,
-                entry.correctionText
+                entry.correctionText.ifBlank { "-" }
             )
         )
-
         root.addView(correctionCard)
         root.addView(UiKit.spacer(context))
 
@@ -238,6 +225,13 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         val clearEvaluationBtn = UiKit.secondaryButton(context, "CLEAR EVALUATION")
 
         evaluationCard.addView(UiKit.cardTitle(context, "EVALUATION"))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                buildEvaluationIntro(entry.evaluation)
+            )
+        )
+        evaluationCard.addView(UiKit.spacer(context))
         evaluationCard.addView(beanColorInput)
         evaluationCard.addView(groundColorInput)
         evaluationCard.addView(roastedAwInput)
@@ -265,6 +259,13 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         val createStyleBtn = UiKit.primaryButton(context, "CREATE MY STYLE")
 
         styleCard.addView(UiKit.cardTitle(context, "STYLE"))
+        styleCard.addView(
+            UiKit.bodyText(
+                context,
+                "Create a reusable roast style from this batch."
+            )
+        )
+        styleCard.addView(UiKit.spacer(context))
         styleCard.addView(createStyleBtn)
 
         root.addView(styleCard)
@@ -284,30 +285,6 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
         dangerCard.addView(deleteBtn)
 
         root.addView(dangerCard)
-
-        fun renderCompareTarget() {
-            val latest = RoastHistoryEngine.latest()
-            val allEntries = RoastHistoryEngine.all()
-            val currentIndex = allEntries.indexOfFirst { it.batchId == entry.batchId }
-            val previous = if (currentIndex >= 0 && currentIndex + 1 < allEntries.size) {
-                allEntries[currentIndex + 1]
-            } else {
-                null
-            }
-
-            compareTargetBody.text = """
-Latest Target
-A  Current Batch
-B  ${if (latest == null) "-" else if (latest.batchId == entry.batchId) "Current Batch" else latest.batchId}
-
-Previous Target
-A  ${previous?.batchId ?: "-"}
-B  Current Batch
-            """.trimIndent()
-
-            compareWithLatestBtn.isEnabled = latest != null && latest.batchId != entry.batchId
-            compareWithPreviousBtn.isEnabled = previous != null
-        }
 
         compareWithLatestBtn.setOnClickListener {
             val latest = RoastHistoryEngine.latest()
@@ -438,14 +415,12 @@ B  Current Batch
         }
 
         createStyleBtn.setOnClickListener {
-            val suggestedName =
-                RoastStyleFromBatchEngine.suggestStyleName(entry.batchId)
+            val suggestedName = RoastStyleFromBatchEngine.suggestStyleName(entry.batchId)
 
-            val result =
-                RoastStyleFromBatchEngine.createFromBatch(
-                    entry.batchId,
-                    suggestedName
-                )
+            val result = RoastStyleFromBatchEngine.createFromBatch(
+                entry.batchId,
+                suggestedName
+            )
 
             Toast.makeText(
                 context,
@@ -479,8 +454,6 @@ B  Current Batch
             onBack?.invoke() ?: RoastStudioPage.show(context, container)
         }
 
-        renderCompareTarget()
-
         scroll.addView(root)
         container.addView(scroll)
     }
@@ -495,11 +468,8 @@ ${entry.batchId}
 Created
 ${formatDateTime(entry.createdAtMillis)}
 
-Status
-${entry.batchStatus}
-
 Health
-${entry.roastHealthHeadline}
+${entry.batchStatus} / ${entry.roastHealthHeadline}
 
 Evaluation
 ${if (entry.evaluation != null) "Saved" else "Not saved"}
@@ -516,6 +486,16 @@ ${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actu
 Pre-FC RoR
 ${formatRor(entry.actualPreFcRor)}
         """.trimIndent()
+    }
+
+    private fun buildEvaluationIntro(
+        evaluation: RoastEvaluation?
+    ): String {
+        return if (evaluation == null) {
+            "No saved evaluation yet. Add cup feedback and roast result notes here."
+        } else {
+            "Saved evaluation detected. Update the values below to revise this batch review."
+        }
     }
 
     private fun decimalInput(
