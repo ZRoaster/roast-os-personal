@@ -29,20 +29,6 @@ object StudioHubPage {
         )
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(
-            UiKit.helperText(
-                context,
-                "Studio is the preparation and build layer of RoastOS. Use it before roasting or when refining your long-term system."
-            )
-        )
-        navCard.addView(UiKit.spacer(context))
-        navCard.addView(backBtn)
-        root.addView(navCard)
-        root.addView(UiKit.spacer(context))
-
         val preparationCard = UiKit.card(context)
         val openEnvironmentBtn = UiKit.primaryButton(context, "OPEN ENVIRONMENT")
         val openPreparationStudioBtn = UiKit.secondaryButton(context, "OPEN PREPARATION STUDIO")
@@ -51,19 +37,7 @@ object StudioHubPage {
         preparationCard.addView(
             UiKit.helperText(
                 context,
-                "Use this area to prepare roast context before live operation."
-            )
-        )
-        preparationCard.addView(UiKit.spacer(context))
-        preparationCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        preparationCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Set environment and preparation information before the roast starts.
-
-This is the first stop when the live screen says you are not ready.
-                """.trimIndent()
+                "Prepare roast context before live operation."
             )
         )
         preparationCard.addView(UiKit.spacer(context))
@@ -79,17 +53,7 @@ This is the first stop when the live screen says you are not ready.
         styleCard.addView(
             UiKit.helperText(
                 context,
-                "This area is for style building, reuse, and future style-system growth."
-            )
-        )
-        styleCard.addView(UiKit.spacer(context))
-        styleCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        styleCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this when moving from single-roast thinking to repeatable style thinking.
-                """.trimIndent()
+                "Build style, reuse, and long-term roasting structure."
             )
         )
         styleCard.addView(UiKit.spacer(context))
@@ -104,17 +68,7 @@ Use this when moving from single-roast thinking to repeatable style thinking.
         machineCard.addView(
             UiKit.helperText(
                 context,
-                "Machine-related setup, calibration logic, and capability tuning belong here."
-            )
-        )
-        machineCard.addView(UiKit.spacer(context))
-        machineCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        machineCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this when you need to improve machine understanding rather than roast one batch right now.
-                """.trimIndent()
+                "Machine setup, calibration logic, and capability tuning."
             )
         )
         machineCard.addView(UiKit.spacer(context))
@@ -129,24 +83,26 @@ Use this when you need to improve machine understanding rather than roast one ba
         intelligenceCard.addView(
             UiKit.helperText(
                 context,
-                "AI-related and future advanced intelligence tools can live in this layer."
-            )
-        )
-        intelligenceCard.addView(UiKit.spacer(context))
-        intelligenceCard.addView(UiKit.sectionLabel(context, "PURPOSE"))
-        intelligenceCard.addView(
-            UiKit.bodyText(
-                context,
-                """
-Use this when refining how RoastOS observes, explains, and assists.
-
-In the current build, this routes into the main studio workspace.
-                """.trimIndent()
+                "Refine how RoastOS observes, explains, and assists."
             )
         )
         intelligenceCard.addView(UiKit.spacer(context))
         intelligenceCard.addView(openIntelligenceStudioBtn)
         root.addView(intelligenceCard)
+        root.addView(UiKit.spacer(context))
+
+        val navCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "BACK")
+        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
+        navCard.addView(
+            UiKit.helperText(
+                context,
+                "Return to the app home when needed."
+            )
+        )
+        navCard.addView(UiKit.spacer(context))
+        navCard.addView(backBtn)
+        root.addView(navCard)
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
