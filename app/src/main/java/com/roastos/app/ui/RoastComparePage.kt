@@ -79,6 +79,24 @@ ${right.batchId}
         root.addView(
             buildSectionCard(
                 context = context,
+                title = "DECISION SUPPORT",
+                leftLabel = "SUPPORT",
+                leftValue = buildDecisionSupport(left, right),
+                rightLabel = "SELECTED",
+                rightValue = """
+A
+${left.batchId}
+
+B
+${right.batchId}
+                """.trimIndent()
+            )
+        )
+        root.addView(UiKit.spacer(context))
+
+        root.addView(
+            buildSectionCard(
+                context = context,
                 title = "OPERATION HINTS",
                 leftLabel = "HINTS",
                 leftValue = buildOperationHints(left, right),
@@ -322,6 +340,60 @@ $evaluationState
 
 Environment Shift
 $envShift
+        """.trimIndent()
+    }
+
+    private fun buildDecisionSupport(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val envShiftStrong = abs(left.envTemp - right.envTemp) >= 1.0 || abs(left.envRh - right.envRh) >= 5.0
+
+        val fcDiff = abs((left.actualFcSec ?: left.predictedFcSec ?: 0) - (right.actualFcSec ?: right.predictedFcSec ?: 0))
+        val dropDiff = abs((left.actualDropSec ?: left.predictedDropSec ?: 0) - (right.actualDropSec ?: right.predictedDropSec ?: 0))
+        val yellowDiff = abs((left.actualYellowSec ?: left.predictedYellowSec ?: 0) - (right.actualYellowSec ?: right.predictedYellowSec ?: 0))
+        val rorDiff = abs((left.actualPreFcRor ?: 0.0) - (right.actualPreFcRor ?: 0.0))
+
+        val paceGapStrong = fcDiff >= 10 || dropDiff >= 10 || yellowDiff >= 10 || rorDiff >= 0.5
+
+        val primaryFocus = when {
+            envShiftStrong -> "Environment shift"
+            paceGapStrong -> "Pace difference"
+            else -> "Minor gap"
+        }
+
+        val evaluationBasis = when {
+            left.evaluation != null && right.evaluation != null -> "Both saved"
+            left.evaluation != null || right.evaluation != null -> "Partial"
+            else -> "None"
+        }
+
+        val riskDiff = abs(riskScore(left.roastHealthHeadline) - riskScore(right.roastHealthHeadline))
+
+        val strongGapCount = listOf(
+            envShiftStrong,
+            fcDiff >= 10,
+            dropDiff >= 10,
+            yellowDiff >= 10,
+            rorDiff >= 0.5,
+            riskDiff >= 2
+        ).count { it }
+
+        val reuseConfidence = when {
+            envShiftStrong || strongGapCount >= 3 -> "Low"
+            strongGapCount >= 1 || riskDiff >= 1 -> "Medium"
+            else -> "High"
+        }
+
+        return """
+Primary Focus
+$primaryFocus
+
+Reuse Confidence
+$reuseConfidence
+
+Evaluation Basis
+$evaluationBasis
         """.trimIndent()
     }
 
