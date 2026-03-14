@@ -205,7 +205,7 @@ ${formatRor(entry.actualPreFcRor)}
             inputType = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            minLines = 3
+            minLines = 4
         }
 
         fillEvaluation(
@@ -232,14 +232,46 @@ ${formatRor(entry.actualPreFcRor)}
             )
         )
         evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+Input
+
+Color / Water Activity
+                """.trimIndent()
+            )
+        )
         evaluationCard.addView(beanColorInput)
         evaluationCard.addView(groundColorInput)
         evaluationCard.addView(roastedAwInput)
+        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+Cup Scores
+
+Use your own consistent scoring rhythm across batches.
+                """.trimIndent()
+            )
+        )
         evaluationCard.addView(sweetnessInput)
         evaluationCard.addView(acidityInput)
         evaluationCard.addView(bodyInput)
         evaluationCard.addView(flavorClarityInput)
         evaluationCard.addView(balanceInput)
+        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+Notes
+
+Capture the cup result, roast impression, and reuse hints.
+                """.trimIndent()
+            )
+        )
         evaluationCard.addView(notesInput)
         evaluationCard.addView(UiKit.spacer(context))
         evaluationCard.addView(
@@ -271,20 +303,20 @@ ${formatRor(entry.actualPreFcRor)}
         root.addView(styleCard)
         root.addView(UiKit.spacer(context))
 
-        val dangerCard = UiKit.card(context)
+        val deleteCard = UiKit.card(context)
         val deleteBtn = UiKit.secondaryButton(context, "DELETE THIS HISTORY")
 
-        dangerCard.addView(UiKit.cardTitle(context, "DELETE"))
-        dangerCard.addView(
+        deleteCard.addView(UiKit.cardTitle(context, "DELETE"))
+        deleteCard.addView(
             UiKit.bodyText(
                 context,
                 "Delete this roast history entry from local storage."
             )
         )
-        dangerCard.addView(UiKit.spacer(context))
-        dangerCard.addView(deleteBtn)
+        deleteCard.addView(UiKit.spacer(context))
+        deleteCard.addView(deleteBtn)
 
-        root.addView(dangerCard)
+        root.addView(deleteCard)
 
         compareWithLatestBtn.setOnClickListener {
             val latest = RoastHistoryEngine.latest()
