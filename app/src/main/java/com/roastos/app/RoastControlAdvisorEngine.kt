@@ -70,7 +70,7 @@ object RoastControlAdvisorEngine {
 
         val risk = buildRisk(ai, prediction)
         val confidence = decision.confidence
-        val insightSummary = RoastInsightBridge.analyzeSnapshot(snapshot).quietSummary
+        val insightSummary = RoastInsightBridge.quietSummaryForSnapshot(snapshot)
 
         val reason = buildReason(
             decision = decision,
