@@ -2,14 +2,9 @@ package com.roastos.app.ui
 
 import android.content.Context
 import android.widget.LinearLayout
-import com.roastos.app.EnergyEngine
-import com.roastos.app.MachineProfiles
-import com.roastos.app.MachineStateEngine
-import com.roastos.app.RoastCurveEngineV3
-import com.roastos.app.RoastInsightEngine
+import com.roastos.app.RoastInsightBridge
 import com.roastos.app.RoastInsightReport
 import com.roastos.app.RoastSessionBus
-import com.roastos.app.RoastStabilityEngine
 import com.roastos.app.UiKit
 
 class RoastInsightPanel(context: Context) : LinearLayout(context) {
@@ -49,47 +44,7 @@ Possibilities
             return
         }
 
-        val session = snapshot.session
-
-        val machineState = MachineStateEngine.buildState(
-            powerW = 0,
-            airflowPa = 0,
-            drumRpm = 0,
-            beanTemp = session.lastBeanTemp,
-            ror = session.lastRor,
-            elapsedSec = session.lastElapsedSec,
-            environmentTemp = 25.0,
-            environmentHumidity = 50.0
-        )
-
-        val profile = MachineProfiles.HB_M2SE
-        val energy = EnergyEngine.evaluate(profile, machineState)
-
-        RoastCurveEngineV3.reset()
-        RoastCurveEngineV3.record(
-            bt = machineState.beanTemp,
-            timeMillis = System.currentTimeMillis()
-        )
-        RoastCurveEngineV3.record(
-            bt = machineState.beanTemp,
-            timeMillis = System.currentTimeMillis() + 1000
-        )
-        RoastCurveEngineV3.record(
-            bt = machineState.beanTemp,
-            timeMillis = System.currentTimeMillis() + 2000
-        )
-        val curvePrediction = RoastCurveEngineV3.predict()
-
-        val stability = RoastStabilityEngine.evaluate(curvePrediction)
-
-        val report = RoastInsightEngine.analyze(
-            profile = profile,
-            machineState = machineState,
-            energy = energy,
-            stability = stability,
-            styleGoal = null
-        )
-
+        val report = RoastInsightBridge.analyzeSnapshot(snapshot)
         renderReport(report)
     }
 
