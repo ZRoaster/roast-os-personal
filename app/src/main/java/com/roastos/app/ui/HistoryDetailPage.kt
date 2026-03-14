@@ -142,16 +142,18 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
 
         val compareCard = UiKit.card(context)
         val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
+        val compareWithPreviousBtn = UiKit.secondaryButton(context, "COMPARE WITH PREVIOUS")
 
         compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
         compareCard.addView(
             UiKit.bodyText(
                 context,
-                "Open a direct comparison between this batch and the latest saved roast."
+                "Open a direct comparison between this batch and another reference batch."
             )
         )
         compareCard.addView(UiKit.spacer(context))
         compareCard.addView(compareWithLatestBtn)
+        compareCard.addView(compareWithPreviousBtn)
 
         root.addView(compareCard)
         root.addView(UiKit.spacer(context))
@@ -305,6 +307,37 @@ ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
                 container = container,
                 left = entry,
                 right = latest,
+                onBack = {
+                    show(
+                        context = context,
+                        container = container,
+                        entry = entry,
+                        onBack = onBack
+                    )
+                }
+            )
+        }
+
+        compareWithPreviousBtn.setOnClickListener {
+            val allEntries = RoastHistoryEngine.all()
+            val currentIndex = allEntries.indexOfFirst { it.batchId == entry.batchId }
+
+            if (currentIndex < 0 || currentIndex + 1 >= allEntries.size) {
+                Toast.makeText(
+                    context,
+                    "No previous roast history found",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            val previous = allEntries[currentIndex + 1]
+
+            RoastComparePage.show(
+                context = context,
+                container = container,
+                left = previous,
+                right = entry,
                 onBack = {
                     show(
                         context = context,
