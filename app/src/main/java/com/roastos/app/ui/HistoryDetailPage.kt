@@ -30,7 +30,7 @@ object HistoryDetailPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST HISTORY DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Single batch review"))
+        root.addView(UiKit.pageSubtitle(context, "Review, evaluate, and reuse"))
         root.addView(UiKit.spacer(context))
 
         val navCard = UiKit.card(context)
@@ -274,7 +274,7 @@ ${formatRor(entry.actualPreFcRor)}
         val dangerCard = UiKit.card(context)
         val deleteBtn = UiKit.secondaryButton(context, "DELETE THIS HISTORY")
 
-        dangerCard.addView(UiKit.cardTitle(context, "DANGER"))
+        dangerCard.addView(UiKit.cardTitle(context, "DELETE"))
         dangerCard.addView(
             UiKit.bodyText(
                 context,
