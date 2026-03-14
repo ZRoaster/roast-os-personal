@@ -290,6 +290,15 @@ Save a roast history entry to enable a lightweight reference deviation check.
                 val lastYellow = latest.actualYellowSec ?: latest.predictedYellowSec
                 val lastFc = latest.actualFcSec ?: latest.predictedFcSec
 
+                val currentHealthScore = riskScore(buildHealthHeadline(validation))
+                val lastHealthScore = riskScore(latest.roastHealthHeadline)
+                if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
+                    alerts += """
+Current health is worse than the last saved roast.
+Watch late-stage stability before repeating the same finish.
+                    """.trimIndent()
+                }
+
                 if (lastYellow != null && currentElapsed >= lastYellow + 20) {
                     alerts += """
 Current elapsed is already beyond last yellow reference.
@@ -304,22 +313,13 @@ Verify whether the current mid-late phase pace is aligned with intent.
                     """.trimIndent()
                 }
 
-                val currentHealthScore = riskScore(buildHealthHeadline(validation))
-                val lastHealthScore = riskScore(latest.roastHealthHeadline)
-                if (currentHealthScore > lastHealthScore && currentHealthScore > 0) {
-                    alerts += """
-Current health is worse than the last saved roast.
-Watch late-stage stability before repeating the same finish.
-                    """.trimIndent()
-                }
-
                 val currentEnv = AppState.lastPlannerInput
                 val currentEnvTemp = currentEnv?.envTemp
                 val currentEnvRh = currentEnv?.envRH
                 val envShiftDetected =
                     currentEnvTemp != null &&
-                    currentEnvRh != null &&
-                    (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
+                        currentEnvRh != null &&
+                        (abs(currentEnvTemp - latest.envTemp) >= 1.5 || abs(currentEnvRh - latest.envRh) >= 8.0)
 
                 if (envShiftDetected) {
                     alerts += """
@@ -335,7 +335,7 @@ No strong deviation alert under current rules.
 Use LAST VS CURRENT as a soft reference and continue monitoring the roast rhythm.
                     """.trimIndent()
                 } else {
-                    alerts.joinToString("\n\n")
+                    alerts.take(2).joinToString("\n\n")
                 }
             }
         }
