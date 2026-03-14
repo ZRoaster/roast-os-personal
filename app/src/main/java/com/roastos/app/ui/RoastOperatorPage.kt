@@ -382,23 +382,16 @@ Use LAST VS CURRENT as a soft reference and keep following the roast rhythm.
 
             statusBody.text =
                 """
-STATUS
+状态
 ${session.status}
 
-BT
-${String.format("%.1f", session.lastBeanTemp)} ℃
+核心读数
+BT   ${String.format("%.1f", session.lastBeanTemp)} ℃
+RoR  ${String.format("%.1f", session.lastRor)} ℃/min
+时间  ${formatElapsed(session.lastElapsedSec)}
 
-RoR
-${String.format("%.1f", session.lastRor)} ℃/min
-
-TIME
-${formatElapsed(session.lastElapsedSec)}
-
-PHASE
-${snapshot.companion.phaseLabel}
-
-HEALTH
-${buildHealthHeadline(snapshot.validation)}
+阶段 / 健康
+${snapshot.companion.phaseLabel} / ${buildHealthHeadline(snapshot.validation)}
                 """.trimIndent()
 
             renderLastSnapshot()
