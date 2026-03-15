@@ -20,8 +20,8 @@ object ReviewHubPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "REVIEW"))
-        root.addView(UiKit.pageSubtitle(context, "Inspect past roasts and compare batches"))
-        root.addView(UiKit.spacer(context))
+        root.addView(UiKit.pageSubtitle(context, "Inspect roast results and compare batches"))
+        root.addView(UiKit.spacerS(context))
         root.addView(
             TopNavBar.create(
                 context = context,
@@ -32,87 +32,85 @@ object ReviewHubPage {
         root.addView(UiKit.spacer(context))
 
         val recentCard = UiKit.card(context)
-        val openRecentBtn = UiKit.primaryButton(context, "OPEN RECENT ROASTS")
-        recentCard.addView(UiKit.cardTitle(context, "RECENT ROASTS"))
+        val openRecentBtn = UiKit.primaryButton(context, "Recent Roasts")
+        recentCard.addView(UiKit.cardTitle(context, "RECENT"))
         recentCard.addView(UiKit.helperText(context, "Browse saved batches first."))
-        recentCard.addView(UiKit.spacer(context))
+        recentCard.addView(UiKit.spacerM(context))
         recentCard.addView(openRecentBtn)
         root.addView(recentCard)
         root.addView(UiKit.spacer(context))
 
-        val lastDetailCard = UiKit.card(context)
-        val openLastDetailBtn = UiKit.primaryButton(context, "OPEN LAST ROAST DETAIL")
-        val lastDetailBody = UiKit.bodyText(context, "")
-        lastDetailCard.addView(UiKit.cardTitle(context, "LAST ROAST"))
-        lastDetailCard.addView(UiKit.helperText(context, "Jump directly into the latest saved roast."))
-        lastDetailCard.addView(UiKit.spacer(context))
-        lastDetailCard.addView(lastDetailBody)
-        lastDetailCard.addView(UiKit.spacer(context))
-        lastDetailCard.addView(openLastDetailBtn)
-        root.addView(lastDetailCard)
+        val lastResultCard = UiKit.card(context)
+        val openLastDetailBtn = UiKit.secondaryButton(context, "Open Last Roast")
+        val lastResultBody = UiKit.bodyText(context, "")
+        lastResultCard.addView(UiKit.cardTitle(context, "LATEST RESULT"))
+        lastResultCard.addView(UiKit.helperText(context, "A quick summary of the latest saved roast."))
+        lastResultCard.addView(UiKit.spacerS(context))
+        lastResultCard.addView(lastResultBody)
+        lastResultCard.addView(UiKit.spacerM(context))
+        lastResultCard.addView(openLastDetailBtn)
+        root.addView(lastResultCard)
         root.addView(UiKit.spacer(context))
 
         val compareCard = UiKit.card(context)
-        val openLastCompareBtn = UiKit.primaryButton(context, "OPEN LAST COMPARE")
+        val openLastCompareBtn = UiKit.secondaryButton(context, "Open Last Compare")
         val compareBody = UiKit.bodyText(context, "")
-        compareCard.addView(UiKit.cardTitle(context, "LAST COMPARE"))
-        compareCard.addView(UiKit.helperText(context, "Compare the latest two saved roasts."))
-        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(UiKit.cardTitle(context, "LATEST COMPARE"))
+        compareCard.addView(UiKit.helperText(context, "Compare the most recent two saved roasts."))
+        compareCard.addView(UiKit.spacerS(context))
         compareCard.addView(compareBody)
-        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(UiKit.spacerM(context))
         compareCard.addView(openLastCompareBtn)
         root.addView(compareCard)
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(UiKit.helperText(context, "Return to the app home when needed."))
-        navCard.addView(UiKit.spacer(context))
-        navCard.addView(backBtn)
-        root.addView(navCard)
+        val accessCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "Home")
+        accessCard.addView(UiKit.cardTitle(context, "MORE ACCESS"))
+        accessCard.addView(UiKit.helperText(context, "Return to the app home when needed."))
+        accessCard.addView(UiKit.spacerM(context))
+        accessCard.addView(backBtn)
+        root.addView(accessCard)
 
         fun render() {
             val allEntries = RoastHistoryEngine.all()
             val latest = RoastHistoryEngine.latest()
 
-            lastDetailBody.text = if (latest == null) {
+            lastResultBody.text = if (latest == null) {
                 """
-No roast history yet.
+暂无历史记录
 
-Save your first roast to unlock detail review.
+保存第一锅后可进入单锅复盘
                 """.trimIndent()
             } else {
                 """
-Batch
+批次
 ${latest.batchId}
 
-Status
-${latest.batchStatus}
+结果 / 健康
+${latest.batchStatus} / ${latest.roastHealthHeadline}
 
-Health
-${latest.roastHealthHeadline}
-
-Evaluation
-${if (latest.evaluation != null) "Saved" else "Not saved"}
+评测
+${if (latest.evaluation != null) "已保存" else "未保存"}
                 """.trimIndent()
             }
 
             compareBody.text = if (allEntries.size < 2) {
                 """
-Need at least 2 roast history entries.
+暂无可对比批次
 
-Save more roasts to unlock direct comparison.
+至少需要 2 锅历史记录
                 """.trimIndent()
             } else {
                 val latestEntry = allEntries[0]
                 val previous = allEntries[1]
-                """
-A
-${previous.batchId}
 
-B
-${latestEntry.batchId}
+                """
+对比对象
+${previous.batchId} → ${latestEntry.batchId}
+
+建议
+先查看最近两锅差异
                 """.trimIndent()
             }
 
