@@ -28,32 +28,36 @@ object HistoryDetailPage {
         val scroll = ScrollView(context)
         val root = UiKit.pageRoot(context)
 
-        root.addView(UiKit.pageTitle(context, "ROAST HISTORY DETAIL"))
-        root.addView(UiKit.pageSubtitle(context, "Review, evaluate, and reuse"))
+        root.addView(UiKit.pageTitle(context, "ROAST DETAIL"))
+        root.addView(UiKit.pageSubtitle(context, "Inspect result, evaluate, and reuse"))
+        root.addView(UiKit.spacerS(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.REVIEW
+            )
+        )
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(backBtn)
-
-        root.addView(navCard)
+        val accessCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "Back")
+        accessCard.addView(UiKit.cardTitle(context, "ACCESS"))
+        accessCard.addView(UiKit.helperText(context, "Return to the review flow."))
+        accessCard.addView(UiKit.spacerM(context))
+        accessCard.addView(backBtn)
+        root.addView(accessCard)
         root.addView(UiKit.spacer(context))
 
         if (entry == null) {
             val emptyCard = UiKit.card(context)
             emptyCard.addView(UiKit.cardTitle(context, "NO DATA"))
-            emptyCard.addView(
-                UiKit.bodyText(
-                    context,
-                    "No roast history entry found."
-                )
-            )
+            emptyCard.addView(UiKit.helperText(context, "No roast history entry found."))
+
             root.addView(emptyCard)
 
             backBtn.setOnClickListener {
-                onBack?.invoke() ?: RoastStudioPage.show(context, container)
+                onBack?.invoke() ?: ReviewHubPage.show(context, container)
             }
 
             scroll.addView(root)
@@ -62,7 +66,8 @@ object HistoryDetailPage {
         }
 
         val summaryCard = UiKit.card(context)
-        summaryCard.addView(UiKit.cardTitle(context, "SUMMARY"))
+        summaryCard.addView(UiKit.cardTitle(context, "RESULT SUMMARY"))
+        summaryCard.addView(UiKit.spacerS(context))
         summaryCard.addView(
             UiKit.bodyText(
                 context,
@@ -73,55 +78,39 @@ object HistoryDetailPage {
         root.addView(UiKit.spacer(context))
 
         val compareCard = UiKit.card(context)
-        val compareWithLatestBtn = UiKit.primaryButton(context, "COMPARE WITH LATEST")
-        val compareWithPreviousBtn = UiKit.secondaryButton(context, "COMPARE WITH PREVIOUS")
+        val compareWithLatestBtn = UiKit.primaryButton(context, "Compare With Latest")
+        val compareWithPreviousBtn = UiKit.secondaryButton(context, "Compare With Previous")
 
         compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
-        compareCard.addView(
-            UiKit.helperText(
-                context,
-                "Open this batch against a newer or older reference."
-            )
-        )
-        compareCard.addView(UiKit.spacer(context))
+        compareCard.addView(UiKit.helperText(context, "Open this roast against a newer or older reference."))
+        compareCard.addView(UiKit.spacerM(context))
         compareCard.addView(compareWithLatestBtn)
+        compareCard.addView(UiKit.spacerS(context))
         compareCard.addView(compareWithPreviousBtn)
-
         root.addView(compareCard)
         root.addView(UiKit.spacer(context))
 
         val batchCard = UiKit.card(context)
         batchCard.addView(UiKit.cardTitle(context, "BATCH OVERVIEW"))
+        batchCard.addView(UiKit.spacerS(context))
         batchCard.addView(
             UiKit.bodyText(
                 context,
                 """
-Batch ID
+批次
 ${entry.batchId}
 
-Title
-${entry.title}
+标题 / 处理
+${entry.title} / ${entry.process}
 
-Created
+创建时间
 ${formatDateTime(entry.createdAtMillis)}
 
-Status
-${entry.batchStatus}
-
-Process
-${entry.process}
-
-Density
-${entry.density}
-
-Moisture
-${entry.moisture}
-
-AW
-${entry.aw}
-
-Environment
+环境
 ${entry.envTemp} ℃ / ${entry.envRh} %
+
+密度 / 水分 / AW
+${entry.density} / ${entry.moisture} / ${entry.aw}
                 """.trimIndent()
             )
         )
@@ -130,21 +119,16 @@ ${entry.envTemp} ℃ / ${entry.envRh} %
 
         val timelineCard = UiKit.card(context)
         timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
+        timelineCard.addView(UiKit.spacerS(context))
         timelineCard.addView(
             UiKit.bodyText(
                 context,
                 """
-Turning
-${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)}
+Turning / Yellow
+${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)} / ${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
 
-Yellow
-${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
-
-First Crack
-${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
-
-Drop
-${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+FC / Drop
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
 
 Pre-FC RoR
 ${formatRor(entry.actualPreFcRor)}
@@ -154,40 +138,28 @@ ${formatRor(entry.actualPreFcRor)}
         root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        val reportCard = UiKit.card(context)
-        reportCard.addView(UiKit.cardTitle(context, "REPORT"))
-        reportCard.addView(
+        val insightCard = UiKit.card(context)
+        insightCard.addView(UiKit.cardTitle(context, "INSIGHT"))
+        insightCard.addView(UiKit.spacerS(context))
+        insightCard.addView(
             UiKit.bodyText(
                 context,
-                entry.reportText.ifBlank { "-" }
+                """
+Report
+${entry.reportText.ifBlank { "-" }}
+
+Diagnosis
+${entry.diagnosisText.ifBlank { "-" }}
+
+Correction
+${entry.correctionText.ifBlank { "-" }}
+                """.trimIndent()
             )
         )
-        root.addView(reportCard)
+        root.addView(insightCard)
         root.addView(UiKit.spacer(context))
 
-        val diagnosisCard = UiKit.card(context)
-        diagnosisCard.addView(UiKit.cardTitle(context, "DIAGNOSIS"))
-        diagnosisCard.addView(
-            UiKit.bodyText(
-                context,
-                entry.diagnosisText.ifBlank { "-" }
-            )
-        )
-        root.addView(diagnosisCard)
-        root.addView(UiKit.spacer(context))
-
-        val correctionCard = UiKit.card(context)
-        correctionCard.addView(UiKit.cardTitle(context, "CORRECTION"))
-        correctionCard.addView(
-            UiKit.bodyText(
-                context,
-                entry.correctionText.ifBlank { "-" }
-            )
-        )
-        root.addView(correctionCard)
-        root.addView(UiKit.spacer(context))
-
-        val evaluationCard = UiKit.card(context)
+        val evaluationCard = UiKit.card()
 
         val beanColorInput = UiKit.decimalField(context, "Bean Color")
         val groundColorInput = UiKit.decimalField(context, "Ground Color")
@@ -214,90 +186,73 @@ ${formatRor(entry.actualPreFcRor)}
             notesInput
         )
 
-        val saveEvaluationBtn = UiKit.primaryButton(context, "SAVE EVALUATION")
-        val clearEvaluationBtn = UiKit.secondaryButton(context, "CLEAR EVALUATION")
+        val saveEvaluationBtn = UiKit.primaryButton(context, "Save Evaluation")
+        val clearEvaluationBtn = UiKit.secondaryButton(context, "Clear Evaluation")
 
         evaluationCard.addView(UiKit.cardTitle(context, "EVALUATION"))
-        evaluationCard.addView(
-            UiKit.helperText(
-                context,
-                buildEvaluationIntro(entry.evaluation)
-            )
-        )
-        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(UiKit.helperText(context, buildEvaluationIntro(entry.evaluation)))
+        evaluationCard.addView(UiKit.spacerM(context))
 
-        evaluationCard.addView(UiKit.sectionLabel(context, "INPUT"))
-        evaluationCard.addView(UiKit.sectionLabel(context, "COLOR / WATER ACTIVITY"))
+        evaluationCard.addView(UiKit.sectionLabel(context, "COLOR / AW"))
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(beanColorInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(groundColorInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(roastedAwInput)
-        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(UiKit.spacerM(context))
 
         evaluationCard.addView(UiKit.sectionLabel(context, "CUP SCORES"))
-        evaluationCard.addView(
-            UiKit.helperText(
-                context,
-                "Use your own consistent scoring rhythm across batches."
-            )
-        )
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(sweetnessInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(acidityInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(bodyInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(flavorClarityInput)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(balanceInput)
-        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(UiKit.spacerM(context))
 
         evaluationCard.addView(UiKit.sectionLabel(context, "NOTES"))
-        evaluationCard.addView(
-            UiKit.helperText(
-                context,
-                "Capture the cup result, roast impression, and reuse hints."
-            )
-        )
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(notesInput)
-        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(UiKit.spacerM(context))
 
-        evaluationCard.addView(UiKit.sectionLabel(context, "SAVED EVALUATION"))
+        evaluationCard.addView(UiKit.sectionLabel(context, "SAVED SUMMARY"))
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(
             UiKit.bodyText(
                 context,
                 buildEvaluationSummary(entry.evaluation)
             )
         )
-        evaluationCard.addView(UiKit.spacer(context))
+        evaluationCard.addView(UiKit.spacerM(context))
         evaluationCard.addView(saveEvaluationBtn)
+        evaluationCard.addView(UiKit.spacerS(context))
         evaluationCard.addView(clearEvaluationBtn)
 
         root.addView(evaluationCard)
         root.addView(UiKit.spacer(context))
 
         val styleCard = UiKit.card(context)
-        val createStyleBtn = UiKit.primaryButton(context, "CREATE MY STYLE")
+        val createStyleBtn = UiKit.primaryButton(context, "Create My Style")
 
-        styleCard.addView(UiKit.cardTitle(context, "STYLE"))
-        styleCard.addView(
-            UiKit.helperText(
-                context,
-                "Turn this batch into a reusable style reference."
-            )
-        )
-        styleCard.addView(UiKit.spacer(context))
+        styleCard.addView(UiKit.cardTitle(context, "REUSE"))
+        styleCard.addView(UiKit.helperText(context, "Turn this batch into a reusable style reference."))
+        styleCard.addView(UiKit.spacerM(context))
         styleCard.addView(createStyleBtn)
 
         root.addView(styleCard)
         root.addView(UiKit.spacer(context))
 
         val deleteCard = UiKit.card(context)
-        val deleteBtn = UiKit.secondaryButton(context, "DELETE THIS HISTORY")
+        val deleteBtn = UiKit.secondaryButton(context, "Delete This History")
 
         deleteCard.addView(UiKit.cardTitle(context, "DELETE"))
-        deleteCard.addView(
-            UiKit.dangerText(
-                context,
-                "Remove this batch from local history."
-            )
-        )
-        deleteCard.addView(UiKit.spacer(context))
+        deleteCard.addView(UiKit.dangerText(context, "Remove this batch from local history."))
+        deleteCard.addView(UiKit.spacerM(context))
         deleteCard.addView(deleteBtn)
 
         root.addView(deleteCard)
@@ -306,20 +261,12 @@ ${formatRor(entry.actualPreFcRor)}
             val latest = RoastHistoryEngine.latest()
 
             if (latest == null) {
-                Toast.makeText(
-                    context,
-                    "No latest roast history found",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "No latest roast history found", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (latest.batchId == entry.batchId) {
-                Toast.makeText(
-                    context,
-                    "Current entry is already the latest batch",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "Current entry is already the latest batch", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -344,11 +291,7 @@ ${formatRor(entry.actualPreFcRor)}
             val currentIndex = allEntries.indexOfFirst { it.batchId == entry.batchId }
 
             if (currentIndex < 0 || currentIndex + 1 >= allEntries.size) {
-                Toast.makeText(
-                    context,
-                    "No previous roast history found",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "No previous roast history found", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -385,11 +328,7 @@ ${formatRor(entry.actualPreFcRor)}
 
             val result = RoastHistoryEngine.saveEvaluation(entry.batchId, evaluation)
 
-            Toast.makeText(
-                context,
-                result.message,
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
 
             val updatedEntry = RoastHistoryEngine.findByBatchId(entry.batchId)
             show(
@@ -412,11 +351,7 @@ ${formatRor(entry.actualPreFcRor)}
                 .setPositiveButton("CLEAR") { _, _ ->
                     val result = RoastHistoryEngine.clearEvaluation(entry.batchId)
 
-                    Toast.makeText(
-                        context,
-                        result.message,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
 
                     val updatedEntry = RoastHistoryEngine.findByBatchId(entry.batchId)
                     show(
@@ -438,11 +373,7 @@ ${formatRor(entry.actualPreFcRor)}
                 suggestedName
             )
 
-            Toast.makeText(
-                context,
-                result.message,
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
         }
 
         deleteBtn.setOnClickListener {
@@ -452,14 +383,10 @@ ${formatRor(entry.actualPreFcRor)}
                 .setPositiveButton("DELETE") { _, _ ->
                     val result = RoastHistoryEngine.delete(entry.batchId)
 
-                    Toast.makeText(
-                        context,
-                        result.message,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
 
                     if (result.deleted) {
-                        onBack?.invoke() ?: RoastStudioPage.show(context, container)
+                        onBack?.invoke() ?: ReviewHubPage.show(context, container)
                     }
                 }
                 .setNegativeButton("CANCEL", null)
@@ -467,7 +394,7 @@ ${formatRor(entry.actualPreFcRor)}
         }
 
         backBtn.setOnClickListener {
-            onBack?.invoke() ?: RoastStudioPage.show(context, container)
+            onBack?.invoke() ?: ReviewHubPage.show(context, container)
         }
 
         scroll.addView(root)
@@ -478,19 +405,19 @@ ${formatRor(entry.actualPreFcRor)}
         entry: RoastHistoryEntry
     ): String {
         return """
-Batch
+批次
 ${entry.batchId}
 
-Created
+创建时间
 ${formatDateTime(entry.createdAtMillis)}
 
-Health
+结果 / 健康
 ${entry.batchStatus} / ${entry.roastHealthHeadline}
 
-Evaluation
-${if (entry.evaluation != null) "Saved" else "Not saved"}
+评测
+${if (entry.evaluation != null) "已保存" else "未保存"}
 
-Environment
+环境
 ${entry.envTemp} ℃ / ${entry.envRh} %
 
 Turning / Yellow
