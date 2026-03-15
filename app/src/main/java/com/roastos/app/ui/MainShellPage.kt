@@ -17,61 +17,41 @@ object MainShellPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROASTOS"))
-        root.addView(UiKit.pageSubtitle(context, "Operate, review, and build your roasting system"))
+        root.addView(UiKit.pageSubtitle(context, "Roast operation, review, and system building"))
         root.addView(UiKit.spacer(context))
 
         val operateCard = UiKit.card(context)
-        val openOperateBtn = UiKit.primaryButton(context, "OPEN OPERATE")
+        val openOperateBtn = UiKit.primaryButton(context, "Open Operate")
         operateCard.addView(UiKit.cardTitle(context, "OPERATE"))
-        operateCard.addView(
-            UiKit.helperText(
-                context,
-                "Live roast control, judgment, and action."
-            )
-        )
-        operateCard.addView(UiKit.spacer(context))
+        operateCard.addView(UiKit.helperText(context, "Live roast control and decision."))
+        operateCard.addView(UiKit.spacerM(context))
         operateCard.addView(openOperateBtn)
         root.addView(operateCard)
         root.addView(UiKit.spacer(context))
 
         val reviewCard = UiKit.card(context)
-        val openReviewBtn = UiKit.primaryButton(context, "OPEN REVIEW")
+        val openReviewBtn = UiKit.secondaryButton(context, "Open Review")
         reviewCard.addView(UiKit.cardTitle(context, "REVIEW"))
-        reviewCard.addView(
-            UiKit.helperText(
-                context,
-                "Review past batches and compare roast results."
-            )
-        )
-        reviewCard.addView(UiKit.spacer(context))
+        reviewCard.addView(UiKit.helperText(context, "Inspect batches and compare results."))
+        reviewCard.addView(UiKit.spacerM(context))
         reviewCard.addView(openReviewBtn)
         root.addView(reviewCard)
         root.addView(UiKit.spacer(context))
 
         val studioCard = UiKit.card(context)
-        val openStudioBtn = UiKit.primaryButton(context, "OPEN STUDIO")
+        val openStudioBtn = UiKit.secondaryButton(context, "Open Studio")
         studioCard.addView(UiKit.cardTitle(context, "STUDIO"))
-        studioCard.addView(
-            UiKit.helperText(
-                context,
-                "Prepare environment, style, and machine setup."
-            )
-        )
-        studioCard.addView(UiKit.spacer(context))
+        studioCard.addView(UiKit.helperText(context, "Prepare environment, style, and setup."))
+        studioCard.addView(UiKit.spacerM(context))
         studioCard.addView(openStudioBtn)
         root.addView(studioCard)
         root.addView(UiKit.spacer(context))
 
         val systemCard = UiKit.card(context)
-        val openSystemBtn = UiKit.primaryButton(context, "OPEN SYSTEM")
+        val openSystemBtn = UiKit.secondaryButton(context, "Open System")
         systemCard.addView(UiKit.cardTitle(context, "SYSTEM"))
-        systemCard.addView(
-            UiKit.helperText(
-                context,
-                "Profile, settings, and advanced system access."
-            )
-        )
-        systemCard.addView(UiKit.spacer(context))
+        systemCard.addView(UiKit.helperText(context, "Profile, settings, and advanced access."))
+        systemCard.addView(UiKit.spacerM(context))
         systemCard.addView(openSystemBtn)
         root.addView(systemCard)
 
@@ -83,9 +63,7 @@ object MainShellPage {
             ReviewHubPage.show(
                 context = context,
                 container = container,
-                onBack = {
-                    show(context, container)
-                }
+                onBack = { show(context, container) }
             )
         }
 
@@ -93,9 +71,7 @@ object MainShellPage {
             StudioHubPage.show(
                 context = context,
                 container = container,
-                onBack = {
-                    show(context, container)
-                }
+                onBack = { show(context, container) }
             )
         }
 
@@ -103,9 +79,7 @@ object MainShellPage {
             SystemHubPage.show(
                 context = context,
                 container = container,
-                onBack = {
-                    show(context, container)
-                }
+                onBack = { show(context, container) }
             )
         }
 
