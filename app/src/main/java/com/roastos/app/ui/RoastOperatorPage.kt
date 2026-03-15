@@ -37,7 +37,7 @@ object RoastOperatorPage {
 
         root.addView(UiKit.pageTitle(context, "OPERATE"))
         root.addView(UiKit.pageSubtitle(context, "Connect, judge, and act"))
-        root.addView(UiKit.spacer(context))
+        root.addView(UiKit.spacerS(context))
         root.addView(
             TopNavBar.create(
                 context = context,
@@ -50,52 +50,61 @@ object RoastOperatorPage {
         val summaryCard = UiKit.card(context)
         val summaryBody = UiKit.bodyText(context, "")
         summaryCard.addView(UiKit.cardTitle(context, "CURRENT STATE"))
+        summaryCard.addView(UiKit.spacerS(context))
         summaryCard.addView(summaryBody)
         root.addView(summaryCard)
         root.addView(UiKit.spacer(context))
 
-        val actionCard = UiKit.card(context)
-        val actionBody = UiKit.bodyText(context, "")
-        actionCard.addView(UiKit.cardTitle(context, "CURRENT DECISION"))
-        actionCard.addView(actionBody)
-        root.addView(actionCard)
+        val decisionCard = UiKit.card(context)
+        val decisionBody = UiKit.bodyText(context, "")
+        decisionCard.addView(UiKit.cardTitle(context, "CURRENT DECISION"))
+        decisionCard.addView(UiKit.spacerS(context))
+        decisionCard.addView(decisionBody)
+        root.addView(decisionCard)
         root.addView(UiKit.spacer(context))
 
         val referenceCard = UiKit.card(context)
         val referenceBody = UiKit.bodyText(context, "")
         referenceCard.addView(UiKit.cardTitle(context, "REFERENCE"))
+        referenceCard.addView(UiKit.spacerS(context))
         referenceCard.addView(referenceBody)
         root.addView(referenceCard)
         root.addView(UiKit.spacer(context))
 
         val primaryControlCard = UiKit.card(context)
-        val startBtn = UiKit.primaryButton(context, "START ROAST")
-        val stopBtn = UiKit.secondaryButton(context, "STOP ROAST")
-        val refreshBtn = UiKit.secondaryButton(context, "REFRESH")
+        val startBtn = UiKit.primaryButton(context, "Start Roast")
+        val stopBtn = UiKit.secondaryButton(context, "Stop Roast")
+        val refreshBtn = UiKit.secondaryButton(context, "Refresh")
 
         primaryControlCard.addView(UiKit.cardTitle(context, "PRIMARY CONTROL"))
-        primaryControlCard.addView(UiKit.helperText(context, "Use these controls for the live roast session."))
-        primaryControlCard.addView(UiKit.spacer(context))
+        primaryControlCard.addView(UiKit.helperText(context, "Live roast session controls."))
+        primaryControlCard.addView(UiKit.spacerM(context))
         primaryControlCard.addView(startBtn)
+        primaryControlCard.addView(UiKit.spacerS(context))
         primaryControlCard.addView(stopBtn)
+        primaryControlCard.addView(UiKit.spacerS(context))
         primaryControlCard.addView(refreshBtn)
         root.addView(primaryControlCard)
         root.addView(UiKit.spacer(context))
 
         val accessCard = UiKit.card(context)
-        val openEnvironmentBtn = UiKit.secondaryButton(context, "OPEN ENVIRONMENT")
-        val openReviewBtn = UiKit.secondaryButton(context, "OPEN REVIEW")
-        val openLatestBtn = UiKit.secondaryButton(context, "OPEN LAST DETAIL")
-        val openLastCompareBtn = UiKit.secondaryButton(context, "OPEN LAST COMPARE")
-        val backShellBtn = UiKit.secondaryButton(context, "BACK TO HOME")
+        val openEnvironmentBtn = UiKit.secondaryButton(context, "Environment")
+        val openReviewBtn = UiKit.secondaryButton(context, "Review")
+        val openLatestBtn = UiKit.secondaryButton(context, "Last Detail")
+        val openLastCompareBtn = UiKit.secondaryButton(context, "Last Compare")
+        val backShellBtn = UiKit.secondaryButton(context, "Home")
 
         accessCard.addView(UiKit.cardTitle(context, "MORE ACCESS"))
-        accessCard.addView(UiKit.helperText(context, "Open preparation, review, history, or go back home."))
-        accessCard.addView(UiKit.spacer(context))
+        accessCard.addView(UiKit.helperText(context, "Preparation, review, history, and home."))
+        accessCard.addView(UiKit.spacerM(context))
         accessCard.addView(openEnvironmentBtn)
+        accessCard.addView(UiKit.spacerS(context))
         accessCard.addView(openReviewBtn)
+        accessCard.addView(UiKit.spacerS(context))
         accessCard.addView(openLatestBtn)
+        accessCard.addView(UiKit.spacerS(context))
         accessCard.addView(openLastCompareBtn)
+        accessCard.addView(UiKit.spacerS(context))
         accessCard.addView(backShellBtn)
         root.addView(accessCard)
 
@@ -124,24 +133,19 @@ object RoastOperatorPage {
 状态
 未连接 / 未确认
 
-Session
-${session.status}
-
-Telemetry
-${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "弱数据存在" else "未检测到有效实时数据"}
+Session / Telemetry
+${session.status} / ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "弱数据存在" else "未检测到有效实时数据"}
 
 下一步
 确认机器连接或数据来源
             """.trimIndent()
 
-            actionBody.text = """
+            decisionBody.text = """
 当前判断
 现在不适合读取实时烘焙建议
 
 当前动作
-检查连接
-补环境
-重新确认状态
+检查连接 · 补环境 · 重新确认状态
 
 当前风险
 实时判断暂不可靠
@@ -179,11 +183,8 @@ ${buildLatestReferenceStrip()}
 状态
 已连接但未就绪
 
-Session
-${session.status}
-
-Environment
-$envText
+Session / Environment
+${session.status} / $envText
 
 Telemetry
 ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "已存在" else "偏弱"}
@@ -192,7 +193,7 @@ ${if (session.lastBeanTemp > 0.0 || session.lastElapsedSec > 0) "已存在" else
 $readinessNote
             """.trimIndent()
 
-            actionBody.text = """
+            decisionBody.text = """
 当前观察
 ${RoastInsightBridge.observationHeadlineForSnapshot(snapshot)}
 
@@ -200,8 +201,7 @@ ${RoastInsightBridge.observationHeadlineForSnapshot(snapshot)}
 只能作为弱提示
 
 当前动作
-先补全准备条件
-再进入完整操作模式
+先补全准备条件，再进入完整操作模式
             """.trimIndent()
 
             referenceBody.text = """
@@ -229,27 +229,21 @@ Session
 ${session.status}
 
 BT / RoR / 时间
-${String.format("%.1f", session.lastBeanTemp)} ℃
-${String.format("%.1f", session.lastRor)} ℃/min
-${formatElapsed(session.lastElapsedSec)}
+${String.format("%.1f", session.lastBeanTemp)} ℃ / ${String.format("%.1f", session.lastRor)} ℃/min / ${formatElapsed(session.lastElapsedSec)}
 
 阶段 / 健康
-${snapshot.companion.phaseLabel}
-${buildHealthHeadline(snapshot.validation)}
+${snapshot.companion.phaseLabel} / ${buildHealthHeadline(snapshot.validation)}
             """.trimIndent()
 
             val fcText = prediction.estimatedFirstCrackWindowSec?.let { formatElapsed(it) } ?: "-"
             val headline = RoastInsightBridge.observationHeadlineForSnapshot(snapshot)
 
-            actionBody.text = """
+            decisionBody.text = """
 当前观察
 $headline
 
-火力
-${advisor.finalHeatAdvice}
-
-风门
-${advisor.finalAirflowAdvice}
+火力 / 风门
+${advisor.finalHeatAdvice} / ${advisor.finalAirflowAdvice}
 
 优先级
 ${advisor.stage} / ${advisor.priority}
@@ -295,9 +289,7 @@ $fcText
             render()
         }
 
-        refreshBtn.setOnClickListener {
-            render()
-        }
+        refreshBtn.setOnClickListener { render() }
 
         openEnvironmentBtn.setOnClickListener {
             EnvironmentInputPage.show(context, container)
@@ -368,11 +360,8 @@ $fcText
 最近参考锅
 ${latest.batchId}
 
-健康
-${latest.batchStatus} / ${latest.roastHealthHeadline}
-
-评测
-${if (latest.evaluation != null) "Saved" else "Not saved"}
+健康 / 评测
+${latest.batchStatus} / ${if (latest.evaluation != null) "已保存" else "未保存"}
         """.trimIndent()
     }
 
@@ -388,6 +377,7 @@ ${if (latest.evaluation != null) "Saved" else "Not saved"}
 参考状态
 暂无历史记录
 
+当前建议
 保存第一锅后可启用偏差检查
             """.trimIndent()
         }
