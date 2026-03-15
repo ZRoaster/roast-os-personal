@@ -5,7 +5,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import com.roastos.app.RoastEvaluation
 import com.roastos.app.RoastHistoryEntry
-import com.roastos.app.RoastInsightBridge
 import com.roastos.app.UiKit
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -27,29 +26,34 @@ object RoastComparePage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "ROAST COMPARE"))
-        root.addView(UiKit.pageSubtitle(context, "Reference, difference, decision"))
+        root.addView(UiKit.pageSubtitle(context, "Inspect difference, result, and reuse value"))
+        root.addView(UiKit.spacerS(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.REVIEW
+            )
+        )
         root.addView(UiKit.spacer(context))
 
-        val navCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        navCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        navCard.addView(backBtn)
-        root.addView(navCard)
+        val accessCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "Back")
+        accessCard.addView(UiKit.cardTitle(context, "ACCESS"))
+        accessCard.addView(UiKit.helperText(context, "Return to the review flow."))
+        accessCard.addView(UiKit.spacerM(context))
+        accessCard.addView(backBtn)
+        root.addView(accessCard)
         root.addView(UiKit.spacer(context))
 
         if (left == null || right == null) {
             val emptyCard = UiKit.card(context)
             emptyCard.addView(UiKit.cardTitle(context, "NO COMPARE DATA"))
-            emptyCard.addView(
-                UiKit.bodyText(
-                    context,
-                    "Two roast history entries are required for comparison."
-                )
-            )
+            emptyCard.addView(UiKit.helperText(context, "Two roast history entries are required for comparison."))
             root.addView(emptyCard)
 
             backBtn.setOnClickListener {
-                onBack?.invoke() ?: RoastStudioPage.show(context, container)
+                onBack?.invoke() ?: ReviewHubPage.show(context, container)
             }
 
             scroll.addView(root)
@@ -57,503 +61,212 @@ object RoastComparePage {
             return
         }
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "OBSERVATION HEADLINE",
-                leftLabel = "A HEADLINE",
-                leftValue = RoastInsightBridge.observationHeadlineForHistory(left),
-                rightLabel = "B HEADLINE",
-                rightValue = RoastInsightBridge.observationHeadlineForHistory(right)
+        val headlineCard = UiKit.card(context)
+        headlineCard.addView(UiKit.cardTitle(context, "COMPARE HEADLINE"))
+        headlineCard.addView(UiKit.spacerS(context))
+        headlineCard.addView(
+            UiKit.bodyText(
+                context,
+                buildCompareHeadline(left, right)
             )
         )
+        root.addView(headlineCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "COMPARE REFERENCE",
-                leftLabel = "REFERENCE",
-                leftValue = buildCompareReference(left, right),
-                rightLabel = "SELECTED",
-                rightValue = """
+        val differenceCard = UiKit.card(context)
+        differenceCard.addView(UiKit.cardTitle(context, "KEY DIFFERENCES"))
+        differenceCard.addView(UiKit.spacerS(context))
+        differenceCard.addView(
+            UiKit.bodyText(
+                context,
+                buildKeyDifferences(left, right)
+            )
+        )
+        root.addView(differenceCard)
+        root.addView(UiKit.spacer(context))
+
+        val hintCard = UiKit.card(context)
+        hintCard.addView(UiKit.cardTitle(context, "ACTIONABLE HINT"))
+        hintCard.addView(UiKit.spacerS(context))
+        hintCard.addView(
+            UiKit.bodyText(
+                context,
+                buildActionableHint(left, right)
+            )
+        )
+        root.addView(hintCard)
+        root.addView(UiKit.spacer(context))
+
+        val summaryCard = UiKit.card(context)
+        summaryCard.addView(UiKit.cardTitle(context, "FAST SUMMARY"))
+        summaryCard.addView(UiKit.spacerS(context))
+        summaryCard.addView(
+            UiKit.bodyText(
+                context,
+                buildFastCompareStrip(left, right)
+            )
+        )
+        root.addView(summaryCard)
+        root.addView(UiKit.spacer(context))
+
+        val batchCard = UiKit.card(context)
+        batchCard.addView(UiKit.cardTitle(context, "BATCH OVERVIEW"))
+        batchCard.addView(UiKit.spacerS(context))
+        batchCard.addView(
+            UiKit.bodyText(
+                context,
+                """
 A
-${left.batchId}
+${buildBatchOverview(left)}
 
 B
-${right.batchId}
+${buildBatchOverview(right)}
                 """.trimIndent()
             )
         )
+        root.addView(batchCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "INSIGHT REFERENCE",
-                leftLabel = "A INSIGHT",
-                leftValue = buildInsightSummary(left),
-                rightLabel = "B INSIGHT",
-                rightValue = buildInsightSummary(right)
-            )
-        )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "DECISION SUPPORT",
-                leftLabel = "SUMMARY",
-                leftValue = buildDecisionSupport(left, right),
-                rightLabel = "SELECTED",
-                rightValue = """
+        val timelineCard = UiKit.card(context)
+        timelineCard.addView(UiKit.cardTitle(context, "TIMELINE"))
+        timelineCard.addView(UiKit.spacerS(context))
+        timelineCard.addView(
+            UiKit.bodyText(
+                context,
+                """
 A
-${left.batchId}
+${buildTimeline(left)}
 
 B
-${right.batchId}
+${buildTimeline(right)}
                 """.trimIndent()
             )
         )
+        root.addView(timelineCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "OPERATION HINTS",
-                leftLabel = "FOCUS",
-                leftValue = buildOperationHints(left, right),
-                rightLabel = "READING",
-                rightValue = """
-Use this section as the first action layer.
+        val environmentCard = UiKit.card(context)
+        environmentCard.addView(UiKit.cardTitle(context, "ENVIRONMENT"))
+        environmentCard.addView(UiKit.spacerS(context))
+        environmentCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+A
+${buildEnvironment(left)}
 
-Then check KEY DIFFERENCES and COMPARE SUMMARY for detail.
+B
+${buildEnvironment(right)}
                 """.trimIndent()
             )
         )
+        root.addView(environmentCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "KEY DIFFERENCES",
-                leftLabel = "TAGS",
-                leftValue = buildKeyDifferences(left, right),
-                rightLabel = "COMPARE",
-                rightValue = buildFastCompareStrip(left, right)
+        val evaluationCard = UiKit.card(context)
+        evaluationCard.addView(UiKit.cardTitle(context, "EVALUATION"))
+        evaluationCard.addView(UiKit.spacerS(context))
+        evaluationCard.addView(
+            UiKit.bodyText(
+                context,
+                buildEvaluationDifferences(left.evaluation, right.evaluation)
             )
         )
+        root.addView(evaluationCard)
         root.addView(UiKit.spacer(context))
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "COMPARE SUMMARY",
-                leftLabel = "SUMMARY",
-                leftValue = buildCompareSummary(left, right),
-                rightLabel = "EVALUATION",
-                rightValue = buildEvaluationDifferences(left.evaluation, right.evaluation)
-            )
-        )
-        root.addView(UiKit.spacer(context))
+        val notesCard = UiKit.card(context)
+        notesCard.addView(UiKit.cardTitle(context, "INSIGHT NOTES"))
+        notesCard.addView(UiKit.spacerS(context))
+        notesCard.addView(
+            UiKit.bodyText(
+                context,
+                """
+A Report
+${left.reportText.ifBlank { "-" }}
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "BATCH",
-                leftLabel = "A",
-                leftValue = buildBatchOverview(left),
-                rightLabel = "B",
-                rightValue = buildBatchOverview(right)
-            )
-        )
-        root.addView(UiKit.spacer(context))
+A Diagnosis
+${left.diagnosisText.ifBlank { "-" }}
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "MATERIAL",
-                leftLabel = "A",
-                leftValue = buildMaterial(left),
-                rightLabel = "B",
-                rightValue = buildMaterial(right)
-            )
-        )
-        root.addView(UiKit.spacer(context))
+A Correction
+${left.correctionText.ifBlank { "-" }}
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "ENVIRONMENT",
-                leftLabel = "A",
-                leftValue = buildEnvironment(left),
-                rightLabel = "B",
-                rightValue = buildEnvironment(right)
-            )
-        )
-        root.addView(UiKit.spacer(context))
+B Report
+${right.reportText.ifBlank { "-" }}
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "TIMELINE",
-                leftLabel = "A",
-                leftValue = buildTimeline(left),
-                rightLabel = "B",
-                rightValue = buildTimeline(right)
-            )
-        )
-        root.addView(UiKit.spacer(context))
+B Diagnosis
+${right.diagnosisText.ifBlank { "-" }}
 
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "ROAST HEALTH",
-                leftLabel = "A",
-                leftValue = buildRoastHealth(left),
-                rightLabel = "B",
-                rightValue = buildRoastHealth(right)
+B Correction
+${right.correctionText.ifBlank { "-" }}
+                """.trimIndent()
             )
         )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "EVALUATION",
-                leftLabel = "A",
-                leftValue = buildEvaluationSummary(left.evaluation),
-                rightLabel = "B",
-                rightValue = buildEvaluationSummary(right.evaluation)
-            )
-        )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "REPORT",
-                leftLabel = "A",
-                leftValue = left.reportText.ifBlank { "-" },
-                rightLabel = "B",
-                rightValue = right.reportText.ifBlank { "-" }
-            )
-        )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "DIAGNOSIS",
-                leftLabel = "A",
-                leftValue = left.diagnosisText.ifBlank { "-" },
-                rightLabel = "B",
-                rightValue = right.diagnosisText.ifBlank { "-" }
-            )
-        )
-        root.addView(UiKit.spacer(context))
-
-        root.addView(
-            buildSectionCard(
-                context = context,
-                title = "CORRECTION",
-                leftLabel = "A",
-                leftValue = left.correctionText.ifBlank { "-" },
-                rightLabel = "B",
-                rightValue = right.correctionText.ifBlank { "-" }
-            )
-        )
+        root.addView(notesCard)
 
         backBtn.setOnClickListener {
-            onBack?.invoke() ?: RoastStudioPage.show(context, container)
+            onBack?.invoke() ?: ReviewHubPage.show(context, container)
         }
 
         scroll.addView(root)
         container.addView(scroll)
     }
 
-    private fun buildSectionCard(
-        context: Context,
-        title: String,
-        leftLabel: String,
-        leftValue: String,
-        rightLabel: String,
-        rightValue: String
-    ): LinearLayout {
-        val card = UiKit.card(context)
-
-        card.addView(UiKit.cardTitle(context, title))
-        card.addView(UiKit.sectionLabel(context, leftLabel))
-        card.addView(UiKit.bodyText(context, leftValue))
-        card.addView(UiKit.spacer(context))
-        card.addView(UiKit.sectionLabel(context, rightLabel))
-        card.addView(UiKit.bodyText(context, rightValue))
-
-        return card
-    }
-
-    private fun buildFastCompareStrip(
+    private fun buildCompareHeadline(
         left: RoastHistoryEntry,
         right: RoastHistoryEntry
     ): String {
-        val fcA = formatSec(left.actualFcSec ?: left.predictedFcSec)
-        val fcB = formatSec(right.actualFcSec ?: right.predictedFcSec)
-        val dropA = formatSec(left.actualDropSec ?: left.predictedDropSec)
-        val dropB = formatSec(right.actualDropSec ?: right.predictedDropSec)
-
-        return """
-FC
-A $fcA
-B $fcB
-
-Drop
-A $dropA
-B $dropB
-
-Health
-A ${left.roastHealthHeadline}
-B ${right.roastHealthHeadline}
-        """.trimIndent()
-    }
-
-    private fun buildInsightSummary(
-        entry: RoastHistoryEntry
-    ): String {
-        return RoastInsightBridge.quietSummaryForHistory(entry)
-    }
-
-    private fun buildCompareReference(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val newerBatch = when {
-            left.createdAtMillis > right.createdAtMillis -> "A"
-            right.createdAtMillis > left.createdAtMillis -> "B"
-            else -> "Same Time"
-        }
-
-        val evaluationState = when {
-            left.evaluation != null && right.evaluation != null -> "A Saved / B Saved"
-            left.evaluation != null && right.evaluation == null -> "A Saved / B Not saved"
-            left.evaluation == null && right.evaluation != null -> "A Not saved / B Saved"
-            else -> "A Not saved / B Not saved"
-        }
-
-        val envShift = if (abs(left.envTemp - right.envTemp) >= 1.0 || abs(left.envRh - right.envRh) >= 5.0) {
-            "Yes"
-        } else {
-            "No"
-        }
-
-        return """
-A
-${left.batchId}
-
-B
-${right.batchId}
-
-Newer Batch
-$newerBatch
-
-Evaluation
-$evaluationState
-
-Environment Shift
-$envShift
-        """.trimIndent()
-    }
-
-    private fun buildDecisionSupport(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val envShiftStrong = abs(left.envTemp - right.envTemp) >= 1.0 || abs(left.envRh - right.envRh) >= 5.0
-
-        val fcDiff = abs((left.actualFcSec ?: left.predictedFcSec ?: 0) - (right.actualFcSec ?: right.predictedFcSec ?: 0))
-        val dropDiff = abs((left.actualDropSec ?: left.predictedDropSec ?: 0) - (right.actualDropSec ?: right.predictedDropSec ?: 0))
-        val yellowDiff = abs((left.actualYellowSec ?: left.predictedYellowSec ?: 0) - (right.actualYellowSec ?: right.predictedYellowSec ?: 0))
-        val rorDiff = abs((left.actualPreFcRor ?: 0.0) - (right.actualPreFcRor ?: 0.0))
-
-        val paceGapStrong = fcDiff >= 10 || dropDiff >= 10 || yellowDiff >= 10 || rorDiff >= 0.5
-
-        val primaryFocus = when {
-            envShiftStrong -> "Environment shift"
-            paceGapStrong -> "Pace difference"
-            else -> "Minor gap"
-        }
-
-        val evaluationBasis = when {
-            left.evaluation != null && right.evaluation != null -> "Both saved"
-            left.evaluation != null || right.evaluation != null -> "Partial"
-            else -> "None"
-        }
-
-        val riskDiff = abs(riskScore(left.roastHealthHeadline) - riskScore(right.roastHealthHeadline))
-
-        val strongGapCount = listOf(
-            envShiftStrong,
-            fcDiff >= 10,
-            dropDiff >= 10,
-            yellowDiff >= 10,
-            rorDiff >= 0.5,
-            riskDiff >= 2
-        ).count { it }
-
-        val reuseConfidence = when {
-            envShiftStrong || strongGapCount >= 3 -> "Low"
-            strongGapCount >= 1 || riskDiff >= 1 -> "Medium"
-            else -> "High"
-        }
-
-        val recommendedUse = when {
-            reuseConfidence == "High" && primaryFocus == "Minor gap" -> "Direct replay reference"
-            reuseConfidence == "Low" -> "Do not directly replay"
-            else -> "Conditional reference"
-        }
-
-        val replayVerdict = when (recommendedUse) {
-            "Direct replay reference" -> "Can replay directly"
-            "Do not directly replay" -> "Do not replay directly"
-            else -> "Replay with conditions"
-        }
-
-        return """
-Replay Verdict
-$replayVerdict
-
-Primary Focus
-$primaryFocus
-
-Reuse Confidence
-$reuseConfidence
-
-Evaluation Basis
-$evaluationBasis
-
-Recommended Use
-$recommendedUse
-        """.trimIndent()
-    }
-
-    private fun buildOperationHints(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val hints = mutableListOf<String>()
-
         val fcA = left.actualFcSec ?: left.predictedFcSec
         val fcB = right.actualFcSec ?: right.predictedFcSec
-        val fcDiff = diffIfBothPresent(fcA, fcB)
-        if (fcDiff != null && abs(fcDiff) >= 10) {
-            hints += if (fcDiff < 0) {
-                """
-Focus 1
-A reaches first crack much earlier than B.
-Next roast should verify whether mid-late phase energy was intentionally higher in A.
-                """.trimIndent()
-            } else {
-                """
-Focus 1
-B reaches first crack much earlier than A.
-Next roast should verify whether mid-late phase energy was intentionally higher in B.
-                """.trimIndent()
-            }
-        }
-
         val dropA = left.actualDropSec ?: left.predictedDropSec
         val dropB = right.actualDropSec ?: right.predictedDropSec
+
+        val fcDiff = diffIfBothPresent(fcA, fcB)
         val dropDiff = diffIfBothPresent(dropA, dropB)
-        if (dropDiff != null && abs(dropDiff) >= 10) {
-            hints += if (dropDiff < 0) {
-                """
-Focus ${hints.size + 1}
-A drops earlier than B by a clear margin.
-Next roast should confirm whether the finish window was deliberately shortened in A.
-                """.trimIndent()
-            } else {
-                """
-Focus ${hints.size + 1}
-B drops earlier than A by a clear margin.
-Next roast should confirm whether the finish window was deliberately shortened in B.
-                """.trimIndent()
-            }
-        }
-
-        val rorDiff = diffIfBothPresent(left.actualPreFcRor, right.actualPreFcRor)
-        if (rorDiff != null && abs(rorDiff) >= 0.5) {
-            hints += if (rorDiff > 0) {
-                """
-Focus ${hints.size + 1}
-A shows clearly higher pre-FC RoR than B.
-Next roast should pay attention to whether this stronger momentum was intentional and repeatable.
-                """.trimIndent()
-            } else {
-                """
-Focus ${hints.size + 1}
-B shows clearly higher pre-FC RoR than A.
-Next roast should pay attention to whether this stronger momentum was intentional and repeatable.
-                """.trimIndent()
-            }
-        }
-
-        val envTempDiff = left.envTemp - right.envTemp
-        val envRhDiff = left.envRh - right.envRh
-        if (abs(envTempDiff) >= 1.0 || abs(envRhDiff) >= 5.0) {
-            hints += """
-Focus ${hints.size + 1}
-Ambient conditions differ clearly between A and B.
-Do not compare heat application or phase timing without accounting for the environment shift first.
-            """.trimIndent()
-        }
-
         val riskA = riskScore(left.roastHealthHeadline)
         val riskB = riskScore(right.roastHealthHeadline)
-        if (riskA != riskB && maxOf(riskA, riskB) > 0) {
-            hints += if (riskA > riskB) {
-                """
-Focus ${hints.size + 1}
-A shows a higher roast health risk headline than B.
-Next roast should review late-stage stability in A before repeating the same finish pattern.
-                """.trimIndent()
-            } else {
-                """
-Focus ${hints.size + 1}
-B shows a higher roast health risk headline than A.
-Next roast should review late-stage stability in B before repeating the same finish pattern.
-                """.trimIndent()
+
+        val headline = when {
+            fcDiff != null && abs(fcDiff) >= 10 -> {
+                if (fcDiff < 0) {
+                    "A enters first crack clearly earlier than B."
+                } else {
+                    "B enters first crack clearly earlier than A."
+                }
             }
-        }
-
-        val yellowA = left.actualYellowSec ?: left.predictedYellowSec
-        val yellowB = right.actualYellowSec ?: right.predictedYellowSec
-        val yellowDiff = diffIfBothPresent(yellowA, yellowB)
-        if (yellowDiff != null && abs(yellowDiff) >= 10 && hints.size < 5) {
-            hints += if (yellowDiff < 0) {
-                """
-Focus ${hints.size + 1}
-A reaches yellow earlier than B.
-Next roast should check whether early drying pace was intentionally faster in A.
-                """.trimIndent()
-            } else {
-                """
-Focus ${hints.size + 1}
-B reaches yellow earlier than A.
-Next roast should check whether early drying pace was intentionally faster in B.
-                """.trimIndent()
+            dropDiff != null && abs(dropDiff) >= 10 -> {
+                if (dropDiff < 0) {
+                    "A finishes earlier than B."
+                } else {
+                    "B finishes earlier than A."
+                }
             }
+            riskA != riskB -> {
+                if (riskA > riskB) {
+                    "A shows a weaker roast health outcome than B."
+                } else {
+                    "B shows a weaker roast health outcome than A."
+                }
+            }
+            else -> "These two roasts are broadly comparable at first glance."
         }
 
-        return if (hints.isEmpty()) {
-            """
-Focus 1
-No strong operational gap is detected under the current rules.
-
-Focus 2
-Treat these two batches as broadly comparable and inspect the detailed sections for smaller differences.
-            """.trimIndent()
-        } else {
-            hints.take(5).joinToString("\n\n")
+        val reuse = when {
+            strongGapCount(left, right) >= 3 -> "Reuse confidence is low."
+            strongGapCount(left, right) >= 1 -> "Reuse confidence is conditional."
+            else -> "Reuse confidence is relatively high."
         }
+
+        return """
+Headline
+$headline
+
+Reuse
+$reuse
+
+Compare Pair
+${left.batchId} ↔ ${right.batchId}
+        """.trimIndent()
     }
 
     private fun buildKeyDifferences(
@@ -562,71 +275,158 @@ Treat these two batches as broadly comparable and inspect the detailed sections 
     ): String {
         val tags = mutableListOf<String>()
 
-        buildTimeTag(
-            label = "FASTER TURNING",
-            leftSec = left.actualTurningSec ?: left.predictedTurningSec,
-            rightSec = right.actualTurningSec ?: right.predictedTurningSec,
-            detailBase = "Turning"
-        )?.let { tags += it }
+        addTimeDifference(tags, "Turning", left.actualTurningSec ?: left.predictedTurningSec, right.actualTurningSec ?: right.predictedTurningSec)
+        addTimeDifference(tags, "Yellow", left.actualYellowSec ?: left.predictedYellowSec, right.actualYellowSec ?: right.predictedYellowSec)
+        addTimeDifference(tags, "First Crack", left.actualFcSec ?: left.predictedFcSec, right.actualFcSec ?: right.predictedFcSec)
+        addTimeDifference(tags, "Drop", left.actualDropSec ?: left.predictedDropSec, right.actualDropSec ?: right.predictedDropSec)
 
-        buildTimeTag(
-            label = "FASTER YELLOW",
-            leftSec = left.actualYellowSec ?: left.predictedYellowSec,
-            rightSec = right.actualYellowSec ?: right.predictedYellowSec,
-            detailBase = "Yellow"
-        )?.let { tags += it }
+        val rorDiff = diffIfBothPresent(left.actualPreFcRor, right.actualPreFcRor)
+        if (rorDiff != null && abs(rorDiff) >= 0.5) {
+            tags += if (rorDiff > 0) {
+                "A has higher pre-FC RoR than B."
+            } else {
+                "B has higher pre-FC RoR than A."
+            }
+        }
 
-        buildTimeTag(
-            label = "FASTER FC",
-            leftSec = left.actualFcSec ?: left.predictedFcSec,
-            rightSec = right.actualFcSec ?: right.predictedFcSec,
-            detailBase = "First crack"
-        )?.let { tags += it }
+        if (abs(left.envTemp - right.envTemp) >= 1.0) {
+            tags += if (left.envTemp > right.envTemp) {
+                "A was roasted in a warmer environment."
+            } else {
+                "B was roasted in a warmer environment."
+            }
+        }
 
-        buildTimeTag(
-            label = "FASTER DROP",
-            leftSec = left.actualDropSec ?: left.predictedDropSec,
-            rightSec = right.actualDropSec ?: right.predictedDropSec,
-            detailBase = "Drop"
-        )?.let { tags += it }
+        if (abs(left.envRh - right.envRh) >= 5.0) {
+            tags += if (left.envRh > right.envRh) {
+                "A had higher ambient humidity."
+            } else {
+                "B had higher ambient humidity."
+            }
+        }
 
-        buildHigherDoubleTag(
-            label = "HIGHER PRE-FC ROR",
-            leftValue = left.actualPreFcRor,
-            rightValue = right.actualPreFcRor,
-            unit = "℃/min",
-            detailPrefix = "Pre-FC RoR"
-        )?.let { tags += it }
-
-        buildHigherDoubleTag(
-            label = "HIGHER ENV TEMP",
-            leftValue = left.envTemp,
-            rightValue = right.envTemp,
-            unit = "℃",
-            detailPrefix = "Env temp"
-        )?.let { tags += it }
-
-        buildHigherDoubleTag(
-            label = "HIGHER ENV RH",
-            leftValue = left.envRh,
-            rightValue = right.envRh,
-            unit = "%",
-            detailPrefix = "Env RH"
-        )?.let { tags += it }
-
-        buildRiskTag(
-            leftHeadline = left.roastHealthHeadline,
-            rightHeadline = right.roastHealthHeadline
-        )?.let { tags += it }
+        val riskA = riskScore(left.roastHealthHeadline)
+        val riskB = riskScore(right.roastHealthHeadline)
+        if (riskA != riskB) {
+            tags += if (riskA > riskB) {
+                "A carries a weaker roast health headline."
+            } else {
+                "B carries a weaker roast health headline."
+            }
+        }
 
         return if (tags.isEmpty()) {
-            """
-NO STRONG DIFFERENCE
-Current records do not show a strong difference under the active rules.
-         """.trimIndent()
+            "No strong difference is detected under the current compare rules."
         } else {
-            tags.joinToString("\n\n")
+            tags.joinToString("\n")
         }
+    }
+
+    private fun buildActionableHint(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        val hints = mutableListOf<String>()
+
+        val fcDiff = diffIfBothPresent(left.actualFcSec ?: left.predictedFcSec, right.actualFcSec ?: right.predictedFcSec)
+        if (fcDiff != null && abs(fcDiff) >= 10) {
+            hints += if (fcDiff < 0) {
+                "If you want to repeat A, verify whether mid-late phase energy was intentionally stronger."
+            } else {
+                "If you want to repeat B, verify whether mid-late phase energy was intentionally stronger."
+            }
+        }
+
+        val dropDiff = diffIfBothPresent(left.actualDropSec ?: left.predictedDropSec, right.actualDropSec ?: right.predictedDropSec)
+        if (dropDiff != null && abs(dropDiff) >= 10) {
+            hints += "Check whether the finish window difference was intentional before replaying either roast."
+        }
+
+        if (abs(left.envTemp - right.envTemp) >= 1.0 || abs(left.envRh - right.envRh) >= 5.0) {
+            hints += "Do not compare heat application directly without accounting for the environment shift."
+        }
+
+        val riskA = riskScore(left.roastHealthHeadline)
+        val riskB = riskScore(right.roastHealthHeadline)
+        if (riskA != riskB) {
+            hints += "Use the healthier roast as the first replay reference unless cup evaluation says otherwise."
+        }
+
+        if (hints.isEmpty()) {
+            return "Treat these two roasts as broadly comparable and inspect detailed sections for smaller differences."
+        }
+
+        return hints.take(4).joinToString("\n")
+    }
+
+    private fun buildFastCompareStrip(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): String {
+        return """
+A
+${left.batchId}
+
+FC / Drop
+${formatSec(left.actualFcSec ?: left.predictedFcSec)} / ${formatSec(left.actualDropSec ?: left.predictedDropSec)}
+
+Health / Evaluation
+${left.roastHealthHeadline} / ${if (left.evaluation != null) "Saved" else "Not saved"}
+
+B
+${right.batchId}
+
+FC / Drop
+${formatSec(right.actualFcSec ?: right.predictedFcSec)} / ${formatSec(right.actualDropSec ?: right.predictedDropSec)}
+
+Health / Evaluation
+${right.roastHealthHeadline} / ${if (right.evaluation != null) "Saved" else "Not saved"}
+        """.trimIndent()
+    }
+
+    private fun buildBatchOverview(
+        entry: RoastHistoryEntry
+    ): String {
+        return """
+批次
+${entry.batchId}
+
+标题 / 处理
+${entry.title} / ${entry.process}
+
+创建时间
+${formatDateTime(entry.createdAtMillis)}
+
+结果
+${entry.batchStatus}
+        """.trimIndent()
+    }
+
+    private fun buildEnvironment(
+        entry: RoastHistoryEntry
+    ): String {
+        return """
+环境温度 / 湿度
+${entry.envTemp} ℃ / ${entry.envRh} %
+
+密度 / 水分 / AW
+${entry.density} / ${entry.moisture} / ${entry.aw}
+        """.trimIndent()
+    }
+
+    private fun buildTimeline(
+        entry: RoastHistoryEntry
+    ): String {
+        return """
+Turning / Yellow
+${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)} / ${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
+
+FC / Drop
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+
+Pre-FC RoR
+${formatRor(entry.actualPreFcRor)}
+        """.trimIndent()
     }
 
     private fun buildEvaluationDifferences(
@@ -634,189 +434,72 @@ Current records do not show a strong difference under the active rules.
         right: RoastEvaluation?
     ): String {
         if (left == null && right == null) {
-            return "No evaluation saved for either batch."
-        }
-        if (left != null && right == null) {
-            return "Only A has saved evaluation."
-        }
-        if (left == null && right != null) {
-            return "Only B has saved evaluation."
+            return "No saved evaluation on either roast."
         }
 
-        val a = left!!
-        val b = right!!
-        val parts = mutableListOf<String>()
+        return """
+A Evaluation
+${buildEvaluationSummary(left)}
 
-        compareDoubleEval("Bean color", a.beanColor, b.beanColor)?.let { parts += it }
-        compareDoubleEval("Ground color", a.groundColor, b.groundColor)?.let { parts += it }
-        compareDoubleEval("Roasted AW", a.roastedAw, b.roastedAw)?.let { parts += it }
-
-        compareIntEval("Sweetness", a.sweetness, b.sweetness)?.let { parts += it }
-        compareIntEval("Acidity", a.acidity, b.acidity)?.let { parts += it }
-        compareIntEval("Body", a.body, b.body)?.let { parts += it }
-        compareIntEval("Flavor clarity", a.flavorClarity, b.flavorClarity)?.let { parts += it }
-        compareIntEval("Balance", a.balance, b.balance)?.let { parts += it }
-
-        if (a.notes.isNotBlank() && b.notes.isBlank()) {
-            parts += "Only A has notes."
-        } else if (a.notes.isBlank() && b.notes.isNotBlank()) {
-            parts += "Only B has notes."
-        } else if (a.notes.isNotBlank() && b.notes.isNotBlank() && a.notes != b.notes) {
-            parts += "A and B both have notes, and the note text differs."
-        }
-
-        return if (parts.isEmpty()) {
-            "Saved evaluations are broadly similar under current rules."
-        } else {
-            parts.joinToString("\n")
-        }
-    }
-
-    private fun compareIntEval(
-        label: String,
-        left: Int?,
-        right: Int?
-    ): String? {
-        if (left == null || right == null) return null
-        val diff = left - right
-        if (diff == 0) return null
-
-        return if (diff > 0) {
-            "A $label is higher by ${abs(diff)}."
-        } else {
-            "B $label is higher by ${abs(diff)}."
-        }
-    }
-
-    private fun compareDoubleEval(
-        label: String,
-        left: Double?,
-        right: Double?
-    ): String? {
-        if (left == null || right == null) return null
-        val diff = left - right
-        if (abs(diff) < 0.05) return null
-
-        return if (diff > 0) {
-            "A $label is higher by ${formatOneDecimal(abs(diff))}."
-        } else {
-            "B $label is higher by ${formatOneDecimal(abs(diff))}."
-        }
+B Evaluation
+${buildEvaluationSummary(right)}
+        """.trimIndent()
     }
 
     private fun buildEvaluationSummary(
         evaluation: RoastEvaluation?
     ): String {
-        if (evaluation == null) {
-            return """
-Saved Evaluation
-No evaluation saved yet.
-            """.trimIndent()
-        }
+        if (evaluation == null) return "Not saved"
 
         return """
-Bean Color
-${evaluation.beanColor ?: "-"}
+Bean / Ground / AW
+${evaluation.beanColor ?: "-"} / ${evaluation.groundColor ?: "-"} / ${evaluation.roastedAw ?: "-"}
 
-Ground Color
-${evaluation.groundColor ?: "-"}
+Sweetness / Acidity / Body
+${evaluation.sweetness ?: "-"} / ${evaluation.acidity ?: "-"} / ${evaluation.body ?: "-"}
 
-Roasted AW
-${evaluation.roastedAw ?: "-"}
-
-Sweetness
-${evaluation.sweetness ?: "-"}
-
-Acidity
-${evaluation.acidity ?: "-"}
-
-Body
-${evaluation.body ?: "-"}
-
-Flavor Clarity
-${evaluation.flavorClarity ?: "-"}
-
-Balance
-${evaluation.balance ?: "-"}
+Clarity / Balance
+${evaluation.flavorClarity ?: "-"} / ${evaluation.balance ?: "-"}
 
 Notes
 ${evaluation.notes.ifBlank { "-" }}
         """.trimIndent()
     }
 
-    private fun buildTimeTag(
+    private fun addTimeDifference(
+        tags: MutableList<String>,
         label: String,
         leftSec: Int?,
-        rightSec: Int?,
-        detailBase: String
-    ): String? {
-        if (leftSec == null || rightSec == null) return null
-        val diff = leftSec - rightSec
-        if (abs(diff) < 5) return null
-
-        return if (diff < 0) {
-            """
-$label
-A reaches $detailBase ${abs(diff)}s earlier than B.
-            """.trimIndent()
-        } else {
-            """
-$label
-B reaches $detailBase ${abs(diff)}s earlier than A.
-            """.trimIndent()
+        rightSec: Int?
+    ) {
+        val diff = diffIfBothPresent(leftSec, rightSec)
+        if (diff != null && abs(diff) >= 10) {
+            tags += if (diff < 0) {
+                "A reaches $label earlier than B."
+            } else {
+                "B reaches $label earlier than A."
+            }
         }
     }
 
-    private fun buildHigherDoubleTag(
-        label: String,
-        leftValue: Double?,
-        rightValue: Double?,
-        unit: String,
-        detailPrefix: String
-    ): String? {
-        if (leftValue == null || rightValue == null) return null
-        val diff = leftValue - rightValue
-        if (abs(diff) < 0.2) return null
-
-        return if (diff > 0) {
-            """
-$label
-A $detailPrefix is ${formatOneDecimal(abs(diff))}$unit higher than B.
-            """.trimIndent()
-        } else {
-            """
-$label
-B $detailPrefix is ${formatOneDecimal(abs(diff))}$unit higher than A.
-            """.trimIndent()
-        }
-    }
-
-    private fun buildRiskTag(
-        leftHeadline: String,
-        rightHeadline: String
-    ): String? {
-        val leftScore = riskScore(leftHeadline)
-        val rightScore = riskScore(rightHeadline)
-
-        if (leftScore == rightScore) return null
-        if (leftScore <= 0 && rightScore <= 0) return null
-
-        return if (leftScore > rightScore) {
-            """
-HIGHER RISK
-A shows a higher roast health risk headline than B.
-            """.trimIndent()
-        } else {
-            """
-HIGHER RISK
-B shows a higher roast health risk headline than A.
-            """.trimIndent()
-        }
+    private fun strongGapCount(
+        left: RoastHistoryEntry,
+        right: RoastHistoryEntry
+    ): Int {
+        val checks = listOf(
+            abs((left.envTemp) - (right.envTemp)) >= 1.0,
+            abs((left.envRh) - (right.envRh)) >= 5.0,
+            abs((left.actualYellowSec ?: left.predictedYellowSec ?: 0) - (right.actualYellowSec ?: right.predictedYellowSec ?: 0)) >= 10,
+            abs((left.actualFcSec ?: left.predictedFcSec ?: 0) - (right.actualFcSec ?: right.predictedFcSec ?: 0)) >= 10,
+            abs((left.actualDropSec ?: left.predictedDropSec ?: 0) - (right.actualDropSec ?: right.predictedDropSec ?: 0)) >= 10,
+            abs((left.actualPreFcRor ?: 0.0) - (right.actualPreFcRor ?: 0.0)) >= 0.5,
+            abs(riskScore(left.roastHealthHeadline) - riskScore(right.roastHealthHeadline)) >= 2
+        )
+        return checks.count { it }
     }
 
     private fun riskScore(headline: String): Int {
         val text = headline.lowercase(Locale.getDefault())
-
         return when {
             "高风险" in headline -> 4
             "中风险" in headline -> 3
@@ -830,223 +513,14 @@ B shows a higher roast health risk headline than A.
         }
     }
 
-    private fun buildCompareSummary(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val lines = mutableListOf<String>()
-
-        lines += "Created"
-        lines += buildCreatedSummary(left, right)
-        lines += ""
-        lines += "Timeline"
-        lines += buildTimelineSummary(left, right)
-        lines += ""
-        lines += "Environment"
-        lines += buildEnvironmentSummary(left, right)
-        lines += ""
-        lines += "RoR"
-        lines += buildRorSummary(left, right)
-        lines += ""
-        lines += "Health"
-        lines += "A: ${left.roastHealthHeadline}"
-        lines += "B: ${right.roastHealthHeadline}"
-
-        return lines.joinToString("\n")
+    private fun diffIfBothPresent(left: Int?, right: Int?): Int? {
+        if (left == null || right == null) return null
+        return left - right
     }
 
-    private fun buildCreatedSummary(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val diffMillis = left.createdAtMillis - right.createdAtMillis
-        if (diffMillis == 0L) return "A and B were created at the same time."
-
-        val diffMinutes = abs(diffMillis) / 60000
-        val earlier = if (diffMillis < 0) "A" else "B"
-        val later = if (earlier == "A") "B" else "A"
-
-        return if (diffMinutes < 1) {
-            "$earlier was created slightly earlier than $later."
-        } else {
-            "$earlier was created ${diffMinutes} min earlier than $later."
-        }
-    }
-
-    private fun buildTimelineSummary(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val parts = mutableListOf<String>()
-
-        compareSecLine(
-            "Turning",
-            left.actualTurningSec ?: left.predictedTurningSec,
-            right.actualTurningSec ?: right.predictedTurningSec
-        )?.let { parts += it }
-
-        compareSecLine(
-            "Yellow",
-            left.actualYellowSec ?: left.predictedYellowSec,
-            right.actualYellowSec ?: right.predictedYellowSec
-        )?.let { parts += it }
-
-        compareSecLine(
-            "First Crack",
-            left.actualFcSec ?: left.predictedFcSec,
-            right.actualFcSec ?: right.predictedFcSec
-        )?.let { parts += it }
-
-        compareSecLine(
-            "Drop",
-            left.actualDropSec ?: left.predictedDropSec,
-            right.actualDropSec ?: right.predictedDropSec
-        )?.let { parts += it }
-
-        return if (parts.isEmpty()) {
-            "No comparable timeline data."
-        } else {
-            parts.joinToString("\n")
-        }
-    }
-
-    private fun buildEnvironmentSummary(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val tempDiff = left.envTemp - right.envTemp
-        val rhDiff = left.envRh - right.envRh
-
-        val tempLine = when {
-            abs(tempDiff) < 0.05 -> "Env temp is effectively the same."
-            tempDiff > 0 -> "A env temp is ${formatOneDecimal(abs(tempDiff))} ℃ higher."
-            else -> "B env temp is ${formatOneDecimal(abs(tempDiff))} ℃ higher."
-        }
-
-        val rhLine = when {
-            abs(rhDiff) < 0.05 -> "Env RH is effectively the same."
-            rhDiff > 0 -> "A env RH is ${formatOneDecimal(abs(rhDiff))} % higher."
-            else -> "B env RH is ${formatOneDecimal(abs(rhDiff))} % higher."
-        }
-
-        return "$tempLine\n$rhLine"
-    }
-
-    private fun buildRorSummary(
-        left: RoastHistoryEntry,
-        right: RoastHistoryEntry
-    ): String {
-        val a = left.actualPreFcRor
-        val b = right.actualPreFcRor
-
-        if (a == null || b == null) {
-            return "No comparable pre-FC RoR data."
-        }
-
-        val diff = a - b
-
-        return when {
-            abs(diff) < 0.05 -> "Pre-FC RoR is effectively the same."
-            diff > 0 -> "A pre-FC RoR is ${formatOneDecimal(abs(diff))} ℃/min higher."
-            else -> "B pre-FC RoR is ${formatOneDecimal(abs(diff))} ℃/min higher."
-        }
-    }
-
-    private fun compareSecLine(
-        label: String,
-        leftSec: Int?,
-        rightSec: Int?
-    ): String? {
-        if (leftSec == null || rightSec == null) return null
-
-        val diff = leftSec - rightSec
-
-        return when {
-            diff == 0 -> "$label is the same."
-            diff < 0 -> "A $label is ${abs(diff)}s earlier than B."
-            else -> "B $label is ${abs(diff)}s earlier than A."
-        }
-    }
-
-    private fun diffIfBothPresent(a: Int?, b: Int?): Int? {
-        if (a == null || b == null) return null
-        return a - b
-    }
-
-    private fun diffIfBothPresent(a: Double?, b: Double?): Double? {
-        if (a == null || b == null) return null
-        return a - b
-    }
-
-    private fun buildBatchOverview(entry: RoastHistoryEntry): String {
-        return """
-Batch ID
-${entry.batchId}
-
-Title
-${entry.title}
-
-Created
-${formatDateTime(entry.createdAtMillis)}
-
-Status
-${entry.batchStatus}
-
-Process
-${entry.process}
-        """.trimIndent()
-    }
-
-    private fun buildMaterial(entry: RoastHistoryEntry): String {
-        return """
-Density
-${entry.density}
-
-Moisture
-${entry.moisture}
-
-AW
-${entry.aw}
-
-Pre-FC RoR
-${formatRor(entry.actualPreFcRor)}
-        """.trimIndent()
-    }
-
-    private fun buildEnvironment(entry: RoastHistoryEntry): String {
-        return """
-Env Temp
-${entry.envTemp} ℃
-
-Env RH
-${entry.envRh} %
-        """.trimIndent()
-    }
-
-    private fun buildTimeline(entry: RoastHistoryEntry): String {
-        return """
-Turning
-${formatSec(entry.actualTurningSec ?: entry.predictedTurningSec)}
-
-Yellow
-${formatSec(entry.actualYellowSec ?: entry.predictedYellowSec)}
-
-First Crack
-${formatSec(entry.actualFcSec ?: entry.predictedFcSec)}
-
-Drop
-${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
-        """.trimIndent()
-    }
-
-    private fun buildRoastHealth(entry: RoastHistoryEntry): String {
-        return """
-Headline
-${entry.roastHealthHeadline}
-
-Detail
-${entry.roastHealthDetail}
-        """.trimIndent()
+    private fun diffIfBothPresent(left: Double?, right: Double?): Double? {
+        if (left == null || right == null) return null
+        return left - right
     }
 
     private fun formatSec(sec: Int?): String {
@@ -1059,10 +533,6 @@ ${entry.roastHealthDetail}
     private fun formatRor(value: Double?): String {
         if (value == null) return "-"
         return String.format(Locale.getDefault(), "%.1f ℃/min", value)
-    }
-
-    private fun formatOneDecimal(value: Double): String {
-        return String.format(Locale.getDefault(), "%.1f", value)
     }
 
     private fun formatDateTime(ms: Long): String {
