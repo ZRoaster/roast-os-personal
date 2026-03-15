@@ -3,7 +3,6 @@ package com.roastos.app.ui
 import android.content.Context
 import android.widget.LinearLayout
 
-// 占位类示例，保证引用存在
 class RoastStylePanel(context: Context) : LinearLayout(context) { fun update() {} }
 class RoastExecutiveSummaryPanel(context: Context) : LinearLayout(context) { fun update() {} }
 class RoastControlAdvisorPanel(context: Context) : LinearLayout(context) { fun update() {} }
