@@ -40,31 +40,42 @@ object RecentRoastListPage {
         val root = UiKit.pageRoot(context)
 
         root.addView(UiKit.pageTitle(context, "RECENT ROASTS"))
-        root.addView(UiKit.pageSubtitle(context, "Latest roast history"))
+        root.addView(UiKit.pageSubtitle(context, "Browse batches, select one, or compare two"))
+        root.addView(UiKit.spacerS(context))
+        root.addView(
+            TopNavBar.create(
+                context = context,
+                container = container,
+                current = TopNavBar.Section.REVIEW
+            )
+        )
         root.addView(UiKit.spacer(context))
 
-        val topCard = UiKit.card(context)
-        val backBtn = UiKit.secondaryButton(context, "BACK")
-        val clearAllBtn = UiKit.secondaryButton(context, "CLEAR ALL HISTORY")
-
-        topCard.addView(UiKit.cardTitle(context, "NAVIGATION"))
-        topCard.addView(backBtn)
-        topCard.addView(clearAllBtn)
-
-        root.addView(topCard)
+        val accessCard = UiKit.card(context)
+        val backBtn = UiKit.secondaryButton(context, "Back")
+        val clearAllBtn = UiKit.secondaryButton(context, "Clear All History")
+        accessCard.addView(UiKit.cardTitle(context, "ACCESS"))
+        accessCard.addView(UiKit.helperText(context, "Return to review or manage local history."))
+        accessCard.addView(UiKit.spacerM(context))
+        accessCard.addView(backBtn)
+        accessCard.addView(UiKit.spacerS(context))
+        accessCard.addView(clearAllBtn)
+        root.addView(accessCard)
         root.addView(UiKit.spacer(context))
 
         val compareCard = UiKit.card(context)
         val compareStateText = UiKit.bodyText(context, "")
-        val clearCompareBtn = UiKit.secondaryButton(context, "CLEAR COMPARE")
-        val openCompareBtn = UiKit.primaryButton(context, "OPEN COMPARE")
+        val clearCompareBtn = UiKit.secondaryButton(context, "Clear Compare")
+        val openCompareBtn = UiKit.primaryButton(context, "Open Compare")
 
         compareCard.addView(UiKit.cardTitle(context, "COMPARE"))
+        compareCard.addView(UiKit.helperText(context, "Select A and B from the list below."))
+        compareCard.addView(UiKit.spacerS(context))
         compareCard.addView(compareStateText)
-        compareCard.addView(UiKit.spacer(context))
-        compareCard.addView(clearCompareBtn)
+        compareCard.addView(UiKit.spacerM(context))
         compareCard.addView(openCompareBtn)
-
+        compareCard.addView(UiKit.spacerS(context))
+        compareCard.addView(clearCompareBtn)
         root.addView(compareCard)
         root.addView(UiKit.spacer(context))
 
@@ -75,7 +86,7 @@ object RecentRoastListPage {
             setSingleLine(true)
         }
 
-        val resultCountText = UiKit.bodyText(context, "")
+        val resultCountText = UiKit.helperText(context, "")
 
         val filterButtonRow1 = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -89,13 +100,13 @@ object RecentRoastListPage {
             orientation = LinearLayout.HORIZONTAL
         }
 
-        val allBtn = UiKit.secondaryButton(context, FILTER_ALL)
-        val idleBtn = UiKit.secondaryButton(context, FILTER_IDLE)
-        val runningBtn = UiKit.secondaryButton(context, FILTER_RUNNING)
-        val stoppedBtn = UiKit.secondaryButton(context, FILTER_STOPPED)
-        val finishedBtn = UiKit.secondaryButton(context, FILTER_FINISHED)
-        val onlyEvaluatedBtn = UiKit.secondaryButton(context, FILTER_ONLY_EVALUATED)
-        val onlyNotEvaluatedBtn = UiKit.secondaryButton(context, FILTER_ONLY_NOT_EVALUATED)
+        val allBtn = UiKit.secondaryButton(context, "All")
+        val idleBtn = UiKit.secondaryButton(context, "Idle")
+        val runningBtn = UiKit.secondaryButton(context, "Running")
+        val stoppedBtn = UiKit.secondaryButton(context, "Stopped")
+        val finishedBtn = UiKit.secondaryButton(context, "Finished")
+        val onlyEvaluatedBtn = UiKit.secondaryButton(context, "Evaluated")
+        val onlyNotEvaluatedBtn = UiKit.secondaryButton(context, "Not Evaluated")
 
         filterButtonRow1.addView(allBtn)
         filterButtonRow1.addView(idleBtn)
@@ -108,15 +119,25 @@ object RecentRoastListPage {
         filterButtonRow3.addView(onlyNotEvaluatedBtn)
 
         filterCard.addView(UiKit.cardTitle(context, "FILTER"))
+        filterCard.addView(UiKit.helperText(context, "Search or narrow the roast list."))
+        filterCard.addView(UiKit.spacerS(context))
         filterCard.addView(searchInput)
-        filterCard.addView(UiKit.spacer(context))
+        filterCard.addView(UiKit.spacerM(context))
         filterCard.addView(filterButtonRow1)
+        filterCard.addView(UiKit.spacerS(context))
         filterCard.addView(filterButtonRow2)
+        filterCard.addView(UiKit.spacerS(context))
         filterCard.addView(filterButtonRow3)
-        filterCard.addView(UiKit.spacer(context))
+        filterCard.addView(UiKit.spacerM(context))
         filterCard.addView(resultCountText)
 
         root.addView(filterCard)
+        root.addView(UiKit.spacer(context))
+
+        val listSectionTitle = UiKit.card(context)
+        listSectionTitle.addView(UiKit.cardTitle(context, "ROAST LIST"))
+        listSectionTitle.addView(UiKit.helperText(context, "Open one roast or mark two for comparison."))
+        root.addView(listSectionTitle)
         root.addView(UiKit.spacer(context))
 
         val listHost = LinearLayout(context).apply {
@@ -138,10 +159,10 @@ object RecentRoastListPage {
         fun buildCompareSlot(entry: RoastHistoryEntry?): String {
             if (entry == null) {
                 return """
-Batch
+批次
 -
 
-Evaluation / Health
+结果 / 评测
 - / -
 
 FC / Drop
@@ -153,11 +174,11 @@ FC / Drop
             val drop = formatSec(entry.actualDropSec ?: entry.predictedDropSec)
 
             return """
-Batch
+批次
 ${entry.batchId}
 
-Evaluation / Health
-${if (entry.evaluation != null) "Saved" else "Not saved"} / ${entry.roastHealthHeadline}
+结果 / 评测
+${entry.roastHealthHeadline} / ${if (entry.evaluation != null) "已保存" else "未保存"}
 
 FC / Drop
 $fc / $drop
@@ -179,6 +200,94 @@ ${buildCompareSlot(b)}
             openCompareBtn.isEnabled = a != null && b != null && a.batchId != b.batchId
         }
 
+        fun buildRoastRow(entry: RoastHistoryEntry): LinearLayout {
+            val rowCard = UiKit.card(context)
+
+            val title = UiKit.cardTitle(context, entry.batchId)
+            val subtitle = UiKit.helperText(
+                context,
+                "${formatDateTime(entry.createdAtMillis)} · ${entry.batchStatus}"
+            )
+            val summary = UiKit.bodyText(
+                context,
+                """
+健康 / 评测
+${entry.roastHealthHeadline} / ${if (entry.evaluation != null) "已保存" else "未保存"}
+
+FC / Drop
+${formatSec(entry.actualFcSec ?: entry.predictedFcSec)} / ${formatSec(entry.actualDropSec ?: entry.predictedDropSec)}
+                """.trimIndent()
+            )
+
+            val actionRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+
+            val selectABtn = UiKit.secondaryButton(
+                context,
+                if (selectedBatchA == entry.batchId) "Selected A" else "Select A"
+            )
+            val selectBBtn = UiKit.secondaryButton(
+                context,
+                if (selectedBatchB == entry.batchId) "Selected B" else "Select B"
+            )
+            val openBtn = UiKit.primaryButton(context, "Open")
+
+            selectABtn.setOnClickListener {
+                selectedBatchA = entry.batchId
+                if (selectedBatchB == entry.batchId) {
+                    selectedBatchB = null
+                }
+                show(
+                    context = context,
+                    container = container,
+                    onBack = onBack
+                )
+            }
+
+            selectBBtn.setOnClickListener {
+                selectedBatchB = entry.batchId
+                if (selectedBatchA == entry.batchId) {
+                    selectedBatchA = null
+                }
+                show(
+                    context = context,
+                    container = container,
+                    onBack = onBack
+                )
+            }
+
+            openBtn.setOnClickListener {
+                HistoryDetailPage.show(
+                    context = context,
+                    container = container,
+                    entry = entry,
+                    onBack = {
+                        show(
+                            context = context,
+                            container = container,
+                            onBack = onBack
+                        )
+                    }
+                )
+            }
+
+            actionRow.addView(selectABtn)
+            actionRow.addView(selectBBtn)
+
+            rowCard.addView(title)
+            rowCard.addView(UiKit.spacerS(context))
+            rowCard.addView(subtitle)
+            rowCard.addView(UiKit.spacerS(context))
+            rowCard.addView(summary)
+            rowCard.addView(UiKit.spacerM(context))
+            rowCard.addView(actionRow)
+            rowCard.addView(UiKit.spacerS(context))
+            rowCard.addView(openBtn)
+
+            return rowCard
+        }
+
         fun applyFilter() {
             val keyword = searchInput.text?.toString()?.trim().orEmpty()
 
@@ -196,12 +305,12 @@ ${buildCompareSlot(b)}
                 val emptyCard = UiKit.card(context)
                 emptyCard.addView(UiKit.cardTitle(context, "NO MATCH"))
                 emptyCard.addView(
-                    UiKit.bodyText(
+                    UiKit.helperText(
                         context,
                         if (allEntries.isEmpty()) {
                             "No roast history yet."
                         } else {
-                            "No roast history matched current search/filter."
+                            "No roast history matched current search or filter."
                         }
                     )
                 )
@@ -211,67 +320,7 @@ ${buildCompareSlot(b)}
             }
 
             filtered.forEachIndexed { index, entry ->
-                val itemCard = UiKit.card(context)
-                val itemTitle = UiKit.cardTitle(context, "ROAST ${index + 1}")
-                val itemBody = UiKit.bodyText(context, buildCompactEntryText(entry))
-                val selectABtn = UiKit.secondaryButton(
-                    context,
-                    if (selectedBatchA == entry.batchId) "SELECTED A" else "SELECT A"
-                )
-                val selectBBtn = UiKit.secondaryButton(
-                    context,
-                    if (selectedBatchB == entry.batchId) "SELECTED B" else "SELECT B"
-                )
-                val openBtn = UiKit.secondaryButton(context, "OPEN DETAIL")
-
-                selectABtn.setOnClickListener {
-                    selectedBatchA = entry.batchId
-                    if (selectedBatchB == entry.batchId) {
-                        selectedBatchB = null
-                    }
-                    show(
-                        context = context,
-                        container = container,
-                        onBack = onBack
-                    )
-                }
-
-                selectBBtn.setOnClickListener {
-                    selectedBatchB = entry.batchId
-                    if (selectedBatchA == entry.batchId) {
-                        selectedBatchA = null
-                    }
-                    show(
-                        context = context,
-                        container = container,
-                        onBack = onBack
-                    )
-                }
-
-                openBtn.setOnClickListener {
-                    HistoryDetailPage.show(
-                        context = context,
-                        container = container,
-                        entry = entry,
-                        onBack = {
-                            show(
-                                context = context,
-                                container = container,
-                                onBack = onBack
-                            )
-                        }
-                    )
-                }
-
-                itemCard.addView(itemTitle)
-                itemCard.addView(itemBody)
-                itemCard.addView(UiKit.spacer(context))
-                itemCard.addView(selectABtn)
-                itemCard.addView(selectBBtn)
-                itemCard.addView(openBtn)
-
-                listHost.addView(itemCard)
-
+                listHost.addView(buildRoastRow(entry))
                 if (index != filtered.lastIndex) {
                     listHost.addView(UiKit.spacer(context))
                 }
@@ -302,7 +351,7 @@ ${buildCompareSlot(b)}
         })
 
         backBtn.setOnClickListener {
-            onBack?.invoke() ?: RoastStudioPage.show(context, container)
+            onBack?.invoke() ?: ReviewHubPage.show(context, container)
         }
 
         clearAllBtn.setOnClickListener {
@@ -406,30 +455,6 @@ ${buildCompareSlot(b)}
             FILTER_ONLY_NOT_EVALUATED -> entry.evaluation == null
             else -> true
         }
-    }
-
-    private fun buildCompactEntryText(
-        entry: RoastHistoryEntry
-    ): String {
-        val fc = formatSec(entry.actualFcSec ?: entry.predictedFcSec)
-        val drop = formatSec(entry.actualDropSec ?: entry.predictedDropSec)
-
-        return """
-Batch
-${entry.batchId}
-
-Status / Health
-${entry.batchStatus} / ${entry.roastHealthHeadline}
-
-Evaluation
-${if (entry.evaluation != null) "Saved" else "Not saved"}
-
-FC / Drop
-$fc / $drop
-
-Created
-${formatDateTime(entry.createdAtMillis)}
-        """.trimIndent()
     }
 
     private fun formatSec(sec: Int?): String {
