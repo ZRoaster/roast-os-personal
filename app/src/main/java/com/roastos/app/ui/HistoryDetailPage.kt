@@ -159,7 +159,7 @@ ${entry.correctionText.ifBlank { "-" }}
         root.addView(insightCard)
         root.addView(UiKit.spacer(context))
 
-        val evaluationCard = UiKit.card()
+        val evaluationCard = UiKit.card(context)
 
         val beanColorInput = UiKit.decimalField(context, "Bean Color")
         val groundColorInput = UiKit.decimalField(context, "Ground Color")
